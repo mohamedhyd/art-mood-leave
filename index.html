@@ -86,6 +86,41 @@ function Logo(_ref) {
 var CSS = "\n@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@500&display=swap');\n*{box-sizing:border-box;margin:0;padding:0}\nbody{background:".concat(T.bg, ";color:").concat(T.txt, ";font-family:'Cairo',sans-serif;direction:rtl}\n::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:").concat(T.border, ";border-radius:4px}\n.mono{font-family:'JetBrains Mono',monospace;direction:ltr}\ninput,select{background:").concat(T.surface, ";border:1.5px solid ").concat(T.border, ";color:").concat(T.txt, ";border-radius:12px;padding:10px 13px;font-family:'Cairo',sans-serif;font-size:14px;outline:none;width:100%;transition:border .15s,box-shadow .15s}\ninput:focus,select:focus{border-color:").concat(T.accent, ";box-shadow:0 0 0 3px rgba(99,102,241,.12)}\nselect option{background:").concat(T.surface, "}\nbutton{cursor:pointer;font-family:'Cairo',sans-serif;border:none;border-radius:12px;transition:all .18s}\na{color:").concat(T.accent, "}\n@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}\n@keyframes pop{from{opacity:0;transform:scale(.93)}to{opacity:1;transform:scale(1)}}\n@keyframes spin{to{transform:rotate(360deg)}}\n@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}\n.fade{animation:fadeUp .25s ease}\n.pop{animation:pop .22s ease}\n.sp{animation:spin 1s linear infinite;display:inline-block}\n.shk{animation:shake .3s ease}\n");
 
 /* ─── CONSTANTS ─── */
+var SCRIPT_URL = "https://script.google.com/macros/s/AKfycby4l82dFKULHa_kqNGZYXpJvUXommksalGPR1hHf_0S5BSacA3mKG4gz1DJs-RvuT0/exec";
+
+// ── Google Sheets helpers ──
+function sheetPost(body) {
+  return fetch(SCRIPT_URL, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(body)
+  }).then(function(r) { return r.json(); }).catch(function() { return null; });
+}
+
+function sheetGet(action) {
+  return fetch(SCRIPT_URL + "?action=" + action)
+    .then(function(r) { return r.json(); })
+    .catch(function() { return null; });
+}
+
+function pushRecord(r) {
+  sheetPost({
+    action: r.type === "in" ? "checkIn" : "checkOut",
+    empId: r.empId, empName: r.empName, dept: r.dept,
+    lat: r.lat, lng: r.lng, inZone: r.inZone,
+    selfie: r.selfieUrl || "", deviceVerified: !!r.deviceVerified
+  });
+}
+
+function syncAllToSheet(emps, mgrs, devs) {
+  return sheetPost({
+    action: "syncAll",
+    employees: emps,
+    managers: mgrs,
+    devices: Object.entries(devs).map(function(e) { return Object.assign({empId: e[0]}, e[1]); })
+  });
+}
+
 var GEO_R = 50;
 var WORK_DAYS = [0, 1, 2, 3, 4]; // الأحد=0 الاثنين=1 ... الخميس=4
 var SATURDAY = 6;
@@ -4727,7 +4762,25 @@ function MgrPanel(_ref26) {
       borderRadius: 10,
       flexShrink: 0
     }
-  }, "\u062E\u0631\u0648\u062C \u2190")), /*#__PURE__*/React.createElement("div", {
+  }, "\u062E\u0631\u0648\u062C \u2190"), /*#__PURE__*/React.createElement("button", {
+    onClick: function onClick() {
+      syncAllToSheet(allEmps, managers, devices).then(function(r) {
+        alert(r && r.success ? "\u2705 \u062A\u0645\u062A \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0645\u0639 Google Sheets" : "\u274C \u062A\u0623\u0643\u062F \u0645\u0646 \u0627\u0644\u0646\u062A");
+      });
+    },
+    style: {
+      padding: "6px 14px",
+      background: "#ECFDF5",
+      color: "#10B981",
+      border: "1.5px solid #6EE7B7",
+      fontSize: 12,
+      fontWeight: 600,
+      borderRadius: 10,
+      flexShrink: 0,
+      cursor: "pointer",
+      fontFamily: "inherit"
+    }
+  }, "\uD83D\uDD04 Sheet")), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       alignItems: "center",
@@ -4768,9 +4821,8 @@ function MgrPanel(_ref26) {
     mgr: mgr,
     recs: recs,
     onRec: function onRec(r) {
-      return setRecs(function (rs) {
-        return [].concat(_toConsumableArray(rs), [r]);
-      });
+      setRecs(function (rs) { return [].concat(_toConsumableArray(rs), [r]); });
+      pushRecord(r);
     }
   }))), !isSuper && /*#__PURE__*/React.createElement("div", {
     style: {
@@ -5415,9 +5467,8 @@ function App() {
     emps: emps,
     recs: recs,
     onRec: function onRec(r) {
-      return setRecs(function (rs) {
-        return [].concat(_toConsumableArray(rs), [r]);
-      });
+      setRecs(function (rs) { return [].concat(_toConsumableArray(rs), [r]); });
+      pushRecord(r);
     },
     wLat: wLat,
     wLng: wLng,
@@ -5464,9 +5515,8 @@ function App() {
     emps: emps,
     recs: recs,
     onRec: function onRec(r) {
-      return setRecs(function (rs) {
-        return [].concat(_toConsumableArray(rs), [r]);
-      });
+      setRecs(function (rs) { return [].concat(_toConsumableArray(rs), [r]); });
+      pushRecord(r);
     },
     wLat: wLat,
     wLng: wLng
