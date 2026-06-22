@@ -1,0 +1,1485 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+  <meta name="apple-mobile-web-app-capable" content="yes"/>
+  <meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+  <meta name="apple-mobile-web-app-title" content="Art Mood Leave"/>
+  <link rel="manifest" href="manifest.json"/>
+  <title>Art Mood Leave</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:#F8F9FC;min-height:100vh;font-family:Cairo,Arial,sans-serif}
+    #loading{position:fixed;inset:0;background:#F8F9FC;display:flex;flex-direction:column;
+      align-items:center;justify-content:center;gap:16px;z-index:9999}
+    #loading h2{font-size:22px;color:#0F172A;font-weight:700;letter-spacing:2px}
+    #loading p{font-size:13px;color:#94A3B8}
+    .dots{display:flex;gap:8px}
+    .dot{width:10px;height:10px;border-radius:50%;background:#6366F1;animation:bounce .8s infinite alternate}
+    .dot:nth-child(2){animation-delay:.15s}
+    .dot:nth-child(3){animation-delay:.3s}
+    @keyframes bounce{to{transform:translateY(-12px);opacity:.4}}
+    #root{min-height:100vh}
+  </style>
+</head>
+<body>
+  <div id="loading">
+    <h2>ART MOOD LEAVE</h2>
+    <div class="dots"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+    <p>جاري تحميل النظام...</p>
+  </div>
+  <div id="root"></div>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script type="text/babel">
+const { useState, useEffect, useRef, useCallback } = React;
+
+
+/* ─── THEME ─── */
+const T = {
+  bg:"#F8F9FC", surface:"#FFFFFF", hi:"#F1F3F8",
+  border:"#E4E8F0", accent:"#6366F1", aLight:"#EEF0FF",
+  danger:"#EF4444", dLight:"#FEF2F2",
+  warn:"#F59E0B", wLight:"#FFFBEB",
+  ok:"#10B981", oLight:"#ECFDF5",
+  gold:"#D97706", gLight:"#FEF3C7",
+  txt:"#0F172A", mid:"#475569", muted:"#94A3B8", dim:"#CBD5E1",
+  sh:"0 1px 3px rgba(0,0,0,.06)", shM:"0 4px 16px rgba(0,0,0,.08)",
+};
+
+/* ─── LOGO ─── */
+const LOGO_URI = "data:image/svg+xml;base64,PD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iVVRGLTgiPz4KPHN2ZyBpZD0iTGF5ZXJfMSIgZGF0YS1uYW1lPSJMYXllciAxIiB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAzMTMuOTIgNTQuMTQiPgogIDxkZWZzPgogICAgPHN0eWxlPgogICAgICAuY2xzLTEgewogICAgICAgIGZvbnQtZmFtaWx5OiBNQU5JRkVTVE8sIE1BTklGRVNUTzsKICAgICAgICBmb250LXNpemU6IDQ2LjY3cHg7CiAgICAgICAgbGV0dGVyLXNwYWNpbmc6IC4xZW07CiAgICAgIH0KICAgIDwvc3R5bGU+CiAgPC9kZWZzPgogIDx0ZXh0IGNsYXNzPSJjbHMtMSIgdHJhbnNmb3JtPSJ0cmFuc2xhdGUoMCA0Mi45MykiPjx0c3BhbiB4PSIwIiB5PSIwIj5BUlQgTU9PRDwvdHNwYW4+PC90ZXh0Pgo8L3N2Zz4=";
+function Logo({width=160}){
+  return <img src={LOGO_URI} alt="Art Mood" style={{width,height:"auto",display:"block"}}/>;
+}
+
+const CSS = `
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@500&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:${T.bg};color:${T.txt};font-family:'Cairo',sans-serif;direction:rtl}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:${T.border};border-radius:4px}
+.mono{font-family:'JetBrains Mono',monospace;direction:ltr}
+input,select{background:${T.surface};border:1.5px solid ${T.border};color:${T.txt};border-radius:12px;padding:10px 13px;font-family:'Cairo',sans-serif;font-size:14px;outline:none;width:100%;transition:border .15s,box-shadow .15s}
+input:focus,select:focus{border-color:${T.accent};box-shadow:0 0 0 3px rgba(99,102,241,.12)}
+select option{background:${T.surface}}
+button{cursor:pointer;font-family:'Cairo',sans-serif;border:none;border-radius:12px;transition:all .18s}
+a{color:${T.accent}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pop{from{opacity:0;transform:scale(.93)}to{opacity:1;transform:scale(1)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}
+.fade{animation:fadeUp .25s ease}
+.pop{animation:pop .22s ease}
+.sp{animation:spin 1s linear infinite;display:inline-block}
+.shk{animation:shake .3s ease}
+`;
+
+/* ─── CONSTANTS ─── */
+const WORK_START = "09:00";
+const WORK_HOURS = 8;
+const GEO_R = 50;
+
+const DEF_MGRS = [
+  {id:"M001",name:"عبدالله حسين", title:"العضو المنتدب", pin:"1111",role:"super",depts:[],color:"#D97706"},
+  {id:"M002",name:"محمد حسين",   title:"المدير العام",   pin:"2222",role:"super",depts:[],color:"#6366F1"},
+  {id:"M003",name:"شادي مصطفي", title:"مدير المصنع",    pin:"3333",role:"super",depts:[],color:"#0F172A"},
+  {id:"M004",name:"سمر ميمي",   title:"مدير الجودة",    pin:"4444",role:"dept", depts:["الجودة"],  color:"#EC4899"},
+  {id:"M005",name:"مني سليمان", title:"مدير التسويق",   pin:"5555",role:"dept", depts:["التسويق"],color:"#10B981"},
+];
+
+const COLORS=["#6366F1","#EC4899","#F59E0B","#10B981","#3B82F6","#8B5CF6","#EF4444","#14B8A6","#D97706","#06B6D4","#F97316","#0EA5E9"];
+
+/* ─── HELPERS ─── */
+const todayStr = () => new Date().toISOString().split("T")[0];
+const nowStr   = () => new Date().toTimeString().slice(0,5);
+const fmtT     = t => t || "—";
+
+function isLate(t){
+  if(!t) return false;
+  const[wh,wm]=WORK_START.split(":").map(Number),[ih,im]=t.split(":").map(Number);
+  return(ih*60+im)>(wh*60+wm+5);
+}
+function diffH(s,e){
+  if(!s||!e) return 0;
+  const[sh,sm]=s.split(":").map(Number),[eh,em]=e.split(":").map(Number);
+  return((eh*60+em)-(sh*60+sm))/60;
+}
+function haversine(la1,lo1,la2,lo2){
+  const R=6371000,dL=(la2-la1)*Math.PI/180,dl=(lo2-lo1)*Math.PI/180;
+  const a=Math.sin(dL/2)**2+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dl/2)**2;
+  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+}
+function ini(n){return n.split(" ").slice(0,2).map(w=>w[0]).join("");}
+
+async function getDeviceFP(){
+  const p=[navigator.userAgent,navigator.language,screen.width+"x"+screen.height,
+    screen.colorDepth,new Date().getTimezoneOffset(),navigator.hardwareConcurrency||"",
+    (()=>{try{const c=document.createElement("canvas"),x=c.getContext("2d");
+      x.font="14px Arial";x.fillStyle="#f60";x.fillRect(10,1,40,10);
+      x.fillStyle="#069";x.fillText("FP",2,10);return c.toDataURL().slice(-30);}catch{return"nc";}})()
+  ].join("|");
+  const b=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(p));
+  return Array.from(new Uint8Array(b)).map(x=>x.toString(16).padStart(2,"0")).join("").slice(0,32);
+}
+
+function useLS(k,d){
+  const[v,set]=useState(()=>{
+    try{const s=localStorage.getItem(k);return s?JSON.parse(s):d;}
+    catch{return d;}
+  });
+  useEffect(()=>{localStorage.setItem(k,JSON.stringify(v));},[k,v]);
+  return[v,set];
+}
+
+/* ─── MICRO UI ─── */
+function Av({e,sz=38}){
+  return <div style={{width:sz,height:sz,borderRadius:"50%",background:e.color||"#6366F1",
+    flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",
+    fontSize:sz*.28,fontWeight:700,color:"#fff"}}>{ini(e.name)}</div>;
+}
+function MgrAv({m,sz=38}){
+  return <div style={{width:sz,height:sz,borderRadius:sz*.25,background:m.color||"#6366F1",
+    flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center",
+    fontSize:sz*.28,fontWeight:700,color:"#fff"}}>{ini(m.name)}</div>;
+}
+function Badge({label,color,bg}){
+  return <span style={{display:"inline-flex",alignItems:"center",padding:"3px 10px",
+    borderRadius:20,fontSize:11,fontWeight:700,color,background:bg,whiteSpace:"nowrap"}}>{label}</span>;
+}
+function RoleBadge({role}){
+  return role==="super"
+    ?<Badge label="⭐ صلاحيات كاملة" color={T.gold} bg={T.gLight}/>
+    :<Badge label="🏢 مدير قسم" color={T.accent} bg={T.aLight}/>;
+}
+function Note({children,color,bg}){
+  return <div style={{background:bg,border:`1px solid ${color}44`,borderRadius:12,
+    padding:"10px 16px",fontSize:13,color,textAlign:"center",lineHeight:1.8}}>{children}</div>;
+}
+function Row({l,v}){
+  return(
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",
+      padding:"10px 0",fontSize:14,borderBottom:`1px solid ${T.border}`}}>
+      <span style={{color:T.muted}}>{l}</span>
+      <span style={{fontWeight:600}}>{v}</span>
+    </div>
+  );
+}
+function Card({title,children,hi}){
+  return(
+    <div style={{background:T.surface,border:`1.5px solid ${hi?T.accent:T.border}`,
+      borderRadius:18,padding:22,boxShadow:T.sh}}>
+      {title&&<div style={{fontWeight:700,fontSize:14,color:hi?T.accent:T.txt,marginBottom:14}}>{title}</div>}
+      {children}
+    </div>
+  );
+}
+function StepBar({cur,steps}){
+  return(
+    <div style={{display:"flex",alignItems:"center",background:T.surface,
+      border:`1px solid ${T.border}`,borderRadius:40,padding:"5px 6px",boxShadow:T.sh}}>
+      {steps.map((s,i,arr)=>{
+        const done=cur>i,active=cur===i;
+        return(
+          <div key={s} style={{display:"flex",alignItems:"center"}}>
+            <div style={{display:"flex",alignItems:"center",gap:5,padding:"6px 12px",
+              borderRadius:30,transition:"all .2s",
+              background:active?T.accent:done?T.aLight:"transparent",
+              color:active?"#fff":done?T.accent:T.muted,
+              fontSize:12,fontWeight:active||done?600:400}}>
+              <span>{done?"✓":i+1}</span>{s}
+            </div>
+            {i<arr.length-1&&<div style={{width:1,height:16,background:T.border,margin:"0 2px"}}/>}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+function IcoBox({icon,bg,glow,sz=64}){
+  return <div style={{width:sz,height:sz,borderRadius:"50%",background:bg,display:"flex",
+    alignItems:"center",justifyContent:"center",fontSize:sz*.44,
+    boxShadow:glow?`0 0 0 14px ${glow}`:"none"}}>{icon}</div>;
+}
+function CenteredPage({children}){
+  return <div style={{minHeight:"100vh",background:T.bg,display:"flex",flexDirection:"column",
+    alignItems:"center",justifyContent:"center",gap:18,padding:32,textAlign:"center"}}>{children}</div>;
+}
+function LiveClock(){
+  const[t,set]=useState(new Date());
+  useEffect(()=>{const i=setInterval(()=>set(new Date()),1000);return()=>clearInterval(i);},[]);
+  const D=["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
+  const M=["يناير","فبراير","مارس","أبريل","مايو","يونيو","يوليو","أغسطس","سبتمبر","أكتوبر","نوفمبر","ديسمبر"];
+  return(
+    <div style={{textAlign:"center"}}>
+      <div className="mono" style={{fontSize:"clamp(36px,9vw,58px)",fontWeight:700,
+        color:T.txt,letterSpacing:-3,lineHeight:1}}>{t.toTimeString().slice(0,8)}</div>
+      <div style={{color:T.muted,fontSize:13,marginTop:6}}>
+        {D[t.getDay()]}، {t.getDate()} {M[t.getMonth()]} {t.getFullYear()}
+      </div>
+    </div>
+  );
+}
+function PinPad({onConfirm,doShake}){
+  const[pin,set]=useState("");
+  useEffect(()=>{if(pin.length===4)setTimeout(()=>{onConfirm(pin);set("");},180);},[pin]);
+  useEffect(()=>{if(doShake)set("");},[doShake]);
+  const add=d=>{if(pin.length<4)set(p=>p+d);};
+  const del=()=>set(p=>p.slice(0,-1));
+  return(
+    <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:16}}>
+      <div style={{display:"flex",gap:12}}>
+        {[0,1,2,3].map(i=><div key={i} style={{width:13,height:13,borderRadius:"50%",
+          transition:"all .2s",background:pin.length>i?T.accent:T.border,
+          transform:pin.length>i?"scale(1.2)":"scale(1)"}}/>)}
+      </div>
+      <div className={doShake?"shk":""} style={{display:"grid",gridTemplateColumns:"repeat(3,72px)",gap:10}}>
+        {[1,2,3,4,5,6,7,8,9,"",0,"⌫"].map((v,i)=>v===""?<div key={i}/>:(
+          <button key={i} onClick={()=>v==="⌫"?del():add(String(v))}
+            style={{height:72,fontSize:v==="⌫"?18:22,fontWeight:600,
+              background:v==="⌫"?T.dLight:T.hi,color:v==="⌫"?T.danger:T.txt,
+              border:`1.5px solid ${v==="⌫"?"#FCA5A5":T.border}`,borderRadius:16,boxShadow:T.sh}}
+            onMouseDown={e=>e.currentTarget.style.transform="scale(.94)"}
+            onMouseUp={e=>e.currentTarget.style.transform="scale(1)"}
+            onMouseLeave={e=>e.currentTarget.style.transform="scale(1)"}>
+            {v}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+function GpsWidget({wLat,wLng,onResult}){
+  const[st,setSt]=useState("loading");const[info,setInfo]=useState(null);
+  const check=useCallback(()=>{
+    setSt("loading");
+    if(!navigator.geolocation){setSt("ns");onResult({ok:false});return;}
+    navigator.geolocation.getCurrentPosition(pos=>{
+      const{latitude:lat,longitude:lng,accuracy:acc}=pos.coords;
+      let inZone=null;
+      if(wLat&&wLng){const d=haversine(lat,lng,parseFloat(wLat),parseFloat(wLng));inZone=d<=GEO_R;setInfo({lat,lng,acc:Math.round(acc),dist:Math.round(d),inZone});}
+      else setInfo({lat,lng,acc:Math.round(acc),inZone:null});
+      setSt("ok");onResult({ok:true,lat,lng,accuracy:Math.round(acc),inZone});
+    },()=>{setSt("denied");onResult({ok:false,inZone:null});},{enableHighAccuracy:true,timeout:12000});
+  },[wLat,wLng,onResult]);
+  useEffect(()=>{check();},[]);
+  const out=info?.inZone===false,inn=info?.inZone===true;
+  return(
+    <div style={{background:st==="ok"?(out?T.dLight:inn?T.oLight:T.wLight):T.wLight,
+      border:`1.5px solid ${st==="ok"?(out?"#FCA5A5":inn?"#6EE7B7":"#FCD34D"):"#FCD34D"}`,
+      borderRadius:14,padding:"12px 16px",display:"flex",alignItems:"center",gap:10}}>
+      <span style={{fontSize:20}}>{st==="loading"?"📡":st==="ok"?(out?"❌":inn?"✅":"📍"):"⚠️"}</span>
+      <span style={{flex:1,fontSize:13,fontWeight:600,color:st==="ok"?(out?T.danger:inn?T.ok:T.warn):T.warn}}>
+        {st==="loading"&&"جاري تحديد موقعك..."}
+        {st==="ok"&&(info?.inZone===null?`${info?.lat?.toFixed(4)},${info?.lng?.toFixed(4)} (±${info?.acc}م)`:inn?`داخل نطاق العمل — ${info?.dist}م`:`خارج النطاق — ${info?.dist}م`)}
+        {(st==="denied"||st==="ns")&&"تعذّر تحديد الموقع"}
+      </span>
+      {st!=="loading"&&<button onClick={check} style={{fontSize:11,padding:"4px 10px",background:"rgba(0,0,0,.05)",color:T.mid,border:"none",borderRadius:8}}>🔄</button>}
+    </div>
+  );
+}
+function SelfieWidget({onCapture}){
+  const vR=useRef(null),cR=useRef(null),sR=useRef(null);
+  const[st,setSt]=useState("idle");const[prev,setPrev]=useState(null);
+  async function start(){try{const s=await navigator.mediaDevices.getUserMedia({video:{facingMode:"user"},audio:false});sR.current=s;if(vR.current)vR.current.srcObject=s;setSt("live");}catch{setSt("err");}}
+  function snap(){const v=vR.current,c=cR.current;if(!v||!c)return;c.width=v.videoWidth;c.height=v.videoHeight;c.getContext("2d").drawImage(v,0,0);const url=c.toDataURL("image/jpeg",.75);setPrev(url);setSt("done");if(sR.current)sR.current.getTracks().forEach(t=>t.stop());onCapture(url);}
+  function redo(){setPrev(null);setSt("idle");onCapture(null);}
+  useEffect(()=>()=>{if(sR.current)sR.current.getTracks().forEach(t=>t.stop());},[]);
+  return(
+    <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:12}}>
+      {st==="idle"&&<button onClick={start} style={{padding:"11px 28px",background:T.aLight,color:T.accent,border:`1.5px solid ${T.accent}`,fontSize:14,fontWeight:600,borderRadius:12}}>📸 التقاط صورة</button>}
+      {st==="live"&&(
+        <div style={{position:"relative",borderRadius:16,overflow:"hidden",border:`2px solid ${T.accent}`}}>
+          <video ref={vR} autoPlay playsInline muted style={{width:200,height:150,display:"block",objectFit:"cover",transform:"scaleX(-1)"}}/>
+          <button onClick={snap} style={{position:"absolute",bottom:8,left:"50%",transform:"translateX(-50%)",width:46,height:46,borderRadius:"50%",background:T.accent,color:"#fff",fontSize:20,display:"flex",alignItems:"center",justifyContent:"center"}}>📸</button>
+        </div>
+      )}
+      {st==="done"&&prev&&(
+        <div style={{position:"relative",display:"inline-block"}}>
+          <img src={prev} style={{width:90,height:90,borderRadius:"50%",objectFit:"cover",border:`3px solid ${T.ok}`,display:"block",transform:"scaleX(-1)"}}/>
+          <div style={{position:"absolute",bottom:2,right:2,width:22,height:22,borderRadius:"50%",background:T.ok,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12}}>✓</div>
+          <button onClick={redo} style={{display:"block",margin:"8px auto 0",fontSize:12,padding:"4px 14px",background:T.hi,color:T.mid,border:`1px solid ${T.border}`,borderRadius:20}}>إعادة</button>
+        </div>
+      )}
+      {st==="err"&&<Note color={T.warn} bg={T.wLight}>⚠️ تعذّر فتح الكاميرا</Note>}
+      <canvas ref={cR} style={{display:"none"}}/>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════
+   KIOSK
+══════════════════════════════════════════════════ */
+function Kiosk({emps,recs,onRec,wLat,wLng,devices}){
+  const[step,setStep]=useState("pin");
+  const[emp,setEmp]=useState(null);const[act,setAct]=useState("");
+  const[gps,setGps]=useState(null);const[selfie,setSelfie]=useState(null);
+  const[err,setErr]=useState("");const[sk,setSk]=useState(0);
+  const[checking,setChecking]=useState(false);
+  const today=todayStr();
+  const todayR=recs.filter(r=>r.date===today);
+  function empSt(id){const rs=todayR.filter(x=>x.empId===id);return rs.length?rs[rs.length-1].type==="in"?"in":"done":"absent";}
+  async function onPin(pin){
+    const e=emps.find(x=>x.pin===pin);
+    if(!e){setErr("❌ PIN غير صحيح");setSk(k=>k+1);setTimeout(()=>setErr(""),2000);return;}
+    if(!devices[e.id]){setEmp(e);setStep("nodev");return;}
+    setChecking(true);const fp=await getDeviceFP();setChecking(false);
+    if(devices[e.id].fp!==fp){setEmp(e);setStep("blocked");return;}
+    setEmp(e);setAct(empSt(e.id)==="in"?"out":"in");setStep("gps");
+  }
+  function doRec(){
+    const time=nowStr();
+    onRec({empId:emp.id,empName:emp.name,dept:emp.dept,date:today,time,type:act,
+      late:act==="in"?isLate(time):false,lat:gps?.lat,lng:gps?.lng,
+      accuracy:gps?.accuracy,inZone:gps?.inZone,selfieUrl:selfie||null,deviceVerified:true});
+    setStep("success");
+    setTimeout(()=>{setStep("pin");setEmp(null);setGps(null);setSelfie(null);},4000);
+  }
+  const sIdx={gps:0,selfie:1,confirm:2};
+  if(step==="nodev")return(
+    <CenteredPage><IcoBox icon="📱" bg={T.wLight}/><div style={{fontSize:18,fontWeight:700}}>جهازك غير مسجّل</div>
+      {emp&&<><Av e={emp} sz={52}/><div style={{fontWeight:600}}>{emp.name}</div></>}
+      <Note color={T.warn} bg={T.wLight}>اضغط "تسجيل جهازي" بالأسفل أولاً</Note>
+      <button onClick={()=>setStep("pin")} style={{background:"none",color:T.muted,fontSize:13,padding:8}}>← رجوع</button>
+    </CenteredPage>
+  );
+  if(step==="blocked")return(
+    <CenteredPage><IcoBox icon="🚫" bg={T.dLight} glow="rgba(239,68,68,.08)" sz={72}/>
+      <div style={{fontSize:20,fontWeight:800,color:T.danger}}>جهاز غير مصرّح</div>
+      {emp&&<><Av e={emp} sz={52}/><div style={{fontWeight:600}}>{emp.name}</div></>}
+      <Note color={T.danger} bg={T.dLight}>هذا الجهاز مختلف عن الجهاز المسجّل.<br/>كلّم مديرك لإعادة التسجيل.</Note>
+      <button onClick={()=>setStep("pin")} style={{background:"none",color:T.muted,fontSize:13,padding:8}}>← رجوع</button>
+    </CenteredPage>
+  );
+  if(step==="success")return(
+    <CenteredPage>
+      <IcoBox icon={act==="in"?"✅":"👋"} bg={act==="in"?T.oLight:T.wLight} glow={act==="in"?"rgba(16,185,129,.1)":"rgba(245,158,11,.1)"} sz={80}/>
+      <div style={{fontSize:22,fontWeight:700}}>{act==="in"?"أهلاً وسهلاً!":"إلى اللقاء!"}</div>
+      {emp&&<div style={{fontSize:15,color:T.mid,fontWeight:500}}>{emp.name}</div>}
+      <div className="mono" style={{fontSize:40,fontWeight:700,color:T.accent,letterSpacing:-2}}>{nowStr()}</div>
+      <Badge label="✓ جهاز موثّق" color={T.ok} bg={T.oLight}/>
+      {gps?.inZone!=null&&<Badge label={gps.inZone?"📍 داخل نطاق العمل":"⚠️ خارج النطاق"} color={gps.inZone?T.ok:T.warn} bg={gps.inZone?T.oLight:T.wLight}/>}
+    </CenteredPage>
+  );
+  if(["gps","selfie","confirm"].includes(step))return(
+    <div style={{minHeight:"100vh",background:T.bg,display:"flex",flexDirection:"column",alignItems:"center",padding:"28px 20px",gap:18}}>
+      <div style={{display:"flex",alignItems:"center",gap:12,background:T.surface,border:`1px solid ${T.border}`,borderRadius:16,padding:"12px 18px",width:"100%",maxWidth:400,boxShadow:T.sh}}>
+        {emp&&<Av e={emp} sz={42}/>}
+        <div style={{flex:1}}><div style={{fontWeight:700,fontSize:15}}>{emp?.name}</div><div style={{fontSize:12,color:T.muted}}>{act==="in"?"↑ حضور":"↓ انصراف"}</div></div>
+        <Badge label="✓ موثّق" color={T.ok} bg={T.oLight}/>
+      </div>
+      <StepBar cur={sIdx[step]||0} steps={["الموقع","الصورة","تأكيد"]}/>
+      <div className="fade" style={{width:"100%",maxWidth:400}}>
+        {step==="gps"&&<div style={{display:"flex",flexDirection:"column",gap:14}}>
+          <GpsWidget wLat={wLat} wLng={wLng} onResult={d=>setGps(d)}/>
+          <button onClick={()=>setStep("selfie")} disabled={!gps} style={{padding:14,background:gps?T.accent:T.hi,color:gps?"#fff":T.muted,fontWeight:700,fontSize:15,borderRadius:12,opacity:gps?1:.6}}>التالي ←</button>
+          <button onClick={()=>{setGps({ok:false,inZone:null});setStep("selfie");}} style={{background:"none",color:T.muted,fontSize:13,padding:8}}>تخطي الموقع</button>
+        </div>}
+        {step==="selfie"&&<div style={{display:"flex",flexDirection:"column",gap:14,alignItems:"center"}}>
+          <SelfieWidget onCapture={url=>setSelfie(url)}/>
+          <button onClick={()=>setStep("confirm")} style={{padding:14,background:T.accent,color:"#fff",fontWeight:700,fontSize:15,width:"100%",borderRadius:12}}>{selfie?"التالي ←":"تخطي →"}</button>
+        </div>}
+        {step==="confirm"&&<div style={{display:"flex",flexDirection:"column",gap:14}}>
+          <div style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:16,padding:18,boxShadow:T.sh}}>
+            <Row l="الموظف" v={emp?.name}/>
+            <Row l="النوع" v={act==="in"?"🟢 حضور":"🔴 انصراف"}/>
+            <Row l="الوقت" v={<span className="mono" style={{fontWeight:600}}>{nowStr()}</span>}/>
+            <Row l="الموقع" v={gps?.inZone===true?"✅ داخل":gps?.inZone===false?"⚠️ خارج":"—"}/>
+            <div style={{display:"flex",justifyContent:"space-between",paddingTop:10,fontSize:14}}>
+              <span style={{color:T.muted}}>الصورة</span><span style={{fontWeight:600}}>{selfie?"✅ ملتقطة":"—"}</span>
+            </div>
+          </div>
+          <button onClick={doRec} style={{padding:14,background:T.accent,color:"#fff",fontWeight:700,fontSize:15,borderRadius:12,boxShadow:"0 4px 14px rgba(99,102,241,.3)"}}>✔ تأكيد التسجيل</button>
+          <button onClick={()=>setStep("pin")} style={{background:"none",color:T.muted,fontSize:13,padding:8}}>← إلغاء</button>
+        </div>}
+      </div>
+    </div>
+  );
+  return(
+    <div style={{minHeight:"100vh",background:T.bg,display:"flex",flexDirection:"column",alignItems:"center",padding:"44px 20px",gap:26}}>
+      <Logo width={160}/>
+      <LiveClock/>
+      <div style={{textAlign:"center"}}><div style={{fontSize:15,fontWeight:600}}>ادخل الـ PIN بتاعك</div><div style={{fontSize:12,color:T.muted,marginTop:3}}>التسجيل من موبايلك الشخصي فقط</div></div>
+      {checking&&<div style={{fontSize:13,color:T.muted}}><span className="sp">🔍</span> جاري التحقق...</div>}
+      {err&&<Note color={T.danger} bg={T.dLight}>{err}</Note>}
+      <PinPad key={sk} onConfirm={onPin} doShake={!!err}/>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════
+   REGISTER DEVICE
+══════════════════════════════════════════════════ */
+function RegisterDevice({emps,devices,setDevices,onBack}){
+  const[step,setStep]=useState("pin");
+  const[emp,setEmp]=useState(null);const[fp,setFp]=useState(null);
+  const[err,setErr]=useState("");const[sk,setSk]=useState(0);
+  async function onPin(pin){
+    const e=emps.find(x=>x.pin===pin);
+    if(!e){setErr("❌ PIN غير صحيح");setSk(k=>k+1);setTimeout(()=>setErr(""),2000);return;}
+    if(devices[e.id]){setEmp({...e,already:true});setStep("already");return;}
+    const f=await getDeviceFP();setFp(f);setEmp(e);setStep("confirm");
+  }
+  function confirm(){setDevices(d=>({...d,[emp.id]:{fp,registeredAt:new Date().toISOString()}}));setStep("done");}
+  if(step==="already")return(
+    <CenteredPage><IcoBox icon="⚠️" bg={T.wLight}/><div style={{fontSize:18,fontWeight:700}}>الجهاز مسجّل مسبقاً</div>
+      {emp&&<><Av e={emp} sz={52}/><div style={{fontWeight:600}}>{emp.name}</div></>}
+      <Note color={T.warn} bg={T.wLight}>تواصل مع مديرك لإعادة التسجيل.</Note>
+      <button onClick={()=>setStep("pin")} style={{background:"none",color:T.muted,fontSize:13,padding:8}}>← رجوع</button>
+    </CenteredPage>
+  );
+  if(step==="done")return(
+    <CenteredPage><IcoBox icon="✅" bg={T.oLight} glow="rgba(16,185,129,.1)" sz={80}/>
+      <div style={{fontSize:20,fontWeight:700}}>تم تسجيل جهازك!</div>
+      {emp&&<><Av e={emp} sz={52}/><div style={{fontWeight:600}}>{emp.name}</div></>}
+      <button onClick={onBack} style={{padding:"12px 32px",background:T.accent,color:"#fff",fontWeight:700,fontSize:15,borderRadius:12,boxShadow:"0 4px 14px rgba(99,102,241,.3)"}}>ابدأ تسجيل الحضور ←</button>
+    </CenteredPage>
+  );
+  if(step==="confirm"&&emp)return(
+    <CenteredPage><div style={{fontSize:18,fontWeight:700}}>تأكيد تسجيل الجهاز</div>
+      <Av e={emp} sz={56}/><div style={{fontWeight:700,fontSize:16}}>{emp.name}</div>
+      <div style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:16,padding:18,width:"100%",maxWidth:340,boxShadow:T.sh}}>
+        <Row l="بصمة الجهاز" v={<span className="mono" style={{fontSize:10,color:T.accent}}>{fp?.slice(0,18)}...</span>}/>
+        <div style={{marginTop:14,background:T.wLight,border:`1px solid #FCD34D`,borderRadius:10,padding:"10px 14px",fontSize:12,color:T.warn}}>⚠️ بعد التسجيل مش هينفع تسجّل من جهاز تاني</div>
+      </div>
+      <button onClick={confirm} style={{padding:"12px 28px",background:T.accent,color:"#fff",fontWeight:700,fontSize:14,borderRadius:12,boxShadow:"0 4px 14px rgba(99,102,241,.3)"}}>✔ تسجيل هذا الجهاز</button>
+      <button onClick={()=>setStep("pin")} style={{background:"none",color:T.muted,fontSize:13,padding:8}}>← رجوع</button>
+    </CenteredPage>
+  );
+  return(
+    <CenteredPage><IcoBox icon="📱" bg={T.aLight}/>
+      <div style={{textAlign:"center"}}><div style={{fontSize:19,fontWeight:800}}>تسجيل الجهاز الشخصي</div><div style={{fontSize:13,color:T.muted,marginTop:4}}>ادخل PIN الخاص بك</div></div>
+      {err&&<Note color={T.danger} bg={T.dLight}>{err}</Note>}
+      <PinPad key={sk} onConfirm={onPin} doShake={!!err}/>
+    </CenteredPage>
+  );
+}
+
+/* ══════════════════════════════════════════════════
+   MANAGER LOGIN
+══════════════════════════════════════════════════ */
+function MgrLogin({managers,onLogin}){
+  const[err,setErr]=useState("");const[sk,setSk]=useState(0);
+  function onPin(pin){
+    const m=managers.find(x=>x.pin===pin);
+    if(!m){setErr("❌ PIN غير صحيح");setSk(k=>k+1);setTimeout(()=>setErr(""),2500);return;}
+    onLogin(m);
+  }
+  return(
+    <div style={{minHeight:"100vh",background:T.bg,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",gap:20,padding:32}}>
+      <Logo width={150}/>
+      <IcoBox icon="🔐" bg={T.aLight}/>
+      <div style={{textAlign:"center"}}><div style={{fontSize:22,fontWeight:800}}>دخول المديرين</div><div style={{fontSize:13,color:T.muted,marginTop:4}}>ادخل PIN الخاص بك</div></div>
+      {err&&<Note color={T.danger} bg={T.dLight}>{err}</Note>}
+      <PinPad key={sk} onConfirm={onPin} doShake={!!err}/>
+      <div style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:16,padding:18,width:"100%",maxWidth:360,boxShadow:T.sh}}>
+        <div style={{fontSize:12,color:T.muted,marginBottom:12,fontWeight:500}}>المديرون المصرّح لهم</div>
+        {managers.map(m=>(
+          <div key={m.id} style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+            <MgrAv m={m} sz={32}/>
+            <div style={{flex:1}}><div style={{fontSize:13,fontWeight:600}}>{m.name}</div><div style={{fontSize:11,color:T.muted}}>{m.title}</div></div>
+            <RoleBadge role={m.role}/>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════
+   DASHBOARD
+══════════════════════════════════════════════════ */
+function AttendDash({emps,recs,leaves,isSuper}){
+  const today=todayStr();const todayR=recs.filter(r=>r.date===today);
+  function st(id){
+    const rs=todayR.filter(x=>x.empId===id);
+    if(!rs.length)return leaves.find(l=>l.empId===id&&l.date===today&&l.status==="approved")?"leave":"absent";
+    return rs[rs.length-1].type==="in"?"in":"done";
+  }
+  const present=emps.filter(e=>["in","done"].includes(st(e.id))).length;
+  const absent=emps.filter(e=>st(e.id)==="absent").length;
+  const onLeave=emps.filter(e=>st(e.id)==="leave").length;
+  const late=emps.filter(e=>{const r=todayR.find(x=>x.empId===e.id&&x.type==="in");return r&&isLate(r.time);}).length;
+  const outZ=isSuper?todayR.filter(r=>r.type==="in"&&emps.some(e=>e.id===r.empId)&&r.inZone===false).length:0;
+  const stCfg={in:{l:"حاضر",c:T.ok,bg:T.oLight},done:{l:"غادر",c:T.mid,bg:T.hi},absent:{l:"غائب",c:T.danger,bg:T.dLight},leave:{l:"إجازة",c:T.warn,bg:T.wLight}};
+  const depts=[...new Set(emps.map(e=>e.dept))];
+  const cards=[{l:"حاضر",v:present,ic:"✅",c:T.ok,bg:T.oLight},{l:"غائب",v:absent,ic:"❌",c:T.danger,bg:T.dLight},{l:"إجازة",v:onLeave,ic:"🌴",c:T.warn,bg:T.wLight},{l:"متأخر",v:late,ic:"⏰",c:T.warn,bg:T.wLight}];
+  if(isSuper)cards.push({l:"خارج النطاق",v:outZ,ic:"📍",c:T.danger,bg:T.dLight});
+  return(
+    <div style={{padding:"20px 0",display:"flex",flexDirection:"column",gap:20}}>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(120px,1fr))",gap:12}}>
+        {cards.map(s=>(
+          <div key={s.l} style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:16,padding:"15px 17px",boxShadow:T.sh}}>
+            <div style={{display:"flex",justifyContent:"space-between"}}><span style={{fontSize:11,color:T.muted,fontWeight:500}}>{s.l}</span><div style={{width:26,height:26,borderRadius:8,background:s.bg,display:"flex",alignItems:"center",justifyContent:"center",fontSize:13}}>{s.ic}</div></div>
+            <div style={{fontSize:30,fontWeight:800,color:s.c,marginTop:4,letterSpacing:-1}}>{s.v}</div>
+          </div>
+        ))}
+      </div>
+      {/* ── تنبيه: موظفون لم يسجّلوا الانصراف بعد انتهاء وقت العمل ── */}
+      {(()=>{
+        const now=nowStr();
+        const[nh,nm]=now.split(":").map(Number);
+        const[wh,wm]=WORK_START.split(":").map(Number);
+        const endH=wh+WORK_HOURS;
+        const afterEnd=(nh*60+nm)>(endH*60+wm);
+        if(!afterEnd) return null;
+        const forgot=emps.filter(e=>{
+          const rs=todayR.filter(r=>r.empId===e.id);
+          if(!rs.length) return false;
+          const last=rs[rs.length-1];
+          return last.type==="in"; // آخر تسجيل حضور ولم يسجّل انصراف
+        });
+        if(!forgot.length) return null;
+        return(
+          <div style={{background:"#FEF2F2",border:"1.5px solid #FCA5A5",borderRadius:16,padding:"14px 18px"}}>
+            <div style={{fontWeight:700,color:T.danger,marginBottom:10,display:"flex",alignItems:"center",gap:8}}>
+              <span>⚠️</span>
+              <span>لم يسجّلوا الانصراف بعد انتهاء وقت العمل ({forgot.length} موظف)</span>
+            </div>
+            <div style={{display:"flex",flexWrap:"wrap",gap:8}}>
+              {forgot.map(e=>{
+                const inR=todayR.find(r=>r.empId===e.id&&r.type==="in");
+                return(
+                  <div key={e.id} style={{display:"flex",alignItems:"center",gap:8,background:T.surface,border:`1px solid #FCA5A5`,borderRadius:12,padding:"8px 12px"}}>
+                    <Av e={e} sz={30}/>
+                    <div>
+                      <div style={{fontWeight:600,fontSize:13}}>{e.name}</div>
+                      <div style={{fontSize:11,color:T.muted}}>دخل: <span className="mono">{inR?.time}</span></div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+      {depts.map(dept=>(
+        <div key={dept} style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:18,overflow:"hidden",boxShadow:T.sh}}>
+          <div style={{padding:"11px 18px",borderBottom:`1px solid ${T.border}`,display:"flex",justifyContent:"space-between",alignItems:"center",background:T.hi}}>
+            <span style={{fontWeight:700,fontSize:14}}>🏢 {dept}</span>
+            <span style={{fontSize:12,color:T.muted}}>{emps.filter(e=>e.dept===dept&&["in","done"].includes(st(e.id))).length}/{emps.filter(e=>e.dept===dept).length} حاضر</span>
+          </div>
+          <div style={{overflowX:"auto"}}>
+            <table style={{width:"100%",borderCollapse:"collapse"}}>
+              <thead><tr style={{background:T.hi}}>{["الموظف","حضور","انصراف","موقع","سيلفي","الحالة"].map(h=><th key={h} style={{padding:"9px 12px",textAlign:"right",fontSize:11,color:T.muted,fontWeight:600,whiteSpace:"nowrap"}}>{h}</th>)}</tr></thead>
+              <tbody>
+                {emps.filter(e=>e.dept===dept).map((e,i)=>{
+                  const s=st(e.id);
+                  const inR=todayR.find(r=>r.empId===e.id&&r.type==="in");
+                  const outR=[...todayR].reverse().find(r=>r.empId===e.id&&r.type==="out");
+                  return(
+                    <tr key={e.id} style={{borderTop:`1px solid ${T.border}`,background:i%2?"transparent":T.bg}}>
+                      <td style={{padding:"10px 12px"}}><div style={{display:"flex",alignItems:"center",gap:8}}><Av e={e} sz={30}/><div><div style={{fontWeight:600,fontSize:13,display:"flex",alignItems:"center",gap:6}}>{e.name}{e._isMgr&&<span style={{fontSize:10,background:T.gLight,color:T.gold,padding:"1px 6px",borderRadius:10,fontWeight:700}}>مدير</span>}</div><div style={{fontSize:11,color:T.muted}}>{e._isMgr?"إدارة":e.id}</div></div></div></td>
+                      <td style={{padding:"10px 12px"}}><span className="mono" style={{fontSize:12,fontWeight:600,color:inR&&isLate(inR.time)?T.warn:inR?T.ok:T.dim}}>{fmtT(inR?.time)}</span></td>
+                      <td style={{padding:"10px 12px"}}><span className="mono" style={{fontSize:12,color:T.mid}}>{fmtT(outR?.time)}</span></td>
+                      <td style={{padding:"10px 12px",fontSize:13}}>{inR?.inZone===true?"✅":inR?.inZone===false?"⚠️":"—"}</td>
+                      <td style={{padding:"10px 12px"}}>{inR?.selfieUrl?<img src={inR.selfieUrl} style={{width:26,height:26,borderRadius:"50%",objectFit:"cover",transform:"scaleX(-1)",border:`1px solid ${T.border}`}}/>:<span style={{color:T.dim}}>—</span>}</td>
+                      <td style={{padding:"10px 12px"}}><Badge label={stCfg[s]?.l||"غائب"} color={stCfg[s]?.c||T.danger} bg={stCfg[s]?.bg||T.dLight}/></td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════
+   REPORTS
+══════════════════════════════════════════════════ */
+function Reports({emps,recs}){
+  const[mode,setMode]=useState("month"); // "month" | "day"
+  const[month,setMonth]=useState(todayStr().slice(0,7));
+  const[day,setDay]=useState(todayStr());
+
+  const filtered=mode==="month"
+    ?recs.filter(r=>r.date.startsWith(month))
+    :recs.filter(r=>r.date===day);
+
+  const label=mode==="month"?`شهر ${month}`:`يوم ${day}`;
+
+  const stats=emps.map(e=>{
+    const er=filtered.filter(r=>r.empId===e.id);
+    const days=[...new Set(er.map(r=>r.date))];
+    let tH=0,late=0,ot=0,outZ=0,exits=0;
+    days.forEach(d=>{
+      const dayRecs=er.filter(r=>r.date===d);
+      const iR=dayRecs.find(r=>r.type==="in");
+      const oR=[...dayRecs].reverse().find(r=>r.type==="out");
+      if(iR&&oR){const h=diffH(iR.time,oR.time);tH+=h;if(h>WORK_HOURS)ot+=h-WORK_HOURS;}
+      if(iR&&isLate(iR.time))late++;
+      if(iR&&iR.inZone===false)outZ++;
+      // عدد مرات الخروج (كل "out" record)
+      exits+=dayRecs.filter(r=>r.type==="out").length;
+    });
+    return{e,days:days.length,tH:tH.toFixed(1),late,ot:ot.toFixed(1),outZ,exits};
+  });
+
+  function csv(){
+    const rows=[["الموظف","القسم","أيام","ساعات","تأخيرات","أوفرتايم","خروجات","خارج النطاق"]];
+    stats.forEach(s=>rows.push([s.e.name,s.e.dept,s.days,s.tH,s.late,s.ot,s.exits,s.outZ]));
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(new Blob(["\uFEFF"+rows.map(r=>r.join(",")).join("\n")],{type:"text/csv;charset=utf-8;"}));
+    a.download=`تقرير-${mode==="month"?month:day}.csv`;a.click();
+  }
+
+  const cols=["الموظف","القسم",mode==="month"?"أيام الحضور":"الساعات","إجمالي الساعات","تأخيرات","أوفرتايم","خروجات","خارج النطاق"];
+
+  return(
+    <div style={{padding:"20px 0",display:"flex",flexDirection:"column",gap:18}}>
+      {/* Controls */}
+      <div style={{display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>
+        {/* Toggle mode */}
+        <div style={{display:"flex",background:T.hi,borderRadius:12,padding:4,gap:2}}>
+          {[{v:"month",l:"📅 شهري"},{v:"day",l:"📆 يومي"}].map(o=>(
+            <button key={o.v} onClick={()=>setMode(o.v)}
+              style={{padding:"7px 16px",fontSize:13,fontWeight:mode===o.v?700:400,
+                background:mode===o.v?T.surface:"transparent",
+                color:mode===o.v?T.accent:T.muted,
+                border:`1.5px solid ${mode===o.v?T.accent:"transparent"}`,
+                borderRadius:10}}>
+              {o.l}
+            </button>
+          ))}
+        </div>
+        {/* Date picker */}
+        {mode==="month"
+          ?<input type="month" value={month} onChange={e=>setMonth(e.target.value)} style={{width:"auto"}}/>
+          :<input type="date" value={day} onChange={e=>setDay(e.target.value)} style={{width:"auto"}}/>
+        }
+        <button onClick={csv} style={{padding:"10px 20px",background:T.aLight,color:T.accent,border:`1.5px solid ${T.accent}`,fontSize:14,fontWeight:600,borderRadius:12}}>⬇️ تصدير CSV</button>
+      </div>
+
+      {/* Table */}
+      <div style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:18,overflow:"hidden",boxShadow:T.sh}}>
+        <div style={{padding:"12px 18px",borderBottom:`1px solid ${T.border}`,fontWeight:700,fontSize:14}}>
+          ملخص {label}
+        </div>
+        <div style={{overflowX:"auto"}}>
+          <table style={{width:"100%",borderCollapse:"collapse"}}>
+            <thead>
+              <tr style={{background:T.hi}}>
+                {cols.map(h=><th key={h} style={{padding:"9px 12px",textAlign:"right",fontSize:11,color:T.muted,fontWeight:600,whiteSpace:"nowrap"}}>{h}</th>)}
+              </tr>
+            </thead>
+            <tbody>{stats.map((s,i)=>(
+              <tr key={s.e.id} style={{borderTop:`1px solid ${T.border}`,background:i%2?"transparent":T.bg}}>
+                <td style={{padding:"10px 12px"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <Av e={s.e} sz={28}/>
+                    <div style={{display:"flex",alignItems:"center",gap:5}}>
+                      <span style={{fontWeight:600,fontSize:13}}>{s.e.name}</span>
+                      {s.e._isMgr&&<span style={{fontSize:10,background:T.gLight,color:T.gold,padding:"1px 6px",borderRadius:10,fontWeight:700}}>مدير</span>}
+                    </div>
+                  </div>
+                </td>
+                <td style={{padding:"10px 12px",color:s.e._isMgr?T.gold:T.mid,fontSize:12,fontWeight:s.e._isMgr?600:400}}>{s.e.dept}</td>
+                {mode==="month"
+                  ?<td style={{padding:"10px 12px",fontWeight:700,color:s.days>15?T.ok:s.days>5?T.warn:T.danger}}>{s.days} يوم</td>
+                  :<td style={{padding:"10px 12px"}}><span className="mono" style={{fontSize:12,fontWeight:600}}>{s.tH}س</span></td>
+                }
+                <td style={{padding:"10px 12px"}}><span className="mono" style={{fontSize:12,fontWeight:600}}>{s.tH}س</span></td>
+                <td style={{padding:"10px 12px"}}>{s.late>0?<Badge label={s.late+" مرة"} color={T.danger} bg={T.dLight}/>:<span style={{color:T.dim}}>—</span>}</td>
+                <td style={{padding:"10px 12px"}}>{Number(s.ot)>0?<span style={{color:T.ok,fontWeight:700}}>{s.ot}س</span>:<span style={{color:T.dim}}>—</span>}</td>
+                <td style={{padding:"10px 12px"}}>
+                  {s.exits>0
+                    ?<Badge label={s.exits+" مرة"} color={s.exits>3?T.danger:T.warn} bg={s.exits>3?T.dLight:T.wLight}/>
+                    :<span style={{color:T.dim}}>—</span>}
+                </td>
+                <td style={{padding:"10px 12px"}}>{s.outZ>0?<Badge label={s.outZ+"×"} color={T.danger} bg={T.dLight}/>:<span style={{color:T.dim}}>—</span>}</td>
+              </tr>
+            ))}</tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════
+   LEAVES
+══════════════════════════════════════════════════ */
+function Leaves({emps,leaves,setLeaves,managers=[]}){
+  const[form,setForm]=useState({empId:"",date:todayStr(),type:"سنوية",reason:""});
+  function submit(){
+    if(!form.empId||!form.date)return;
+    const e=[...emps,...(managers||[])].find(x=>x.id===form.empId);
+    setLeaves(l=>[...l,{...form,id:Date.now(),empName:e?.name||"",status:"pending",submittedAt:todayStr()}]);
+    setForm(f=>({...f,empId:"",reason:""}));
+  }
+  function upd(id,status){setLeaves(l=>l.map(r=>r.id===id?{...r,status}:r));}
+  const allPeople=[...emps,...(managers||[])];
+  const mine=leaves.filter(l=>allPeople.some(p=>p.id===l.empId));
+  const sCfg={pending:{l:"قيد المراجعة",c:T.warn,bg:T.wLight},approved:{l:"موافق عليها",c:T.ok,bg:T.oLight},rejected:{l:"مرفوضة",c:T.danger,bg:T.dLight}};
+  return(
+    <div style={{padding:"20px 0",display:"flex",flexDirection:"column",gap:18}}>
+      <Card title="طلب إجازة جديد">
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))",gap:12}}>
+          <select value={form.empId} onChange={e=>setForm(f=>({...f,empId:e.target.value}))}>
+            <option value="">اختر الموظف...</option>
+            <optgroup label="── الموظفون ──">
+              {emps.map(e=><option key={e.id} value={e.id}>{e.name} ({e.dept})</option>)}
+            </optgroup>
+            {managers&&managers.length>0&&<optgroup label="── المديرون ──">
+              {managers.map(m=><option key={m.id} value={m.id}>{m.name} — {m.title}</option>)}
+            </optgroup>}
+          </select>
+          <input type="date" value={form.date} onChange={e=>setForm(f=>({...f,date:e.target.value}))}/>
+          <select value={form.type} onChange={e=>setForm(f=>({...f,type:e.target.value}))}>
+            {["سنوية","مرضية","طارئة","بدون راتب"].map(t=><option key={t}>{t}</option>)}
+          </select>
+          <input placeholder="السبب..." value={form.reason} onChange={e=>setForm(f=>({...f,reason:e.target.value}))}/>
+        </div>
+        <div style={{marginTop:14}}><button onClick={submit} style={{padding:"10px 24px",background:T.accent,color:"#fff",fontWeight:700,fontSize:14,borderRadius:12,boxShadow:"0 4px 14px rgba(99,102,241,.3)"}}>+ إرسال</button></div>
+      </Card>
+      {mine.filter(l=>l.status==="pending").map(l=>{const e=allPeople.find(x=>x.id===l.empId);return(
+        <div key={l.id} style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:14,padding:"13px 17px",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",boxShadow:T.sh}}>
+          {e&&<Av e={e}/>}
+          <div style={{flex:1,minWidth:140}}><div style={{fontWeight:600}}>{e?.name}</div><div style={{fontSize:12,color:T.muted}}>{l.date} · {l.type}{l.reason&&` · ${l.reason}`}</div></div>
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={()=>upd(l.id,"approved")} style={{padding:"7px 14px",background:T.oLight,color:T.ok,border:`1.5px solid ${T.ok}`,borderRadius:10,fontSize:13,fontWeight:600}}>موافقة</button>
+            <button onClick={()=>upd(l.id,"rejected")} style={{padding:"7px 14px",background:T.dLight,color:T.danger,border:`1.5px solid ${T.danger}`,borderRadius:10,fontSize:13,fontWeight:600}}>رفض</button>
+          </div>
+        </div>
+      );})}
+      {mine.filter(l=>l.status!=="pending").slice(-8).reverse().map(l=>{const e=allPeople.find(x=>x.id===l.empId);const cfg=sCfg[l.status]||sCfg.pending;return(
+        <div key={l.id} style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:12,padding:"10px 15px",display:"flex",alignItems:"center",gap:10}}>
+          {e&&<Av e={e} sz={32}/>}
+          <div style={{flex:1}}><div style={{fontWeight:600,fontSize:13}}>{e?.name}</div><div style={{fontSize:11,color:T.muted}}>{l.date} · {l.type}</div></div>
+          <Badge label={cfg.l} color={cfg.c} bg={cfg.bg}/>
+        </div>
+      );})}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════
+   EMPLOYEES MANAGEMENT  ✅ FIXED — state at top level
+══════════════════════════════════════════════════ */
+function EmpsMgmt({emps,setEmps,managers}){
+  const[adding,setAdding]         =useState(false);
+  const[form,setForm]             =useState({name:"",dept:"",pin:"",color:"#6366F1"});
+  const[newDeptInput,setNDI]      =useState("");
+  const[movingEmp,setMovingEmp]   =useState(null);   // {id, dept}
+  const[pendingDel,setPendingDel] =useState(null);   // empId to confirm delete ✅
+
+  const allDepts=[...new Set(emps.map(e=>e.dept))].filter(Boolean);
+  const deptGroups=[...new Set(emps.map(e=>e.dept))].filter(Boolean);
+  function getMgr(dept){return managers.find(m=>m.role==="dept"&&m.depts.includes(dept));}
+
+  function addEmp(){
+    if(!form.name.trim()||!form.pin.trim()||!form.dept.trim()){alert("الاسم والـ PIN والقسم مطلوبين");return;}
+    if(form.pin.length<4){alert("الـ PIN لازم 4 أرقام على الأقل");return;}
+    if(emps.find(e=>e.pin===form.pin)){alert("الـ PIN ده موجود بالفعل");return;}
+    const id="E"+String(Date.now()).slice(-6);
+    setEmps(prev=>[...prev,{id,name:form.name.trim(),dept:form.dept.trim(),pin:form.pin.trim(),color:form.color}]);
+    setForm({name:"",dept:"",pin:"",color:COLORS[Math.floor(Math.random()*COLORS.length)]});
+    setNDI("");setAdding(false);
+  }
+
+  // ✅ Delete with 2-click confirm — state is at component top level
+  function handleDelete(id){
+    if(pendingDel===id){
+      setEmps(prev=>prev.filter(e=>e.id!==id));
+      setPendingDel(null);
+    } else {
+      setPendingDel(id);
+      setTimeout(()=>setPendingDel(p=>p===id?null:p),3000);
+    }
+  }
+
+  function saveMove(empId,newDept){
+    if(!newDept.trim())return;
+    setEmps(prev=>prev.map(e=>e.id===empId?{...e,dept:newDept.trim()}:e));
+    setMovingEmp(null);
+  }
+
+  return(
+    <div style={{padding:"20px 0",display:"flex",flexDirection:"column",gap:16}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div><div style={{fontWeight:700,fontSize:15}}>إدارة الموظفين</div><div style={{fontSize:12,color:T.muted,marginTop:2}}>{emps.length} موظف في {deptGroups.length} قسم</div></div>
+        <button onClick={()=>{setAdding(a=>!a);setForm({name:"",dept:"",pin:"",color:"#6366F1"});}}
+          style={{padding:"10px 20px",background:adding?T.hi:T.accent,color:adding?T.txt:"#fff",fontWeight:700,fontSize:14,borderRadius:12,boxShadow:adding?"none":"0 4px 14px rgba(99,102,241,.3)"}}>
+          {adding?"✕ إلغاء":"+ إضافة موظف"}
+        </button>
+      </div>
+
+      {adding&&(
+        <div className="fade" style={{background:T.surface,border:`1.5px solid ${T.accent}`,borderRadius:18,padding:22,boxShadow:T.shM}}>
+          <div style={{fontWeight:600,color:T.accent,marginBottom:14}}>بيانات الموظف الجديد</div>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))",gap:12,marginBottom:14}}>
+            <input placeholder="الاسم الكامل *" value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))}/>
+            <input placeholder="PIN (4 أرقام) *" maxLength={6} value={form.pin} onChange={e=>setForm(f=>({...f,pin:e.target.value.replace(/\D/g,"")}))}/>
+          </div>
+          <div style={{marginBottom:14}}>
+            <div style={{fontSize:12,color:T.muted,marginBottom:8,fontWeight:600}}>القسم *</div>
+            {allDepts.length>0&&(
+              <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:10}}>
+                {allDepts.map(d=>(
+                  <button key={d} onClick={()=>setForm(f=>({...f,dept:d}))}
+                    style={{padding:"6px 14px",background:form.dept===d?T.accent:T.hi,
+                      color:form.dept===d?"#fff":T.mid,
+                      border:`1.5px solid ${form.dept===d?T.accent:T.border}`,borderRadius:20,fontSize:13}}>
+                    {d}
+                  </button>
+                ))}
+              </div>
+            )}
+            <div style={{display:"flex",gap:8}}>
+              <input placeholder="أو اكتب قسم جديد..." value={newDeptInput} onChange={e=>setNDI(e.target.value)} style={{flex:1}}/>
+              {newDeptInput.trim()&&<button onClick={()=>setForm(f=>({...f,dept:newDeptInput.trim()}))} style={{padding:"0 16px",background:T.aLight,color:T.accent,border:`1.5px solid ${T.accent}`,fontSize:13,fontWeight:600,borderRadius:12,flexShrink:0,whiteSpace:"nowrap"}}>اختر</button>}
+            </div>
+            {form.dept&&<div style={{marginTop:8,fontSize:12,color:T.ok,fontWeight:500}}>✓ <b>{form.dept}</b>{getMgr(form.dept)&&<span style={{color:T.muted}}> ← {getMgr(form.dept).name}</span>}</div>}
+          </div>
+          <div style={{marginBottom:16}}>
+            <div style={{fontSize:12,color:T.muted,marginBottom:8}}>اللون</div>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+              {COLORS.map(c=><div key={c} onClick={()=>setForm(f=>({...f,color:c}))} style={{width:26,height:26,borderRadius:"50%",background:c,cursor:"pointer",border:`3px solid ${form.color===c?"#0F172A":"transparent"}`,transform:form.color===c?"scale(1.2)":"scale(1)",transition:"transform .15s"}}/>)}
+            </div>
+          </div>
+          <button onClick={addEmp} style={{padding:"11px 28px",background:T.accent,color:"#fff",fontWeight:700,fontSize:14,borderRadius:12,boxShadow:"0 4px 14px rgba(99,102,241,.3)"}}>✓ حفظ الموظف</button>
+        </div>
+      )}
+
+      {deptGroups.map(dept=>{
+        const mgr=getMgr(dept);const deptEmps=emps.filter(e=>e.dept===dept);
+        return(
+          <div key={dept} style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:18,overflow:"hidden",boxShadow:T.sh}}>
+            <div style={{padding:"11px 18px",borderBottom:`1px solid ${T.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",background:T.hi}}>
+              <span style={{fontWeight:700,fontSize:14}}>🏢 {dept} <span style={{color:T.muted,fontWeight:400,fontSize:12}}>({deptEmps.length})</span></span>
+              {mgr?<div style={{display:"flex",alignItems:"center",gap:6}}><MgrAv m={mgr} sz={22}/><span style={{fontSize:12,color:T.mid}}>{mgr.name}</span></div>:<span style={{fontSize:11,color:T.dim}}>بدون مدير</span>}
+            </div>
+            <div style={{display:"flex",flexDirection:"column"}}>
+              {deptEmps.map((e,i)=>(
+                <div key={e.id} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 18px",
+                  borderTop:i>0?`1px solid ${T.border}`:"none",background:i%2===0?"transparent":T.bg}}>
+                  <Av e={e} sz={38}/>
+                  <div style={{flex:1}}>
+                    <div style={{fontWeight:600,fontSize:14}}>{e.name}</div>
+                    <div style={{fontSize:11,color:T.muted,marginTop:2}}>{e.id} · PIN: ••••</div>
+                  </div>
+                  {movingEmp?.id===e.id?(
+                    <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
+                      <select value={movingEmp.dept} onChange={ev=>setMovingEmp(x=>({...x,dept:ev.target.value}))} style={{width:140,fontSize:13,padding:"6px 10px"}}>
+                        {allDepts.map(d=><option key={d} value={d}>{d}</option>)}
+                      </select>
+                      <input placeholder="قسم جديد" style={{width:120,fontSize:13,padding:"6px 10px"}} onChange={ev=>setMovingEmp(x=>({...x,dept:ev.target.value}))}/>
+                      <button onClick={()=>saveMove(e.id,movingEmp.dept)} style={{padding:"6px 14px",background:T.accent,color:"#fff",borderRadius:10,fontSize:13,fontWeight:600}}>حفظ</button>
+                      <button onClick={()=>setMovingEmp(null)} style={{padding:"6px 10px",background:T.hi,color:T.mid,borderRadius:10,fontSize:13}}>✕</button>
+                    </div>
+                  ):(
+                    <div style={{display:"flex",gap:8}}>
+                      <button onClick={()=>setMovingEmp({id:e.id,dept:e.dept})}
+                        style={{padding:"6px 14px",background:T.aLight,color:T.accent,border:`1px solid ${T.accent}`,borderRadius:10,fontSize:12,fontWeight:600}}>
+                        نقل ←
+                      </button>
+                      <button onClick={()=>handleDelete(e.id)}
+                        style={{padding:"6px 14px",
+                          background:pendingDel===e.id?"#EF4444":T.dLight,
+                          color:pendingDel===e.id?"#fff":T.danger,
+                          border:`1.5px solid ${pendingDel===e.id?"#EF4444":"#FCA5A5"}`,
+                          borderRadius:10,fontSize:12,fontWeight:600}}>
+                        {pendingDel===e.id?"تأكيد؟":"حذف"}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+      {emps.length===0&&<div style={{textAlign:"center",padding:"40px 20px",color:T.muted}}>لا يوجد موظفون — اضغط "+ إضافة موظف"</div>}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════
+   MANAGERS MANAGEMENT  ✅ FIXED — state at top level
+══════════════════════════════════════════════════ */
+function MgrsMgmt({managers,setManagers,allEmps}){
+  const[adding,setAdding]           =useState(false);
+  const[form,setForm]               =useState({name:"",title:"",pin:"",role:"dept",depts:[],color:"#6366F1"});
+  const[editDepts,setEditDepts]     =useState(null);  // {id, depts}
+  const[pendingDel,setPendingDel]   =useState(null);  // mgr id ✅
+
+  const allDepts=[...new Set(allEmps.map(e=>e.dept))].filter(Boolean);
+  function toggleFD(d){setForm(f=>({...f,depts:f.depts.includes(d)?f.depts.filter(x=>x!==d):[...f.depts,d]}));}
+
+  function addMgr(){
+    if(!form.name.trim()||!form.pin.trim()){alert("الاسم والـ PIN مطلوبين");return;}
+    if(form.pin.length<4){alert("الـ PIN لازم 4 أرقام");return;}
+    if(managers.find(m=>m.pin===form.pin)){alert("الـ PIN ده موجود");return;}
+    if(form.role==="dept"&&form.depts.length===0){alert("اختر قسم واحد على الأقل");return;}
+    const id="M"+String(Date.now()).slice(-5);
+    setManagers(prev=>[...prev,{id,...form}]);
+    setForm({name:"",title:"",pin:"",role:"dept",depts:[],color:"#6366F1"});setAdding(false);
+  }
+
+  // ✅ Delete with 2-click confirm at component level
+  function handleDelete(id){
+    const supers=managers.filter(m=>m.role==="super");
+    const target=managers.find(m=>m.id===id);
+    if(target?.role==="super"&&supers.length<=1){alert("لازم يبقى Super Admin واحد على الأقل");return;}
+    if(pendingDel===id){
+      setManagers(prev=>prev.filter(m=>m.id!==id));
+      setPendingDel(null);
+    } else {
+      setPendingDel(id);
+      setTimeout(()=>setPendingDel(p=>p===id?null:p),3000);
+    }
+  }
+
+  function changePin(id,pin){
+    if(pin.length<4)return;
+    if(managers.find(m=>m.id!==id&&m.pin===pin)){alert("الـ PIN ده موجود");return;}
+    setManagers(prev=>prev.map(m=>m.id===id?{...m,pin}:m));
+  }
+  function changeRole(id,role){setManagers(prev=>prev.map(m=>m.id===id?{...m,role,depts:role==="super"?[]:m.depts}:m));}
+  function saveEditDepts(){
+    if(!editDepts)return;
+    const m=managers.find(x=>x.id===editDepts.id);
+    if(m?.role==="dept"&&editDepts.depts.length===0){alert("اختر قسم واحد على الأقل");return;}
+    setManagers(prev=>prev.map(m=>m.id===editDepts.id?{...m,depts:editDepts.depts}:m));
+    setEditDepts(null);
+  }
+
+  return(
+    <div style={{padding:"20px 0",display:"flex",flexDirection:"column",gap:16}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div><div style={{fontWeight:700,fontSize:15}}>إدارة المديرين</div><div style={{fontSize:12,color:T.muted,marginTop:2}}>{managers.length} مدير</div></div>
+        <button onClick={()=>{setAdding(a=>!a);setForm({name:"",title:"",pin:"",role:"dept",depts:[],color:"#6366F1"});}}
+          style={{padding:"10px 20px",background:adding?T.hi:T.accent,color:adding?T.txt:"#fff",fontWeight:700,fontSize:14,borderRadius:12,boxShadow:adding?"none":"0 4px 14px rgba(99,102,241,.3)"}}>
+          {adding?"✕ إلغاء":"+ إضافة مدير"}
+        </button>
+      </div>
+
+      {adding&&(
+        <div className="fade" style={{background:T.surface,border:`1.5px solid ${T.accent}`,borderRadius:18,padding:22,boxShadow:T.shM}}>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(170px,1fr))",gap:12,marginBottom:14}}>
+            <input placeholder="الاسم *" value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))}/>
+            <input placeholder="المسمى الوظيفي" value={form.title} onChange={e=>setForm(f=>({...f,title:e.target.value}))}/>
+            <input placeholder="PIN (4+ أرقام) *" maxLength={6} value={form.pin} onChange={e=>setForm(f=>({...f,pin:e.target.value.replace(/\D/g,"")}))}/>
+            <select value={form.role} onChange={e=>setForm(f=>({...f,role:e.target.value,depts:e.target.value==="super"?[]:f.depts}))}>
+              <option value="super">⭐ صلاحيات كاملة</option>
+              <option value="dept">🏢 مدير قسم</option>
+            </select>
+          </div>
+          {form.role==="dept"&&(
+            <div style={{marginBottom:14}}>
+              <div style={{fontSize:12,color:T.muted,marginBottom:8,fontWeight:600}}>الأقسام المسموح بها *</div>
+              {/* أقسام موجودة */}
+              {allDepts.length>0&&(
+                <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:10}}>
+                  {allDepts.map(d=>(
+                    <button key={d} onClick={()=>toggleFD(d)}
+                      style={{padding:"6px 14px",background:form.depts.includes(d)?T.accent:T.hi,
+                        color:form.depts.includes(d)?"#fff":T.mid,
+                        border:`1.5px solid ${form.depts.includes(d)?T.accent:T.border}`,borderRadius:20,fontSize:13}}>
+                      {d}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {/* إضافة قسم جديد */}
+              <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                <input
+                  placeholder="اكتب اسم قسم جديد..."
+                  value={form._newDept||""}
+                  onChange={e=>setForm(f=>({...f,_newDept:e.target.value}))}
+                  style={{flex:1,fontSize:13}}
+                  onKeyDown={e=>{
+                    if(e.key==="Enter"&&form._newDept?.trim()){
+                      const d=form._newDept.trim();
+                      if(!form.depts.includes(d)) setForm(f=>({...f,depts:[...f.depts,d],_newDept:""}));
+                      else setForm(f=>({...f,_newDept:""}));
+                    }
+                  }}
+                />
+                <button
+                  onClick={()=>{
+                    const d=(form._newDept||"").trim();
+                    if(!d) return;
+                    if(!form.depts.includes(d)) setForm(f=>({...f,depts:[...f.depts,d],_newDept:""}));
+                    else setForm(f=>({...f,_newDept:""}));
+                  }}
+                  style={{padding:"10px 18px",background:T.accent,color:"#fff",fontWeight:600,
+                    fontSize:13,borderRadius:12,flexShrink:0,
+                    boxShadow:"0 2px 8px rgba(99,102,241,.3)"}}>
+                  + إضافة
+                </button>
+              </div>
+              {/* الأقسام المختارة */}
+              {form.depts.length>0&&(
+                <div style={{marginTop:10,display:"flex",flexWrap:"wrap",gap:6}}>
+                  {form.depts.map(d=>(
+                    <span key={d} style={{display:"inline-flex",alignItems:"center",gap:6,
+                      padding:"4px 12px",background:T.aLight,color:T.accent,
+                      border:`1px solid ${T.accent}`,borderRadius:20,fontSize:12,fontWeight:600}}>
+                      {d}
+                      <button onClick={()=>setForm(f=>({...f,depts:f.depts.filter(x=>x!==d)}))}
+                        style={{background:"none",color:T.accent,fontSize:14,padding:"0 2px",lineHeight:1}}>×</button>
+                    </span>
+                  ))}
+                </div>
+              )}
+              {form.depts.length===0&&<div style={{fontSize:11,color:T.danger,marginTop:6}}>⚠️ اختر أو أضف قسم واحد على الأقل</div>}
+            </div>
+          )}
+          <div style={{marginBottom:14}}>
+            <div style={{fontSize:12,color:T.muted,marginBottom:8}}>اللون</div>
+            <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>{COLORS.map(c=><div key={c} onClick={()=>setForm(f=>({...f,color:c}))} style={{width:26,height:26,borderRadius:"50%",background:c,cursor:"pointer",border:`3px solid ${form.color===c?"#0F172A":"transparent"}`,transform:form.color===c?"scale(1.2)":"scale(1)",transition:"transform .15s"}}/>)}</div>
+          </div>
+          <button onClick={addMgr} style={{padding:"11px 28px",background:T.accent,color:"#fff",fontWeight:700,fontSize:14,borderRadius:12,boxShadow:"0 4px 14px rgba(99,102,241,.3)"}}>✓ حفظ المدير</button>
+        </div>
+      )}
+
+      {managers.map(m=>{
+        const deptEmps=m.role==="super"?allEmps:allEmps.filter(e=>m.depts.includes(e.dept));
+        const isEditing=editDepts?.id===m.id;
+        return(
+          <div key={m.id} style={{background:T.surface,border:`1.5px solid ${m.role==="super"?"#FCD34D":T.border}`,borderRadius:16,padding:"16px 20px",boxShadow:T.sh}}>
+            <div style={{display:"flex",alignItems:"flex-start",gap:14,flexWrap:"wrap"}}>
+              <MgrAv m={m} sz={46}/>
+              <div style={{flex:1,minWidth:180}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap",marginBottom:4}}>
+                  <div style={{fontWeight:700,fontSize:15}}>{m.name}</div>
+                  <RoleBadge role={m.role}/>
+                </div>
+                <div style={{fontSize:12,color:T.muted}}>{m.title}</div>
+                <div style={{fontSize:11,color:T.muted,marginTop:4}}>{m.role==="super"?`كل الموظفين (${allEmps.length})`:`${deptEmps.length} موظف`}</div>
+                {m.role==="dept"&&!isEditing&&(
+                  <div style={{marginTop:8,display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+                    {m.depts.map(d=><Badge key={d} label={d} color={T.accent} bg={T.aLight}/>)}
+                    <button onClick={()=>setEditDepts({id:m.id,depts:[...m.depts]})} style={{fontSize:11,padding:"3px 10px",background:T.hi,color:T.mid,border:`1px solid ${T.border}`,borderRadius:20}}>✏️ تعديل</button>
+                  </div>
+                )}
+                {m.role==="dept"&&isEditing&&(
+                  <div style={{marginTop:10}}>
+                    <div style={{fontSize:12,color:T.muted,marginBottom:6,fontWeight:600}}>اختر الأقسام:</div>
+                    {/* الأقسام الموجودة + المضافة */}
+                    <div style={{display:"flex",flexWrap:"wrap",gap:6,marginBottom:10}}>
+                      {[...new Set([...allDepts,...(editDepts.depts||[])])].map(d=>(
+                        <button key={d} onClick={()=>setEditDepts(x=>({...x,depts:x.depts.includes(d)?x.depts.filter(y=>y!==d):[...x.depts,d]}))}
+                          style={{padding:"5px 12px",
+                            background:editDepts.depts.includes(d)?T.accent:T.hi,
+                            color:editDepts.depts.includes(d)?"#fff":T.mid,
+                            border:`1.5px solid ${editDepts.depts.includes(d)?T.accent:T.border}`,
+                            borderRadius:20,fontSize:12}}>
+                          {d}
+                        </button>
+                      ))}
+                    </div>
+                    {/* إضافة قسم جديد */}
+                    <div style={{display:"flex",gap:8,marginBottom:10}}>
+                      <input placeholder="اكتب قسم جديد..." value={editDepts._new||""}
+                        onChange={ev=>setEditDepts(x=>({...x,_new:ev.target.value}))}
+                        style={{flex:1,fontSize:12,padding:"7px 10px"}}
+                        onKeyDown={ev=>{if(ev.key==="Enter"&&editDepts._new?.trim()){const d=editDepts._new.trim();setEditDepts(x=>({...x,depts:[...new Set([...x.depts,d])],_new:""}));}}}
+                      />
+                      <button onClick={()=>{const d=(editDepts._new||"").trim();if(d)setEditDepts(x=>({...x,depts:[...new Set([...x.depts,d])],_new:""}));}}
+                        style={{padding:"7px 14px",background:T.aLight,color:T.accent,border:`1px solid ${T.accent}`,borderRadius:10,fontSize:12,fontWeight:600,flexShrink:0}}>
+                        + إضافة
+                      </button>
+                    </div>
+                    <div style={{display:"flex",gap:8}}>
+                      <button onClick={saveEditDepts} style={{padding:"6px 16px",background:T.accent,color:"#fff",borderRadius:10,fontSize:13,fontWeight:600}}>حفظ</button>
+                      <button onClick={()=>setEditDepts(null)} style={{padding:"6px 12px",background:T.hi,color:T.mid,borderRadius:10,fontSize:13}}>إلغاء</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap",flexShrink:0}}>
+                <select value={m.role} onChange={e=>changeRole(m.id,e.target.value)} style={{width:"auto",fontSize:12,padding:"6px 10px"}}>
+                  <option value="super">⭐ كاملة</option>
+                  <option value="dept">🏢 قسم</option>
+                </select>
+                <input placeholder="PIN جديد" maxLength={6} style={{width:100,padding:"6px 10px",fontSize:12}}
+                  onBlur={e=>{if(e.target.value.length>=4){changePin(m.id,e.target.value);e.target.value="";}}}/>
+                {(managers.filter(x=>x.role==="super").length>1||m.role!=="super")&&(
+                  <button onClick={()=>handleDelete(m.id)}
+                    style={{padding:"6px 14px",
+                      background:pendingDel===m.id?"#EF4444":T.dLight,
+                      color:pendingDel===m.id?"#fff":T.danger,
+                      border:`1.5px solid ${pendingDel===m.id?"#EF4444":"#FCA5A5"}`,
+                      borderRadius:10,fontSize:12,fontWeight:600}}>
+                    {pendingDel===m.id?"تأكيد؟":"حذف"}
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════
+   DEVICES
+══════════════════════════════════════════════════ */
+function DevsMgmt({allEmps,devices,setDevices}){
+  const reg=allEmps.filter(e=>devices[e.id]);const notReg=allEmps.filter(e=>!devices[e.id]);
+  function reset(id){setDevices(d=>{const n={...d};delete n[id];return n;});}
+  return(
+    <div style={{padding:"20px 0",display:"flex",flexDirection:"column",gap:16}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:10}}>
+        <div><div style={{fontWeight:700,fontSize:15}}>أجهزة الموظفين</div><div style={{fontSize:12,color:T.muted,marginTop:2}}>{reg.length} مسجّل · {notReg.length} غير مسجّل</div></div>
+        {reg.length>0&&<button onClick={()=>setDevices({})} style={{padding:"8px 16px",background:T.dLight,color:T.danger,border:`1.5px solid #FCA5A5`,fontSize:13,fontWeight:600,borderRadius:10}}>مسح الكل</button>}
+      </div>
+      {notReg.length>0&&(
+        <div style={{background:T.wLight,border:`1px solid #FCD34D`,borderRadius:14,padding:16}}>
+          <div style={{fontWeight:600,color:T.warn,marginBottom:10,fontSize:13}}>⚠️ لم يسجّلوا أجهزتهم ({notReg.length})</div>
+          <div style={{display:"flex",flexWrap:"wrap",gap:8}}>{notReg.map(e=><div key={e.id} style={{display:"flex",alignItems:"center",gap:7,background:T.surface,border:`1px solid ${T.border}`,borderRadius:10,padding:"6px 12px"}}><Av e={e} sz={24}/><span style={{fontSize:12,fontWeight:500}}>{e.name}</span></div>)}</div>
+        </div>
+      )}
+      {reg.map(e=>(
+        <div key={e.id} style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:14,padding:"13px 17px",display:"flex",alignItems:"center",gap:12,flexWrap:"wrap",boxShadow:T.sh}}>
+          <Av e={e} sz={40}/>
+          <div style={{flex:1,minWidth:150}}>
+            <div style={{fontWeight:600}}>{e.name}</div>
+            <div style={{fontSize:11,color:T.muted,marginTop:2}}>{e.dept}</div>
+            <div style={{marginTop:5,display:"flex",gap:8,alignItems:"center"}}>
+              <Badge label="✓ جهاز مسجّل" color={T.ok} bg={T.oLight}/>
+              <span style={{fontSize:11,color:T.dim}}>{new Date(devices[e.id].registeredAt).toLocaleDateString("ar-EG")}</span>
+            </div>
+          </div>
+          <button onClick={()=>reset(e.id)} style={{padding:"7px 14px",background:T.dLight,color:T.danger,border:`1.5px solid #FCA5A5`,borderRadius:10,fontSize:12,fontWeight:600}}>إعادة التسجيل</button>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════
+   SETTINGS
+══════════════════════════════════════════════════ */
+function Settings({wLat,setWLat,wLng,setWLng,recs,setRecs,allEmps,kioskMode,setKioskMode}){
+  const[locSt,setLocSt]=useState("");
+  function getPos(){setLocSt("l");navigator.geolocation.getCurrentPosition(p=>{setWLat(p.coords.latitude.toFixed(6));setWLng(p.coords.longitude.toFixed(6));setLocSt("ok");},()=>setLocSt("err"),{enableHighAccuracy:true});}
+  function demo(){
+    const today=todayStr();const nr=[];
+    allEmps.slice(0,Math.min(10,allEmps.length)).forEach((e,i)=>{
+      const iT=`0${8+(i%3===0?1:0)}:${i%2?"22":"00"}`;const oT=`17:${i%2?"10":"00"}`;
+      nr.push({empId:e.id,empName:e.name,dept:e.dept,date:today,time:iT,type:"in",late:isLate(iT),inZone:i<8,selfieUrl:null,deviceVerified:true});
+      if(i<8)nr.push({empId:e.id,empName:e.name,dept:e.dept,date:today,time:oT,type:"out",late:false,inZone:true,selfieUrl:null,deviceVerified:true});
+    });
+    setRecs(r=>[...r.filter(x=>x.date!==today),...nr]);
+  }
+  return(
+    <div style={{padding:"20px 0",display:"flex",flexDirection:"column",gap:14,maxWidth:520}}>
+      <Card title="📱 وضع الجهاز">
+        <div style={{fontSize:12,color:T.muted,marginBottom:12}}>اختر طريقة تسجيل الحضور المناسبة لهذا الجهاز</div>
+        <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+          {[{v:"personal",ic:"📱",l:"موبايل شخصي",sub:"Device Fingerprint"},{v:"tablet",ic:"🖥️",l:"كيوسك / تابلت",sub:"سيلفي إجبارية"}].map(o=>(
+            <button key={o.v} onClick={()=>kioskMode!==undefined&&setKioskMode&&setKioskMode(o.v)}
+              style={{flex:1,minWidth:150,padding:"14px 16px",background:kioskMode===o.v?T.aLight:T.hi,
+                border:`2px solid ${kioskMode===o.v?T.accent:T.border}`,borderRadius:14,textAlign:"right",cursor:"pointer"}}>
+              <div style={{fontSize:22,marginBottom:6}}>{o.ic}</div>
+              <div style={{fontWeight:700,fontSize:14,color:kioskMode===o.v?T.accent:T.txt}}>{o.l}</div>
+              <div style={{fontSize:11,color:T.muted,marginTop:3}}>{o.sub}</div>
+            </button>
+          ))}
+        </div>
+      </Card>
+      <Card title="📍 موقع مكان العمل">
+        <div style={{fontSize:12,color:T.muted,marginBottom:12}}>الموظفون خارج {GEO_R}م يُسجَّلون كـ "خارج النطاق"</div>
+        <div style={{display:"flex",gap:10,marginBottom:12}}>
+          <input placeholder="خط العرض (lat)" value={wLat} onChange={e=>setWLat(e.target.value)}/>
+          <input placeholder="خط الطول (lng)" value={wLng} onChange={e=>setWLng(e.target.value)}/>
+        </div>
+        <button onClick={getPos} style={{padding:"10px 20px",background:T.aLight,color:T.accent,border:`1.5px solid ${T.accent}`,fontSize:14,fontWeight:600,borderRadius:12}}>
+          {locSt==="l"?<span className="sp">📍</span>:"📍 موقعي الحالي"}
+        </button>
+        {locSt==="ok"&&<div style={{color:T.ok,fontSize:12,marginTop:8}}>✅ {wLat}, {wLng} — <a href={`https://maps.google.com/?q=${wLat},${wLng}`} target="_blank">عرض</a></div>}
+        {locSt==="err"&&<div style={{color:T.danger,fontSize:12,marginTop:8}}>❌ أدخل الإحداثيات يدوياً من Google Maps</div>}
+      </Card>
+      <Card title="⚙️ بيانات">
+        <div style={{display:"flex",flexDirection:"column",gap:10}}>
+          <button onClick={demo} style={{padding:11,background:T.aLight,color:T.accent,border:`1.5px solid ${T.accent}`,fontSize:14,fontWeight:600,borderRadius:12}}>إضافة بيانات تجريبية</button>
+          <button onClick={()=>setRecs(r=>r.filter(x=>x.date!==todayStr()))} style={{padding:11,background:T.dLight,color:T.danger,border:`1.5px solid #FCA5A5`,fontSize:14,fontWeight:600,borderRadius:12}}>مسح سجلات اليوم</button>
+          <button onClick={()=>setRecs([])} style={{padding:11,background:T.dLight,color:T.danger,border:`1.5px solid #FCA5A5`,fontSize:14,fontWeight:600,borderRadius:12}}>مسح كل السجلات</button>
+        </div>
+        <div style={{marginTop:14,padding:"11px 14px",background:T.hi,borderRadius:12,fontSize:12,color:T.mid,lineHeight:2}}>
+          سجلات: <b>{recs.length}</b> · موظفون: <b>{allEmps.length}</b> · نطاق: <b>{GEO_R}م</b>
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════
+   MANAGER PANEL
+══════════════════════════════════════════════════ */
+function MgrPanel({mgr,allEmps,setAllEmps,recs,setRecs,leaves,setLeaves,devices,setDevices,managers,setManagers,wLat,setWLat,wLng,setWLng,kioskMode,setKioskMode,onExit}){
+  const isSuper=mgr.role==="super";
+  // الموظفون المرئيون حسب الصلاحية
+  const visEmps=isSuper
+    ?allEmps
+    :allEmps.filter(e=>mgr.depts.includes(e.dept));
+  // المديرون المرئيون: شادي + مديرو الأقسام (للـ super فقط)
+  // ولمديري الأقسام: المدير نفسه فقط
+  const visMgrs=isSuper
+    ?managers.filter(m=>m.role==="dept"||m.name==="شادي مصطفي")
+    :[mgr];
+  // الكل مع بعض للداش والتقارير
+  const visAll=[...visEmps,...visMgrs.map(m=>({
+    id:m.id, name:m.name, dept:m.title||"إدارة", color:m.color, _isMgr:true
+  }))];
+  const[tab,setTab]=useState("dash");
+  const TABS=isSuper
+    ?[{id:"dash",ic:"📊",l:"اليوم"},{id:"rep",ic:"📈",l:"تقارير"},{id:"leave",ic:"🌴",l:"إجازات"},{id:"devs",ic:"📱",l:"الأجهزة"},{id:"mgrs",ic:"👔",l:"المديرون"},{id:"emps",ic:"👥",l:"الموظفون"},{id:"set",ic:"⚙️",l:"إعدادات"}]
+    :[{id:"dash",ic:"📊",l:"فريقي"},{id:"rep",ic:"📈",l:"تقارير"},{id:"leave",ic:"🌴",l:"إجازات"}];
+  return(
+    <div style={{minHeight:"100vh",background:T.bg,display:"flex",flexDirection:"column"}}>
+      <div style={{background:T.surface,borderBottom:`1px solid ${T.border}`,padding:"12px 20px",display:"flex",alignItems:"center",justifyContent:"space-between",position:"sticky",top:0,zIndex:100,boxShadow:T.sh}}>
+        <div style={{display:"flex",alignItems:"center",gap:14}}>
+          <Logo width={110}/>
+          <div style={{width:1,height:28,background:T.border}}/>
+          <MgrAv m={mgr} sz={36}/>
+          <div>
+            <div style={{fontWeight:700,fontSize:14}}>{mgr.name}</div>
+            <div style={{fontSize:11,color:T.muted,display:"flex",alignItems:"center",gap:6,flexWrap:"wrap"}}>
+              {mgr.title} · <RoleBadge role={mgr.role}/>
+              {!isSuper&&<span style={{color:T.accent}}>({mgr.depts.join("، ")})</span>}
+            </div>
+          </div>
+        </div>
+        <button onClick={onExit} style={{padding:"7px 16px",background:T.hi,color:T.mid,border:`1px solid ${T.border}`,fontSize:13,fontWeight:500,borderRadius:10}}>خروج ←</button>
+      </div>
+      {!isSuper&&(
+        <div style={{background:T.aLight,borderBottom:`1px solid rgba(99,102,241,.2)`,padding:"8px 20px",fontSize:12,color:T.accent}}>
+          🏢 مخوّل برؤية: <b>{mgr.depts.join("، ")}</b> — {visEmps.length} موظف
+        </div>
+      )}
+      <div style={{background:T.surface,borderBottom:`1px solid ${T.border}`,padding:"0 20px",display:"flex",gap:0,overflowX:"auto"}}>
+        {TABS.map(t=>(
+          <button key={t.id} onClick={()=>setTab(t.id)} style={{padding:"12px 13px",background:"none",
+            color:tab===t.id?T.accent:T.muted,
+            borderBottom:tab===t.id?`2px solid ${T.accent}`:"2px solid transparent",
+            borderRadius:0,fontSize:13,fontWeight:tab===t.id?700:400,
+            whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:5}}>
+            <span>{t.ic}</span><span>{t.l}</span>
+          </button>
+        ))}
+      </div>
+      <div style={{flex:1,padding:"0 20px",maxWidth:1200,width:"100%",margin:"0 auto"}}>
+        {tab==="dash" &&<AttendDash emps={visAll} recs={recs} leaves={leaves} isSuper={isSuper}/>}
+        {tab==="rep"  &&<Reports    emps={visAll} recs={recs}/>}
+        {tab==="leave"&&<Leaves     emps={visEmps} leaves={leaves} setLeaves={setLeaves} managers={managers}/>}
+        {tab==="devs" &&isSuper&&<DevsMgmt allEmps={allEmps} devices={devices} setDevices={setDevices}/>}
+        {tab==="mgrs" &&isSuper&&<MgrsMgmt managers={managers} setManagers={setManagers} allEmps={allEmps}/>}
+        {tab==="emps" &&isSuper&&<EmpsMgmt emps={allEmps} setEmps={setAllEmps} managers={managers}/>}
+        {tab==="set"  &&isSuper&&<Settings wLat={wLat} setWLat={setWLat} wLng={wLng} setWLng={setWLng} recs={recs} setRecs={setRecs} allEmps={allEmps} kioskMode={kioskMode} setKioskMode={setKioskMode}/>}
+      </div>
+    </div>
+  );
+}
+
+
+/* ══════════════════════════════════════════════════
+   KIOSK TABLET MODE — جهاز ثابت عند الباب
+   بدون Device Fingerprint — السيلفي إجبارية
+══════════════════════════════════════════════════ */
+function KioskTablet({emps,recs,onRec,wLat,wLng}){
+  const[step,setStep]=useState("pin");
+  const[emp,setEmp]=useState(null);const[act,setAct]=useState("");
+  const[gps,setGps]=useState(null);const[selfie,setSelfie]=useState(null);
+  const[err,setErr]=useState("");const[sk,setSk]=useState(0);
+  const today=todayStr();
+  const todayR=recs.filter(r=>r.date===today);
+  function empSt(id){const rs=todayR.filter(x=>x.empId===id);return rs.length?rs[rs.length-1].type==="in"?"in":"done":"absent";}
+
+  function onPin(pin){
+    const e=emps.find(x=>x.pin===pin);
+    if(!e){setErr("❌ PIN غير صحيح");setSk(k=>k+1);setTimeout(()=>setErr(""),2000);return;}
+    setEmp(e);setAct(empSt(e.id)==="in"?"out":"in");setStep("selfie");
+  }
+
+  function doRec(){
+    if(!selfie){setErr("📸 الصورة إجبارية في وضع الكيوسك");return;}
+    const time=nowStr();
+    onRec({empId:emp.id,empName:emp.name,dept:emp.dept,date:today,time,type:act,
+      late:act==="in"?isLate(time):false,lat:gps?.lat,lng:gps?.lng,
+      accuracy:gps?.accuracy,inZone:gps?.inZone,selfieUrl:selfie,deviceVerified:false,kioskMode:true});
+    setStep("success");
+    setTimeout(()=>{setStep("pin");setEmp(null);setGps(null);setSelfie(null);},4000);
+  }
+
+  if(step==="success")return(
+    <CenteredPage>
+      <IcoBox icon={act==="in"?"✅":"👋"} bg={act==="in"?T.oLight:T.wLight} glow={act==="in"?"rgba(16,185,129,.1)":"rgba(245,158,11,.1)"} sz={80}/>
+      <div style={{fontSize:22,fontWeight:700}}>{act==="in"?"أهلاً وسهلاً!":"إلى اللقاء!"}</div>
+      {emp&&<div style={{fontSize:16,color:T.mid,fontWeight:500}}>{emp.name}</div>}
+      <div className="mono" style={{fontSize:44,fontWeight:700,color:T.accent,letterSpacing:-2}}>{nowStr()}</div>
+      {selfie&&<img src={selfie} style={{width:80,height:80,borderRadius:"50%",objectFit:"cover",border:`3px solid ${T.ok}`,transform:"scaleX(-1)"}}/>}
+      {gps?.inZone!=null&&<Badge label={gps.inZone?"📍 داخل نطاق العمل":"⚠️ خارج النطاق"} color={gps.inZone?T.ok:T.warn} bg={gps.inZone?T.oLight:T.wLight}/>}
+    </CenteredPage>
+  );
+
+  if(step==="selfie")return(
+    <div style={{minHeight:"100vh",background:T.bg,display:"flex",flexDirection:"column",alignItems:"center",padding:"30px 20px",gap:20}}>
+      <div style={{display:"flex",alignItems:"center",gap:12,background:T.surface,border:`1px solid ${T.border}`,borderRadius:16,padding:"12px 18px",width:"100%",maxWidth:420,boxShadow:T.sh}}>
+        {emp&&<Av e={emp} sz={44}/>}
+        <div style={{flex:1}}>
+          <div style={{fontWeight:700,fontSize:16}}>{emp?.name}</div>
+          <div style={{fontSize:12,color:T.muted}}>{act==="in"?"↑ تسجيل حضور":"↓ تسجيل انصراف"}</div>
+        </div>
+        <div style={{background:T.wLight,border:`1px solid #FCD34D`,borderRadius:8,padding:"4px 10px",fontSize:11,color:T.warn,fontWeight:600}}>🖥 كيوسك</div>
+      </div>
+
+      <StepBar cur={selfie?1:0} steps={["📸 صورة إجبارية","✔ تأكيد"]}/>
+
+      {!selfie&&(
+        <div className="fade" style={{width:"100%",maxWidth:420}}>
+          <div style={{textAlign:"center",marginBottom:12}}>
+            <div style={{fontWeight:600,fontSize:15}}>📸 التقاط صورة للتحقق</div>
+            <div style={{fontSize:12,color:T.danger,marginTop:4}}>⚠️ الصورة إجبارية في وضع الكيوسك</div>
+          </div>
+          <SelfieWidget onCapture={url=>setSelfie(url)}/>
+        </div>
+      )}
+
+      {selfie&&(
+        <div className="fade" style={{width:"100%",maxWidth:420,display:"flex",flexDirection:"column",gap:14}}>
+          <div style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:16,padding:18,boxShadow:T.sh}}>
+            <Row l="الموظف" v={emp?.name}/>
+            <Row l="النوع" v={act==="in"?"🟢 حضور":"🔴 انصراف"}/>
+            <Row l="الوقت" v={<span className="mono" style={{fontWeight:600}}>{nowStr()}</span>}/>
+            <Row l="الصورة" v={<img src={selfie} style={{width:40,height:40,borderRadius:"50%",objectFit:"cover",transform:"scaleX(-1)"}}/>}/>
+          </div>
+          {wLat&&wLng&&!gps&&(
+            <GpsWidget wLat={wLat} wLng={wLng} onResult={d=>setGps(d)}/>
+          )}
+          {err&&<Note color={T.danger} bg={T.dLight}>{err}</Note>}
+          <button onClick={doRec} style={{padding:14,background:T.accent,color:"#fff",fontWeight:700,fontSize:16,borderRadius:12,boxShadow:"0 4px 14px rgba(99,102,241,.3)"}}>✔ تأكيد التسجيل</button>
+          <button onClick={()=>setSelfie(null)} style={{background:"none",color:T.muted,fontSize:13,padding:8}}>← إعادة الصورة</button>
+        </div>
+      )}
+
+      <button onClick={()=>{setStep("pin");setEmp(null);setSelfie(null);setGps(null);}} style={{background:"none",color:T.muted,fontSize:13,padding:8}}>← إلغاء</button>
+    </div>
+  );
+
+  // PIN screen
+  return(
+    <div style={{minHeight:"100vh",background:T.bg,display:"flex",flexDirection:"column",alignItems:"center",padding:"44px 20px",gap:26}}>
+      <Logo width={160}/>
+      <LiveClock/>
+      <div style={{textAlign:"center"}}>
+        <div style={{fontSize:15,fontWeight:600}}>ادخل الـ PIN بتاعك</div>
+        <div style={{fontSize:12,color:T.muted,marginTop:3}}>وضع الكيوسك — جهاز مشترك</div>
+      </div>
+      {err&&<Note color={T.danger} bg={T.dLight}>{err}</Note>}
+      <PinPad key={sk} onConfirm={onPin} doShake={!!err}/>
+      {/* present now */}
+      <div style={{background:T.surface,border:`1px solid ${T.border}`,borderRadius:16,padding:"14px 18px",boxShadow:T.sh,width:"100%",maxWidth:340}}>
+        <div style={{display:"flex",justifyContent:"space-between",marginBottom:10}}>
+          <span style={{fontSize:12,color:T.muted}}>الحاضرون الآن</span>
+          <span style={{fontSize:12,fontWeight:700,color:T.accent}}>{emps.filter(e=>empSt(e.id)==="in").length}/{emps.length}</span>
+        </div>
+        <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+          {emps.filter(e=>empSt(e.id)==="in").map(e=>(
+            <div key={e.id} title={e.name} style={{width:32,height:32,borderRadius:"50%",background:e.color||"#6366F1",display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,fontWeight:700,color:"#fff"}}>{ini(e.name)}</div>
+          ))}
+          {emps.filter(e=>empSt(e.id)==="in").length===0&&<span style={{color:T.dim,fontSize:12}}>لا يوجد حاضرون</span>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ══════════════════════════════════════════════════
+   ROOT APP
+══════════════════════════════════════════════════ */
+function App(){
+  const[emps,setEmps]        =useLS("a9_emps",[]);
+  const[recs,setRecs]        =useLS("a9_recs",[]);
+  const[leaves,setLeaves]    =useLS("a9_leaves",[]);
+  const[devices,setDevices]  =useLS("a9_devs",{});
+  const[managers,setManagers]=useLS("a9_mgrs",DEF_MGRS);
+  const[wLat,setWLat]        =useLS("a9_lat","");
+  const[wLng,setWLng]        =useLS("a9_lng","");
+  const[kioskMode,setKioskMode]=useLS("a9_kioskmode","personal"); // "personal" | "tablet"
+  const[view,setView]        =useState("kiosk");
+  const[curMgr,setCurMgr]   =useState(null);
+
+  return(
+    <>
+      <style>{CSS}</style>
+
+      {/* ── شاشة اختيار الوضع — تظهر أول مرة فقط ── */}
+      {view==="selectMode"&&(
+        <div style={{minHeight:"100vh",background:T.bg,display:"flex",flexDirection:"column",
+          alignItems:"center",justifyContent:"center",gap:24,padding:32}}>
+          <Logo width={180}/>
+          <div style={{textAlign:"center"}}>
+            <div style={{fontSize:20,fontWeight:800,color:T.txt}}>اختر وضع الجهاز</div>
+            <div style={{fontSize:13,color:T.muted,marginTop:6}}>هذا الإعداد يُحفظ ولا يحتاج تكراره</div>
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:14,width:"100%",maxWidth:400}}>
+            <button onClick={()=>{setKioskMode("personal");setView("kiosk");}}
+              style={{padding:"20px 24px",background:T.surface,border:`2px solid ${T.border}`,
+                borderRadius:18,textAlign:"right",boxShadow:T.shM,cursor:"pointer"}}
+              onMouseEnter={e=>e.currentTarget.style.borderColor=T.accent}
+              onMouseLeave={e=>e.currentTarget.style.borderColor=T.border}>
+              <div style={{fontSize:28,marginBottom:8}}>📱</div>
+              <div style={{fontWeight:700,fontSize:16,color:T.txt}}>موبايل شخصي</div>
+              <div style={{fontSize:13,color:T.muted,marginTop:4}}>كل موظف يسجّل من موبايله الخاص — Device Fingerprint للتحقق</div>
+            </button>
+            <button onClick={()=>{setKioskMode("tablet");setView("kiosk");}}
+              style={{padding:"20px 24px",background:T.surface,border:`2px solid ${T.border}`,
+                borderRadius:18,textAlign:"right",boxShadow:T.shM,cursor:"pointer"}}
+              onMouseEnter={e=>e.currentTarget.style.borderColor=T.accent}
+              onMouseLeave={e=>e.currentTarget.style.borderColor=T.border}>
+              <div style={{fontSize:28,marginBottom:8}}>🖥️</div>
+              <div style={{fontWeight:700,fontSize:16,color:T.txt}}>تابلت / كيوسك ثابت</div>
+              <div style={{fontSize:13,color:T.muted,marginTop:4}}>جهاز واحد مشترك عند الباب — السيلفي إجبارية للتحقق</div>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── Kiosk screens ── */}
+      {view==="kiosk"&&kioskMode==="personal"&&(
+        <>
+          <Kiosk emps={emps} recs={recs} onRec={r=>setRecs(rs=>[...rs,r])} wLat={wLat} wLng={wLng} devices={devices}/>
+          <div style={{position:"fixed",bottom:20,left:"50%",transform:"translateX(-50%)",zIndex:200,display:"flex",gap:10}}>
+            <button onClick={()=>setView("reg")} style={{padding:"9px 18px",background:T.surface,color:T.accent,border:`1.5px solid ${T.accent}`,fontSize:13,fontWeight:600,borderRadius:12,boxShadow:T.shM}}>📱 تسجيل جهازي</button>
+            <button onClick={()=>setView("login")} style={{padding:"9px 18px",background:T.surface,color:T.mid,border:`1px solid ${T.border}`,fontSize:13,fontWeight:500,borderRadius:12,boxShadow:T.shM}}>🔐 المديرون</button>
+          </div>
+        </>
+      )}
+      {view==="kiosk"&&kioskMode==="tablet"&&(
+        <>
+          <KioskTablet emps={emps} recs={recs} onRec={r=>setRecs(rs=>[...rs,r])} wLat={wLat} wLng={wLng}/>
+          <div style={{position:"fixed",bottom:20,left:"50%",transform:"translateX(-50%)",zIndex:200}}>
+            <button onClick={()=>setView("login")} style={{padding:"9px 18px",background:T.surface,color:T.mid,border:`1px solid ${T.border}`,fontSize:13,fontWeight:500,borderRadius:12,boxShadow:T.shM}}>🔐 المديرون</button>
+          </div>
+        </>
+      )}
+
+      {view==="reg"&&<RegisterDevice emps={emps} devices={devices} setDevices={setDevices} onBack={()=>setView("kiosk")}/>}
+      {view==="login"&&<MgrLogin managers={managers} onLogin={m=>{setCurMgr(m);setView("panel");}}/>}
+      {view==="panel"&&curMgr&&(
+        <MgrPanel mgr={curMgr} allEmps={emps} setAllEmps={setEmps}
+          recs={recs} setRecs={setRecs} leaves={leaves} setLeaves={setLeaves}
+          devices={devices} setDevices={setDevices}
+          managers={managers} setManagers={setManagers}
+          wLat={wLat} setWLat={setWLat} wLng={wLng} setWLng={setWLng}
+          kioskMode={kioskMode} setKioskMode={setKioskMode}
+          onExit={()=>{setCurMgr(null);setView("kiosk");}}/>
+      )}
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App));
+document.getElementById("loading").style.display = "none";
+  </script>
+</body>
+</html>
