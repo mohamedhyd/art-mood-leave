@@ -105,6 +105,7 @@ var SHIFTS = {
 var DEFAULT_SHIFT = "9-5";
 var LATE_GRACE = 90; // دقيقة سماح من أول وقت شيفت (8:00 لحد 9:30)
 var WORK_HOURS = 8;
+var WORK_START = "09:00"; // للتوافق مع الكود القديم
 var GEO_R_CONST = GEO_R;
 
 // حساب هل الموظف متأخر حسب شيفته
@@ -4554,7 +4555,7 @@ function MgrCheckIn(_ref25) {
               date: today,
               time: time,
               type: action,
-              late: action === "in" ? isLate(time) : false,
+              late: action === "in" ? isLate(time, DEFAULT_SHIFT) : false,
               lat: lat,
               lng: lng,
               inZone: inZone,
@@ -5563,7 +5564,7 @@ function App() {
     }
   }));
 }
-ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App));
   </script>
 </body>
 </html>
