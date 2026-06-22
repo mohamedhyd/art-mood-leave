@@ -7,11 +7,7 @@
   <meta name="apple-mobile-web-app-title" content="Art Mood Leave"/>
   <link rel="manifest" href="manifest.json"/>
   <title>Art Mood Leave</title>
-  <style>
-    *{box-sizing:border-box;margin:0;padding:0}
-    body{background:#F8F9FC;min-height:100vh;font-family:Cairo,Arial,sans-serif}
-    #root{min-height:100vh}
-  </style>
+  <style>*{box-sizing:border-box;margin:0;padding:0}body{background:#F8F9FC;min-height:100vh;font-family:Cairo,Arial,sans-serif}#root{min-height:100vh}</style>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 </head>
@@ -2689,19 +2685,27 @@ function EmpsMgmt(_ref19) {
       return m.role === "dept" && m.depts.includes(dept);
     });
   }
+  var _useState61 = useState(""),
+    _useState62 = _slicedToArray(_useState61, 2),
+    empErr = _useState62[0],
+    setEmpErr = _useState62[1];
   function addEmp() {
-    if (!form.name.trim() || !form.pin.trim() || !form.dept.trim()) {
-      alert("الاسم والـ PIN والقسم مطلوبين");
+    if (!form.name.trim()) {
+      setEmpErr("❌ أدخل اسم الموظف");
       return;
     }
-    if (form.pin.length < 4) {
-      alert("الـ PIN لازم 4 أرقام على الأقل");
+    if (!form.pin.trim() || form.pin.length < 4) {
+      setEmpErr("❌ الـ PIN لازم 4 أرقام على الأقل");
       return;
     }
     if (emps.find(function (e) {
       return e.pin === form.pin;
     })) {
-      alert("الـ PIN ده موجود بالفعل");
+      setEmpErr("❌ الـ PIN ده موجود بالفعل، اختر رقم تاني");
+      return;
+    }
+    if (!form.dept.trim()) {
+      setEmpErr("❌ اختر القسم أو اكتب قسم جديد");
       return;
     }
     var id = "E" + String(Date.now()).slice(-6);
@@ -2720,6 +2724,7 @@ function EmpsMgmt(_ref19) {
       pin: "",
       color: COLORS[Math.floor(Math.random() * COLORS.length)]
     });
+    setEmpErr("");
     setNDI("");
     setAdding(false);
   }
@@ -2959,7 +2964,17 @@ function EmpsMgmt(_ref19) {
         transition: "transform .15s"
       }
     });
-  }))), /*#__PURE__*/React.createElement("button", {
+  }))), empErr && /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: T.dLight,
+      border: "1px solid #FCA5A5",
+      borderRadius: 10,
+      padding: "10px 14px",
+      fontSize: 13,
+      color: T.danger,
+      marginBottom: 4
+    }
+  }, empErr), /*#__PURE__*/React.createElement("button", {
     onClick: addEmp,
     style: {
       padding: "11px 28px",
@@ -3172,11 +3187,11 @@ function MgrsMgmt(_ref20) {
   var managers = _ref20.managers,
     setManagers = _ref20.setManagers,
     allEmps = _ref20.allEmps;
-  var _useState61 = useState(false),
-    _useState62 = _slicedToArray(_useState61, 2),
-    adding = _useState62[0],
-    setAdding = _useState62[1];
-  var _useState63 = useState({
+  var _useState63 = useState(false),
+    _useState64 = _slicedToArray(_useState63, 2),
+    adding = _useState64[0],
+    setAdding = _useState64[1];
+  var _useState65 = useState({
       name: "",
       title: "",
       pin: "",
@@ -3184,17 +3199,17 @@ function MgrsMgmt(_ref20) {
       depts: [],
       color: "#6366F1"
     }),
-    _useState64 = _slicedToArray(_useState63, 2),
-    form = _useState64[0],
-    setForm = _useState64[1];
-  var _useState65 = useState(null),
     _useState66 = _slicedToArray(_useState65, 2),
-    editDepts = _useState66[0],
-    setEditDepts = _useState66[1]; // {id, depts}
+    form = _useState66[0],
+    setForm = _useState66[1];
   var _useState67 = useState(null),
     _useState68 = _slicedToArray(_useState67, 2),
-    pendingDel = _useState68[0],
-    setPendingDel = _useState68[1]; // mgr id ✅
+    editDepts = _useState68[0],
+    setEditDepts = _useState68[1]; // {id, depts}
+  var _useState69 = useState(null),
+    _useState70 = _slicedToArray(_useState69, 2),
+    pendingDel = _useState70[0],
+    setPendingDel = _useState70[1]; // mgr id ✅
 
   var allDepts = _toConsumableArray(new Set(allEmps.map(function (e) {
     return e.dept;
@@ -3208,23 +3223,27 @@ function MgrsMgmt(_ref20) {
       });
     });
   }
+  var _useState71 = useState(""),
+    _useState72 = _slicedToArray(_useState71, 2),
+    mgrErr = _useState72[0],
+    setMgrErr = _useState72[1];
   function addMgr() {
-    if (!form.name.trim() || !form.pin.trim()) {
-      alert("الاسم والـ PIN مطلوبين");
+    if (!form.name.trim()) {
+      setMgrErr("❌ أدخل اسم المدير");
       return;
     }
-    if (form.pin.length < 4) {
-      alert("الـ PIN لازم 4 أرقام");
+    if (!form.pin.trim() || form.pin.length < 4) {
+      setMgrErr("❌ الـ PIN لازم 4 أرقام على الأقل");
       return;
     }
     if (managers.find(function (m) {
       return m.pin === form.pin;
     })) {
-      alert("الـ PIN ده موجود");
+      setMgrErr("❌ الـ PIN ده موجود بالفعل");
       return;
     }
     if (form.role === "dept" && form.depts.length === 0) {
-      alert("اختر قسم واحد على الأقل");
+      setMgrErr("❌ اختر قسم واحد على الأقل");
       return;
     }
     var id = "M" + String(Date.now()).slice(-5);
@@ -3233,6 +3252,7 @@ function MgrsMgmt(_ref20) {
         id: id
       }, form)]);
     });
+    setMgrErr("");
     setForm({
       name: "",
       title: "",
@@ -3253,7 +3273,7 @@ function MgrsMgmt(_ref20) {
       return m.id === id;
     });
     if ((target === null || target === void 0 ? void 0 : target.role) === "super" && supers.length <= 1) {
-      alert("لازم يبقى Super Admin واحد على الأقل");
+      setPendingDel(null);
       return;
     }
     if (pendingDel === id) {
@@ -3277,7 +3297,6 @@ function MgrsMgmt(_ref20) {
     if (managers.find(function (m) {
       return m.id !== id && m.pin === pin;
     })) {
-      alert("الـ PIN ده موجود");
       return;
     }
     setManagers(function (prev) {
@@ -3304,7 +3323,6 @@ function MgrsMgmt(_ref20) {
       return x.id === editDepts.id;
     });
     if ((m === null || m === void 0 ? void 0 : m.role) === "dept" && editDepts.depts.length === 0) {
-      alert("اختر قسم واحد على الأقل");
       return;
     }
     setManagers(function (prev) {
@@ -3601,7 +3619,17 @@ function MgrsMgmt(_ref20) {
         transition: "transform .15s"
       }
     });
-  }))), /*#__PURE__*/React.createElement("button", {
+  }))), mgrErr && /*#__PURE__*/React.createElement("div", {
+    style: {
+      background: T.dLight,
+      border: "1px solid #FCA5A5",
+      borderRadius: 10,
+      padding: "10px 14px",
+      fontSize: 13,
+      color: T.danger,
+      marginBottom: 4
+    }
+  }, mgrErr), /*#__PURE__*/React.createElement("button", {
     onClick: addMgr,
     style: {
       padding: "11px 28px",
@@ -4048,10 +4076,10 @@ function Settings(_ref22) {
     allEmps = _ref22.allEmps,
     kioskMode = _ref22.kioskMode,
     setKioskMode = _ref22.setKioskMode;
-  var _useState69 = useState(""),
-    _useState70 = _slicedToArray(_useState69, 2),
-    locSt = _useState70[0],
-    setLocSt = _useState70[1];
+  var _useState73 = useState(""),
+    _useState74 = _slicedToArray(_useState73, 2),
+    locSt = _useState74[0],
+    setLocSt = _useState74[1];
   function getPos() {
     setLocSt("l");
     navigator.geolocation.getCurrentPosition(function (p) {
@@ -4325,10 +4353,10 @@ function MgrPanel(_ref23) {
       _isMgr: true
     };
   })));
-  var _useState71 = useState("dash"),
-    _useState72 = _slicedToArray(_useState71, 2),
-    tab = _useState72[0],
-    setTab = _useState72[1];
+  var _useState75 = useState("dash"),
+    _useState76 = _slicedToArray(_useState75, 2),
+    tab = _useState76[0],
+    setTab = _useState76[1];
   var TABS = isSuper ? [{
     id: "dash",
     ic: "📊",
@@ -4531,34 +4559,34 @@ function KioskTablet(_ref24) {
     onRec = _ref24.onRec,
     wLat = _ref24.wLat,
     wLng = _ref24.wLng;
-  var _useState73 = useState("pin"),
-    _useState74 = _slicedToArray(_useState73, 2),
-    step = _useState74[0],
-    setStep = _useState74[1];
-  var _useState75 = useState(null),
-    _useState76 = _slicedToArray(_useState75, 2),
-    emp = _useState76[0],
-    setEmp = _useState76[1];
-  var _useState77 = useState(""),
+  var _useState77 = useState("pin"),
     _useState78 = _slicedToArray(_useState77, 2),
-    act = _useState78[0],
-    setAct = _useState78[1];
+    step = _useState78[0],
+    setStep = _useState78[1];
   var _useState79 = useState(null),
     _useState80 = _slicedToArray(_useState79, 2),
-    gps = _useState80[0],
-    setGps = _useState80[1];
-  var _useState81 = useState(null),
+    emp = _useState80[0],
+    setEmp = _useState80[1];
+  var _useState81 = useState(""),
     _useState82 = _slicedToArray(_useState81, 2),
-    selfie = _useState82[0],
-    setSelfie = _useState82[1];
-  var _useState83 = useState(""),
+    act = _useState82[0],
+    setAct = _useState82[1];
+  var _useState83 = useState(null),
     _useState84 = _slicedToArray(_useState83, 2),
-    err = _useState84[0],
-    setErr = _useState84[1];
-  var _useState85 = useState(0),
+    gps = _useState84[0],
+    setGps = _useState84[1];
+  var _useState85 = useState(null),
     _useState86 = _slicedToArray(_useState85, 2),
-    sk = _useState86[0],
-    setSk = _useState86[1];
+    selfie = _useState86[0],
+    setSelfie = _useState86[1];
+  var _useState87 = useState(""),
+    _useState88 = _slicedToArray(_useState87, 2),
+    err = _useState88[0],
+    setErr = _useState88[1];
+  var _useState89 = useState(0),
+    _useState90 = _slicedToArray(_useState89, 2),
+    sk = _useState90[0],
+    setSk = _useState90[1];
   var today = todayStr();
   var todayR = recs.filter(function (r) {
     return r.date === today;
@@ -4958,14 +4986,14 @@ function App() {
     _useLS14 = _slicedToArray(_useLS13, 2),
     kioskMode = _useLS14[0],
     setKioskMode = _useLS14[1]; // "personal" | "tablet"
-  var _useState87 = useState("kiosk"),
-    _useState88 = _slicedToArray(_useState87, 2),
-    view = _useState88[0],
-    setView = _useState88[1];
-  var _useState89 = useState(null),
-    _useState90 = _slicedToArray(_useState89, 2),
-    curMgr = _useState90[0],
-    setCurMgr = _useState90[1];
+  var _useState91 = useState("kiosk"),
+    _useState92 = _slicedToArray(_useState91, 2),
+    view = _useState92[0],
+    setView = _useState92[1];
+  var _useState93 = useState(null),
+    _useState94 = _slicedToArray(_useState93, 2),
+    curMgr = _useState94[0],
+    setCurMgr = _useState94[1];
   return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("style", null, CSS), view === "selectMode" && /*#__PURE__*/React.createElement("div", {
     style: {
       minHeight: "100vh",
