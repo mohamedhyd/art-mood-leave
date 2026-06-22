@@ -90,18 +90,11 @@ var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyoAeHMREC2OHTeNOoSKA9
 
 function sheetPost(body) {
   return fetch(SCRIPT_URL, {
-    redirect: "follow",
-    method: "POST",
+    redirect: "follow", method: "POST",
     headers: {"Content-Type": "text/plain"},
     body: JSON.stringify(body)
   }).then(function(r) { return r.text(); })
     .then(function(t) { try { return JSON.parse(t); } catch(e) { return {success:true}; } })
-    .catch(function() { return null; });
-}
-
-function sheetGet(action) {
-  return fetch(SCRIPT_URL + "?action=" + action, { redirect: "follow" })
-    .then(function(r) { return r.json(); })
     .catch(function() { return null; });
 }
 
@@ -4769,16 +4762,9 @@ function MgrPanel(_ref26) {
       });
     },
     style: {
-      padding: "6px 14px",
-      background: "#ECFDF5",
-      color: "#10B981",
-      border: "1.5px solid #6EE7B7",
-      fontSize: 12,
-      fontWeight: 600,
-      borderRadius: 10,
-      flexShrink: 0,
-      cursor: "pointer",
-      fontFamily: "inherit"
+      padding: "6px 14px", background: "#ECFDF5", color: "#10B981",
+      border: "1.5px solid #6EE7B7", fontSize: 12, fontWeight: 600,
+      borderRadius: 10, flexShrink: 0, cursor: "pointer", fontFamily: "inherit"
     }
   }, "\uD83D\uDD04 Sheet")), /*#__PURE__*/React.createElement("div", {
     style: {
@@ -5352,21 +5338,6 @@ function App() {
     _useState98 = _slicedToArray(_useState97, 2),
     curMgr = _useState98[0],
     setCurMgr = _useState98[1];
-
-  // ── تحميل البيانات من الشيت عند الفتح ──
-  useEffect(function() {
-    sheetGet("getEmployees").then(function(data) {
-      if (data && Array.isArray(data) && data.length > 0) {
-        setEmps(data);
-      }
-    });
-    sheetGet("getManagers").then(function(data) {
-      if (data && Array.isArray(data) && data.length > 0) {
-        setManagers(data);
-      }
-    });
-  }, []);
-
   return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("style", null, CSS), view === "selectMode" && /*#__PURE__*/React.createElement("div", {
     style: {
       minHeight: "100vh",
