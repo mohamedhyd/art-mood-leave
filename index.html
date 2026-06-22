@@ -173,10 +173,10 @@ function getDeviceFP() {
   return _getDeviceFP.apply(this, arguments);
 }
 function _getDeviceFP() {
-  _getDeviceFP = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4() {
+  _getDeviceFP = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee5() {
     var p, b;
-    return _regenerator().w(function (_context4) {
-      while (1) switch (_context4.n) {
+    return _regenerator().w(function (_context5) {
+      while (1) switch (_context5.n) {
         case 0:
           p = [navigator.userAgent, navigator.language, screen.width + "x" + screen.height, screen.colorDepth, new Date().getTimezoneOffset(), navigator.hardwareConcurrency || "", function () {
             try {
@@ -188,19 +188,19 @@ function _getDeviceFP() {
               x.fillStyle = "#069";
               x.fillText("FP", 2, 10);
               return c.toDataURL().slice(-30);
-            } catch (_unused3) {
+            } catch (_unused4) {
               return "nc";
             }
           }()].join("|");
-          _context4.n = 1;
+          _context5.n = 1;
           return crypto.subtle.digest("SHA-256", new TextEncoder().encode(p));
         case 1:
-          b = _context4.v;
-          return _context4.a(2, Array.from(new Uint8Array(b)).map(function (x) {
+          b = _context5.v;
+          return _context5.a(2, Array.from(new Uint8Array(b)).map(function (x) {
             return x.toString(16).padStart(2, "0");
           }).join("").slice(0, 32));
       }
-    }, _callee4);
+    }, _callee5);
   }));
   return _getDeviceFP.apply(this, arguments);
 }
@@ -4312,27 +4312,169 @@ function Settings(_ref22) {
 }
 
 /* ══════════════════════════════════════════════════
+   MGR CHECK-IN — زرار تسجيل حضور المدير
+══════════════════════════════════════════════════ */
+function MgrCheckIn(_ref23) {
+  var mgr = _ref23.mgr,
+    recs = _ref23.recs,
+    onRec = _ref23.onRec;
+  var _useState75 = useState("idle"),
+    _useState76 = _slicedToArray(_useState75, 2),
+    status = _useState76[0],
+    setStatus = _useState76[1]; // idle|loading|done
+  var _useState77 = useState(null),
+    _useState78 = _slicedToArray(_useState77, 2),
+    lastAction = _useState78[0],
+    setLastAction = _useState78[1];
+  var today = todayStr();
+  var todayR = recs.filter(function (r) {
+    return r.date === today && r.empId === mgr.id;
+  });
+  var lastRec = todayR[todayR.length - 1];
+  var isIn = (lastRec === null || lastRec === void 0 ? void 0 : lastRec.type) === "in";
+  var action = isIn ? "out" : "in";
+  function doRecord() {
+    return _doRecord.apply(this, arguments);
+  }
+  function _doRecord() {
+    _doRecord = _asyncToGenerator(/*#__PURE__*/_regenerator().m(function _callee4() {
+      var time, lat, lng, inZone, pos, rec, _t2;
+      return _regenerator().w(function (_context4) {
+        while (1) switch (_context4.p = _context4.n) {
+          case 0:
+            setStatus("loading");
+            time = nowStr(); // Try GPS
+            inZone = null;
+            _context4.p = 1;
+            _context4.n = 2;
+            return new Promise(function (res, rej) {
+              return navigator.geolocation.getCurrentPosition(res, rej, {
+                enableHighAccuracy: true,
+                timeout: 5000
+              });
+            });
+          case 2:
+            pos = _context4.v;
+            lat = pos.coords.latitude;
+            lng = pos.coords.longitude;
+            _context4.n = 4;
+            break;
+          case 3:
+            _context4.p = 3;
+            _t2 = _context4.v;
+          case 4:
+            rec = {
+              empId: mgr.id,
+              empName: mgr.name,
+              dept: mgr.title || "إدارة",
+              date: today,
+              time: time,
+              type: action,
+              late: action === "in" ? isLate(time) : false,
+              lat: lat,
+              lng: lng,
+              inZone: inZone,
+              selfieUrl: null,
+              deviceVerified: true,
+              isMgr: true
+            };
+            onRec(rec);
+            setLastAction({
+              type: action,
+              time: time
+            });
+            setStatus("done");
+            setTimeout(function () {
+              return setStatus("idle");
+            }, 3000);
+          case 5:
+            return _context4.a(2);
+        }
+      }, _callee4, null, [[1, 3]]);
+    }));
+    return _doRecord.apply(this, arguments);
+  }
+  if (status === "done" && lastAction) return /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 8,
+      background: lastAction.type === "in" ? T.oLight : T.wLight,
+      border: "1px solid ".concat(lastAction.type === "in" ? "#6EE7B7" : "#FCD34D"),
+      borderRadius: 10,
+      padding: "7px 14px",
+      fontSize: 13
+    }
+  }, /*#__PURE__*/React.createElement("span", null, lastAction.type === "in" ? "✅" : "👋"), /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontWeight: 600,
+      color: lastAction.type === "in" ? T.ok : T.warn
+    }
+  }, lastAction.type === "in" ? "تم تسجيل حضورك" : "تم تسجيل انصرافك"), /*#__PURE__*/React.createElement("span", {
+    className: "mono",
+    style: {
+      color: T.muted,
+      fontSize: 12
+    }
+  }, lastAction.time));
+  return /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      alignItems: "center",
+      gap: 8
+    }
+  }, lastRec && /*#__PURE__*/React.createElement("span", {
+    style: {
+      fontSize: 11,
+      color: T.muted
+    }
+  }, "\u0622\u062E\u0631 \u062A\u0633\u062C\u064A\u0644: ", /*#__PURE__*/React.createElement("span", {
+    className: "mono"
+  }, lastRec.time), " ", /*#__PURE__*/React.createElement("span", {
+    style: {
+      color: lastRec.type === "in" ? T.ok : T.warn
+    }
+  }, "(", lastRec.type === "in" ? "حضور" : "انصراف", ")")), /*#__PURE__*/React.createElement("button", {
+    onClick: doRecord,
+    disabled: status === "loading",
+    style: {
+      padding: "8px 18px",
+      fontWeight: 700,
+      fontSize: 13,
+      borderRadius: 10,
+      background: action === "in" ? T.oLight : T.wLight,
+      color: action === "in" ? T.ok : T.warn,
+      border: "1.5px solid ".concat(action === "in" ? "#6EE7B7" : "#FCD34D"),
+      opacity: status === "loading" ? .7 : 1,
+      whiteSpace: "nowrap"
+    }
+  }, status === "loading" ? /*#__PURE__*/React.createElement("span", {
+    className: "sp"
+  }, "\u23F3") : action === "in" ? "⬆️ تسجيل حضوري" : "⬇️ تسجيل انصرافي"));
+}
+
+/* ══════════════════════════════════════════════════
    MANAGER PANEL
 ══════════════════════════════════════════════════ */
-function MgrPanel(_ref23) {
-  var mgr = _ref23.mgr,
-    allEmps = _ref23.allEmps,
-    setAllEmps = _ref23.setAllEmps,
-    recs = _ref23.recs,
-    setRecs = _ref23.setRecs,
-    leaves = _ref23.leaves,
-    setLeaves = _ref23.setLeaves,
-    devices = _ref23.devices,
-    setDevices = _ref23.setDevices,
-    managers = _ref23.managers,
-    setManagers = _ref23.setManagers,
-    wLat = _ref23.wLat,
-    setWLat = _ref23.setWLat,
-    wLng = _ref23.wLng,
-    setWLng = _ref23.setWLng,
-    kioskMode = _ref23.kioskMode,
-    setKioskMode = _ref23.setKioskMode,
-    onExit = _ref23.onExit;
+function MgrPanel(_ref24) {
+  var mgr = _ref24.mgr,
+    allEmps = _ref24.allEmps,
+    setAllEmps = _ref24.setAllEmps,
+    recs = _ref24.recs,
+    setRecs = _ref24.setRecs,
+    leaves = _ref24.leaves,
+    setLeaves = _ref24.setLeaves,
+    devices = _ref24.devices,
+    setDevices = _ref24.setDevices,
+    managers = _ref24.managers,
+    setManagers = _ref24.setManagers,
+    wLat = _ref24.wLat,
+    setWLat = _ref24.setWLat,
+    wLng = _ref24.wLng,
+    setWLng = _ref24.setWLng,
+    kioskMode = _ref24.kioskMode,
+    setKioskMode = _ref24.setKioskMode,
+    onExit = _ref24.onExit;
   var isSuper = mgr.role === "super";
   // الموظفون المرئيون حسب الصلاحية
   var visEmps = isSuper ? allEmps : allEmps.filter(function (e) {
@@ -4353,10 +4495,10 @@ function MgrPanel(_ref23) {
       _isMgr: true
     };
   })));
-  var _useState75 = useState("dash"),
-    _useState76 = _slicedToArray(_useState75, 2),
-    tab = _useState76[0],
-    setTab = _useState76[1];
+  var _useState79 = useState("dash"),
+    _useState80 = _slicedToArray(_useState79, 2),
+    tab = _useState80[0],
+    setTab = _useState80[1];
   var TABS = isSuper ? [{
     id: "dash",
     ic: "📊",
@@ -4455,7 +4597,21 @@ function MgrPanel(_ref23) {
     style: {
       color: T.accent
     }
-  }, "(", mgr.depts.join("، "), ")")))), /*#__PURE__*/React.createElement("button", {
+  }, "(", mgr.depts.join("، "), ")")))), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 8,
+      alignItems: "center"
+    }
+  }, /*#__PURE__*/React.createElement(MgrCheckIn, {
+    mgr: mgr,
+    recs: recs,
+    onRec: function onRec(r) {
+      return setRecs(function (rs) {
+        return [].concat(_toConsumableArray(rs), [r]);
+      });
+    }
+  }), /*#__PURE__*/React.createElement("button", {
     onClick: onExit,
     style: {
       padding: "7px 16px",
@@ -4466,7 +4622,7 @@ function MgrPanel(_ref23) {
       fontWeight: 500,
       borderRadius: 10
     }
-  }, "\u062E\u0631\u0648\u062C \u2190")), !isSuper && /*#__PURE__*/React.createElement("div", {
+  }, "\u062E\u0631\u0648\u062C \u2190"))), !isSuper && /*#__PURE__*/React.createElement("div", {
     style: {
       background: T.aLight,
       borderBottom: "1px solid rgba(99,102,241,.2)",
@@ -4553,40 +4709,40 @@ function MgrPanel(_ref23) {
    KIOSK TABLET MODE — جهاز ثابت عند الباب
    بدون Device Fingerprint — السيلفي إجبارية
 ══════════════════════════════════════════════════ */
-function KioskTablet(_ref24) {
-  var emps = _ref24.emps,
-    recs = _ref24.recs,
-    onRec = _ref24.onRec,
-    wLat = _ref24.wLat,
-    wLng = _ref24.wLng;
-  var _useState77 = useState("pin"),
-    _useState78 = _slicedToArray(_useState77, 2),
-    step = _useState78[0],
-    setStep = _useState78[1];
-  var _useState79 = useState(null),
-    _useState80 = _slicedToArray(_useState79, 2),
-    emp = _useState80[0],
-    setEmp = _useState80[1];
-  var _useState81 = useState(""),
+function KioskTablet(_ref25) {
+  var emps = _ref25.emps,
+    recs = _ref25.recs,
+    onRec = _ref25.onRec,
+    wLat = _ref25.wLat,
+    wLng = _ref25.wLng;
+  var _useState81 = useState("pin"),
     _useState82 = _slicedToArray(_useState81, 2),
-    act = _useState82[0],
-    setAct = _useState82[1];
+    step = _useState82[0],
+    setStep = _useState82[1];
   var _useState83 = useState(null),
     _useState84 = _slicedToArray(_useState83, 2),
-    gps = _useState84[0],
-    setGps = _useState84[1];
-  var _useState85 = useState(null),
+    emp = _useState84[0],
+    setEmp = _useState84[1];
+  var _useState85 = useState(""),
     _useState86 = _slicedToArray(_useState85, 2),
-    selfie = _useState86[0],
-    setSelfie = _useState86[1];
-  var _useState87 = useState(""),
+    act = _useState86[0],
+    setAct = _useState86[1];
+  var _useState87 = useState(null),
     _useState88 = _slicedToArray(_useState87, 2),
-    err = _useState88[0],
-    setErr = _useState88[1];
-  var _useState89 = useState(0),
+    gps = _useState88[0],
+    setGps = _useState88[1];
+  var _useState89 = useState(null),
     _useState90 = _slicedToArray(_useState89, 2),
-    sk = _useState90[0],
-    setSk = _useState90[1];
+    selfie = _useState90[0],
+    setSelfie = _useState90[1];
+  var _useState91 = useState(""),
+    _useState92 = _slicedToArray(_useState91, 2),
+    err = _useState92[0],
+    setErr = _useState92[1];
+  var _useState93 = useState(0),
+    _useState94 = _slicedToArray(_useState93, 2),
+    sk = _useState94[0],
+    setSk = _useState94[1];
   var today = todayStr();
   var todayR = recs.filter(function (r) {
     return r.date === today;
@@ -4986,14 +5142,14 @@ function App() {
     _useLS14 = _slicedToArray(_useLS13, 2),
     kioskMode = _useLS14[0],
     setKioskMode = _useLS14[1]; // "personal" | "tablet"
-  var _useState91 = useState("kiosk"),
-    _useState92 = _slicedToArray(_useState91, 2),
-    view = _useState92[0],
-    setView = _useState92[1];
-  var _useState93 = useState(null),
-    _useState94 = _slicedToArray(_useState93, 2),
-    curMgr = _useState94[0],
-    setCurMgr = _useState94[1];
+  var _useState95 = useState("kiosk"),
+    _useState96 = _slicedToArray(_useState95, 2),
+    view = _useState96[0],
+    setView = _useState96[1];
+  var _useState97 = useState(null),
+    _useState98 = _slicedToArray(_useState97, 2),
+    curMgr = _useState98[0],
+    setCurMgr = _useState98[1];
   return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("style", null, CSS), view === "selectMode" && /*#__PURE__*/React.createElement("div", {
     style: {
       minHeight: "100vh",
