@@ -94,14 +94,15 @@ function sheetPost(body) {
     method: "POST",
     headers: {"Content-Type": "text/plain"},
     body: JSON.stringify(body)
-  }).then(function(r) {
-    return r.text();
-  }).then(function(t) {
-    try { return JSON.parse(t); } catch(e) { return {success: true}; }
-  }).catch(function(e) {
-    console.error("Sheet error:", e);
-    return null;
-  });
+  }).then(function(r) { return r.text(); })
+    .then(function(t) { try { return JSON.parse(t); } catch(e) { return {success:true}; } })
+    .catch(function() { return null; });
+}
+
+function sheetGet(action) {
+  return fetch(SCRIPT_URL + "?action=" + action, { redirect: "follow" })
+    .then(function(r) { return r.json(); })
+    .catch(function() { return null; });
 }
 
 function pushRecord(r) {
@@ -109,16 +110,13 @@ function pushRecord(r) {
     action: r.type === "in" ? "checkIn" : "checkOut",
     empId: r.empId, empName: r.empName, dept: r.dept,
     lat: r.lat, lng: r.lng, inZone: r.inZone,
-    selfie: r.selfieUrl || "", deviceVerified: !!r.deviceVerified,
-    late: !!r.late
+    selfie: r.selfieUrl || "", deviceVerified: !!r.deviceVerified, late: !!r.late
   });
 }
 
 function syncAllToSheet(emps, mgrs, devs) {
   return sheetPost({
-    action: "syncAll",
-    employees: emps,
-    managers: mgrs,
+    action: "syncAll", employees: emps, managers: mgrs,
     devices: Object.entries(devs || {}).map(function(e) { return Object.assign({empId: e[0]}, e[1]); })
   });
 }
@@ -5354,6 +5352,21 @@ function App() {
     _useState98 = _slicedToArray(_useState97, 2),
     curMgr = _useState98[0],
     setCurMgr = _useState98[1];
+
+  // ── تحميل البيانات من الشيت عند الفتح ──
+  useEffect(function() {
+    sheetGet("getEmployees").then(function(data) {
+      if (data && Array.isArray(data) && data.length > 0) {
+        setEmps(data);
+      }
+    });
+    sheetGet("getManagers").then(function(data) {
+      if (data && Array.isArray(data) && data.length > 0) {
+        setManagers(data);
+      }
+    });
+  }, []);
+
   return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("style", null, CSS), view === "selectMode" && /*#__PURE__*/React.createElement("div", {
     style: {
       minHeight: "100vh",
