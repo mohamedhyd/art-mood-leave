@@ -90,10 +90,18 @@ var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyoAeHMREC2OHTeNOoSKA9
 
 function sheetPost(body) {
   return fetch(SCRIPT_URL, {
+    redirect: "follow",
     method: "POST",
-    headers: {"Content-Type": "application/json"},
+    headers: {"Content-Type": "text/plain"},
     body: JSON.stringify(body)
-  }).then(function(r) { return r.json(); }).catch(function(e) { console.error("Sheet error:", e); return null; });
+  }).then(function(r) {
+    return r.text();
+  }).then(function(t) {
+    try { return JSON.parse(t); } catch(e) { return {success: true}; }
+  }).catch(function(e) {
+    console.error("Sheet error:", e);
+    return null;
+  });
 }
 
 function pushRecord(r) {
