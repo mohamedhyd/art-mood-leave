@@ -86,14 +86,14 @@ function Logo(_ref) {
 var CSS = "\n@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@500&display=swap');\n*{box-sizing:border-box;margin:0;padding:0}\nbody{background:".concat(T.bg, ";color:").concat(T.txt, ";font-family:'Cairo',sans-serif;direction:rtl}\n::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:").concat(T.border, ";border-radius:4px}\n.mono{font-family:'JetBrains Mono',monospace;direction:ltr}\ninput,select{background:").concat(T.surface, ";border:1.5px solid ").concat(T.border, ";color:").concat(T.txt, ";border-radius:12px;padding:10px 13px;font-family:'Cairo',sans-serif;font-size:14px;outline:none;width:100%;transition:border .15s,box-shadow .15s}\ninput:focus,select:focus{border-color:").concat(T.accent, ";box-shadow:0 0 0 3px rgba(99,102,241,.12)}\nselect option{background:").concat(T.surface, "}\nbutton{cursor:pointer;font-family:'Cairo',sans-serif;border:none;border-radius:12px;transition:all .18s}\na{color:").concat(T.accent, "}\n@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}\n@keyframes pop{from{opacity:0;transform:scale(.93)}to{opacity:1;transform:scale(1)}}\n@keyframes spin{to{transform:rotate(360deg)}}\n@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}\n.fade{animation:fadeUp .25s ease}\n.pop{animation:pop .22s ease}\n.sp{animation:spin 1s linear infinite;display:inline-block}\n.shk{animation:shake .3s ease}\n");
 
 /* ─── CONSTANTS ─── */
-var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzOK_d41Wy19mmIdA1bE09ONk2dqIihfa0NCQi9Ao1eX0-AA0dKSTA6BcstnaepHzo/exec";
+var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyoAeHMREC2OHTeNOoSKA923uk-B2U3TgI9t60kjzaf1IUNX8IUQ00O3rgP0EFkfA/exec";
 
 function sheetPost(body) {
   return fetch(SCRIPT_URL, {
     method: "POST",
     headers: {"Content-Type": "application/json"},
     body: JSON.stringify(body)
-  }).then(function(r) { return r.json(); }).catch(function() { return null; });
+  }).then(function(r) { return r.json(); }).catch(function(e) { console.error("Sheet error:", e); return null; });
 }
 
 function pushRecord(r) {
@@ -101,7 +101,8 @@ function pushRecord(r) {
     action: r.type === "in" ? "checkIn" : "checkOut",
     empId: r.empId, empName: r.empName, dept: r.dept,
     lat: r.lat, lng: r.lng, inZone: r.inZone,
-    selfie: r.selfieUrl || "", deviceVerified: !!r.deviceVerified
+    selfie: r.selfieUrl || "", deviceVerified: !!r.deviceVerified,
+    late: !!r.late
   });
 }
 
@@ -110,7 +111,7 @@ function syncAllToSheet(emps, mgrs, devs) {
     action: "syncAll",
     employees: emps,
     managers: mgrs,
-    devices: Object.entries(devs).map(function(e) { return Object.assign({empId: e[0]}, e[1]); })
+    devices: Object.entries(devs || {}).map(function(e) { return Object.assign({empId: e[0]}, e[1]); })
   });
 }
 
