@@ -77,9 +77,94 @@ function Logo(_ref) {
 var CSS = "\n@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@500&display=swap');\n*{box-sizing:border-box;margin:0;padding:0}\nbody{background:".concat(T.bg, ";color:").concat(T.txt, ";font-family:'Cairo',sans-serif;direction:rtl}\n::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:").concat(T.border, ";border-radius:4px}\n.mono{font-family:'JetBrains Mono',monospace;direction:ltr}\ninput,select{background:").concat(T.surface, ";border:1.5px solid ").concat(T.border, ";color:").concat(T.txt, ";border-radius:12px;padding:10px 13px;font-family:'Cairo',sans-serif;font-size:14px;outline:none;width:100%;transition:border .15s,box-shadow .15s}\ninput:focus,select:focus{border-color:").concat(T.accent, ";box-shadow:0 0 0 3px rgba(99,102,241,.12)}\nselect option{background:").concat(T.surface, "}\nbutton{cursor:pointer;font-family:'Cairo',sans-serif;border:none;border-radius:12px;transition:all .18s}\na{color:").concat(T.accent, "}\n@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}\n@keyframes pop{from{opacity:0;transform:scale(.93)}to{opacity:1;transform:scale(1)}}\n@keyframes spin{to{transform:rotate(360deg)}}\n@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}\n.fade{animation:fadeUp .25s ease}\n.pop{animation:pop .22s ease}\n.sp{animation:spin 1s linear infinite;display:inline-block}\n.shk{animation:shake .3s ease}\n");
 
 /* ─── CONSTANTS ─── */
-var WORK_START = "09:00";
-var WORK_HOURS = 8;
 var GEO_R = 50;
+var WORK_DAYS = [0, 1, 2, 3, 4]; // الأحد=0 الاثنين=1 ... الخميس=4
+var SATURDAY = 6;
+
+// الشيفتات المتاحة
+var SHIFTS = {
+  "9-5": {
+    label: "9ص - 5م",
+    start: "09:00",
+    end: "17:00",
+    hours: 8
+  },
+  "8-4": {
+    label: "8ص - 4م",
+    start: "08:00",
+    end: "16:00",
+    hours: 8
+  },
+  "8.5-4.5": {
+    label: "8:30ص - 4:30م",
+    start: "08:30",
+    end: "16:30",
+    hours: 8
+  }
+};
+var DEFAULT_SHIFT = "9-5";
+var LATE_GRACE = 90; // دقيقة سماح من أول وقت شيفت (8:00 لحد 9:30)
+var WORK_HOURS = 8;
+var GEO_R_CONST = GEO_R;
+
+// حساب هل الموظف متأخر حسب شيفته
+function isLateForShift(time, shiftKey) {
+  if (!time) return false;
+  var shift = SHIFTS[shiftKey || DEFAULT_SHIFT];
+  var _shift$start$split$ma = shift.start.split(":").map(Number),
+    _shift$start$split$ma2 = _slicedToArray(_shift$start$split$ma, 2),
+    sh = _shift$start$split$ma2[0],
+    sm = _shift$start$split$ma2[1];
+  var _time$split$map = time.split(":").map(Number),
+    _time$split$map2 = _slicedToArray(_time$split$map, 2),
+    ih = _time$split$map2[0],
+    im = _time$split$map2[1];
+  var shiftStartMins = sh * 60 + sm;
+  var checkInMins = ih * 60 + im;
+  // السماح: من أول شيفت (8:00) + LATE_GRACE دقيقة
+  var earliestStart = 8 * 60; // 8:00 صباحاً
+  var graceEnd = earliestStart + LATE_GRACE; // 9:30
+  // متأخر لو جاء بعد وقت شيفته + 5 دقايق، وبعد الـ grace period
+  return checkInMins > Math.max(shiftStartMins + 5, graceEnd);
+}
+
+// هل اليوم ده يوم عمل عادي؟
+function isWorkDay(dateStr) {
+  var day = new Date(dateStr).getDay();
+  return WORK_DAYS.includes(day);
+}
+
+// هل السبت؟
+function isSaturday(dateStr) {
+  return new Date(dateStr).getDay() === SATURDAY;
+}
+
+// حساب الأوفرتايم
+function calcOvertime(hours, dateStr, shiftKey) {
+  var shift = SHIFTS[shiftKey || DEFAULT_SHIFT];
+  if (isSaturday(dateStr)) {
+    // السبت كله overtime
+    return {
+      regular: 0,
+      overtime: hours,
+      saturdayOT: hours
+    };
+  }
+  if (isWorkDay(dateStr)) {
+    var extra = Math.max(0, hours - shift.hours);
+    return {
+      regular: Math.min(hours, shift.hours),
+      overtime: extra,
+      saturdayOT: 0
+    };
+  }
+  // جمعة = إجازة
+  return {
+    regular: 0,
+    overtime: hours,
+    saturdayOT: 0
+  };
+}
 var DEF_MGRS = [{
   id: "M001",
   name: "عبدالله حسين",
@@ -133,17 +218,11 @@ var nowStr = function nowStr() {
 var fmtT = function fmtT(t) {
   return t || "—";
 };
-function isLate(t) {
-  if (!t) return false;
-  var _WORK_START$split$map = WORK_START.split(":").map(Number),
-    _WORK_START$split$map2 = _slicedToArray(_WORK_START$split$map, 2),
-    wh = _WORK_START$split$map2[0],
-    wm = _WORK_START$split$map2[1],
-    _t$split$map = t.split(":").map(Number),
-    _t$split$map2 = _slicedToArray(_t$split$map, 2),
-    ih = _t$split$map2[0],
-    im = _t$split$map2[1];
-  return ih * 60 + im > wh * 60 + wm + 5;
+function isLate(t, shiftKey) {
+  return isLateForShift(t, shiftKey || DEFAULT_SHIFT);
+}
+function getShiftForEmp(emp) {
+  return (emp === null || emp === void 0 ? void 0 : emp.shift) || DEFAULT_SHIFT;
 }
 function diffH(s, e) {
   if (!s || !e) return 0;
@@ -959,7 +1038,7 @@ function Kiosk(_ref13) {
       date: today,
       time: time,
       type: act,
-      late: act === "in" ? isLate(time) : false,
+      late: act === "in" ? isLate(time, getShiftForEmp(emp)) : false,
       lat: gps === null || gps === void 0 ? void 0 : gps.lat,
       lng: gps === null || gps === void 0 ? void 0 : gps.lng,
       accuracy: gps === null || gps === void 0 ? void 0 : gps.accuracy,
@@ -1690,7 +1769,7 @@ function AttendDash(_ref16) {
     var r = todayR.find(function (x) {
       return x.empId === e.id && x.type === "in";
     });
-    return r && isLate(r.time);
+    return r && isLate(r.time, e.shift);
   }).length;
   var outZ = isSuper ? todayR.filter(function (r) {
     return r.type === "in" && emps.some(function (e) {
@@ -1814,10 +1893,10 @@ function AttendDash(_ref16) {
       _now$split$map2 = _slicedToArray(_now$split$map, 2),
       nh = _now$split$map2[0],
       nm = _now$split$map2[1];
-    var _WORK_START$split$map3 = WORK_START.split(":").map(Number),
-      _WORK_START$split$map4 = _slicedToArray(_WORK_START$split$map3, 2),
-      wh = _WORK_START$split$map4[0],
-      wm = _WORK_START$split$map4[1];
+    var _WORK_START$split$map = WORK_START.split(":").map(Number),
+      _WORK_START$split$map2 = _slicedToArray(_WORK_START$split$map, 2),
+      wh = _WORK_START$split$map2[0],
+      wm = _WORK_START$split$map2[1];
     var endH = wh + WORK_HOURS;
     var afterEnd = nh * 60 + nm > endH * 60 + wm;
     if (!afterEnd) return null;
@@ -1908,7 +1987,13 @@ function AttendDash(_ref16) {
         fontWeight: 700,
         fontSize: 14
       }
-    }, "\uD83C\uDFE2 ", dept), /*#__PURE__*/React.createElement("span", {
+    }, "\uD83C\uDFE2 ", dept), /*#__PURE__*/React.createElement("div", {
+      style: {
+        display: "flex",
+        alignItems: "center",
+        gap: 8
+      }
+    }, /*#__PURE__*/React.createElement("span", {
       style: {
         fontSize: 12,
         color: T.muted
@@ -1917,7 +2002,11 @@ function AttendDash(_ref16) {
       return e.dept === dept && ["in", "done"].includes(st(e.id));
     }).length, "/", emps.filter(function (e) {
       return e.dept === dept;
-    }).length, " \u062D\u0627\u0636\u0631")), /*#__PURE__*/React.createElement("div", {
+    }).length, " \u062D\u0627\u0636\u0631"), isSaturday(today) && /*#__PURE__*/React.createElement(Badge, {
+      label: "\u26A1 \u0633\u0628\u062A \u2014 overtime",
+      color: T.warn,
+      bg: T.wLight
+    }))), /*#__PURE__*/React.createElement("div", {
       style: {
         overflowX: "auto"
       }
@@ -2003,7 +2092,7 @@ function AttendDash(_ref16) {
         style: {
           fontSize: 12,
           fontWeight: 600,
-          color: inR && isLate(inR.time) ? T.warn : inR ? T.ok : T.dim
+          color: inR && isLate(inR.time, e.shift) ? T.warn : inR ? T.ok : T.dim
         }
       }, fmtT(inR === null || inR === void 0 ? void 0 : inR.time))), /*#__PURE__*/React.createElement("td", {
         style: {
@@ -2076,6 +2165,7 @@ function Reports(_ref17) {
   });
   var label = mode === "month" ? "\u0634\u0647\u0631 ".concat(month) : "\u064A\u0648\u0645 ".concat(day);
   var stats = emps.map(function (e) {
+    var shift = e.shift || DEFAULT_SHIFT;
     var er = filtered.filter(function (r) {
       return r.empId === e.id;
     });
@@ -2084,9 +2174,13 @@ function Reports(_ref17) {
     })));
     var tH = 0,
       late = 0,
-      ot = 0,
+      regularH = 0,
+      otH = 0,
+      satOtH = 0,
       outZ = 0,
-      exits = 0;
+      exits = 0,
+      workDays = 0,
+      satDays = 0;
     days.forEach(function (d) {
       var dayRecs = er.filter(function (r) {
         return r.date === d;
@@ -2100,21 +2194,29 @@ function Reports(_ref17) {
       if (iR && oR) {
         var h = diffH(iR.time, oR.time);
         tH += h;
-        if (h > WORK_HOURS) ot += h - WORK_HOURS;
+        var ot = calcOvertime(h, d, shift);
+        regularH += ot.regular;
+        otH += ot.overtime;
+        satOtH += ot.saturdayOT;
+        if (isSaturday(d)) satDays++;else workDays++;
       }
-      if (iR && isLate(iR.time)) late++;
+      if (iR && isLate(iR.time, shift)) late++;
       if (iR && iR.inZone === false) outZ++;
-      // عدد مرات الخروج (كل "out" record)
       exits += dayRecs.filter(function (r) {
         return r.type === "out";
       }).length;
     });
     return {
       e: e,
+      shift: shift,
       days: days.length,
+      workDays: workDays,
+      satDays: satDays,
       tH: tH.toFixed(1),
+      regularH: regularH.toFixed(1),
+      otH: otH.toFixed(1),
+      satOtH: satOtH.toFixed(1),
       late: late,
-      ot: ot.toFixed(1),
       outZ: outZ,
       exits: exits
     };
@@ -2133,7 +2235,7 @@ function Reports(_ref17) {
     a.download = "\u062A\u0642\u0631\u064A\u0631-".concat(mode === "month" ? month : day, ".csv");
     a.click();
   }
-  var cols = ["الموظف", "القسم", mode === "month" ? "أيام الحضور" : "الساعات", "إجمالي الساعات", "تأخيرات", "أوفرتايم", "خروجات", "خارج النطاق"];
+  var cols = ["الموظف", "القسم", "الشيفت", mode === "month" ? "أيام العمل" : "ساعات اليوم", "إجمالي الساعات", "تأخيرات", "أوفرتايم", "OT السبت", "خروجات", "خارج النطاق"];
   return /*#__PURE__*/React.createElement("div", {
     style: {
       padding: "20px 0",
@@ -2248,6 +2350,7 @@ function Reports(_ref17) {
       }
     }, h);
   }))), /*#__PURE__*/React.createElement("tbody", null, stats.map(function (s, i) {
+    var _SHIFTS;
     return /*#__PURE__*/React.createElement("tr", {
       key: s.e.id,
       style: {
@@ -2294,13 +2397,30 @@ function Reports(_ref17) {
         fontSize: 12,
         fontWeight: s.e._isMgr ? 600 : 400
       }
-    }, s.e.dept), mode === "month" ? /*#__PURE__*/React.createElement("td", {
+    }, s.e.dept), /*#__PURE__*/React.createElement("td", {
       style: {
-        padding: "10px 12px",
+        padding: "10px 12px"
+      }
+    }, /*#__PURE__*/React.createElement(Badge, {
+      label: ((_SHIFTS = SHIFTS[s.shift || DEFAULT_SHIFT]) === null || _SHIFTS === void 0 ? void 0 : _SHIFTS.label) || "9ص-5م",
+      color: T.accent,
+      bg: T.aLight
+    })), mode === "month" ? /*#__PURE__*/React.createElement("td", {
+      style: {
+        padding: "10px 12px"
+      }
+    }, /*#__PURE__*/React.createElement("div", {
+      style: {
         fontWeight: 700,
-        color: s.days > 15 ? T.ok : s.days > 5 ? T.warn : T.danger
+        color: s.workDays > 15 ? T.ok : s.workDays > 5 ? T.warn : T.danger
       }
-    }, s.days, " \u064A\u0648\u0645") : /*#__PURE__*/React.createElement("td", {
+    }, s.workDays, " \u064A\u0648\u0645"), s.satDays > 0 && /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 11,
+        color: T.warn,
+        marginTop: 2
+      }
+    }, "+", s.satDays, " \u0633\u0628\u062A")) : /*#__PURE__*/React.createElement("td", {
       style: {
         padding: "10px 12px"
       }
@@ -2320,7 +2440,12 @@ function Reports(_ref17) {
         fontSize: 12,
         fontWeight: 600
       }
-    }, s.tH, "\u0633")), /*#__PURE__*/React.createElement("td", {
+    }, s.tH, "\u0633"), /*#__PURE__*/React.createElement("div", {
+      style: {
+        fontSize: 10,
+        color: T.muted
+      }
+    }, "\u0639\u0627\u062F\u064A: ", s.regularH, "\u0633")), /*#__PURE__*/React.createElement("td", {
       style: {
         padding: "10px 12px"
       }
@@ -2336,12 +2461,24 @@ function Reports(_ref17) {
       style: {
         padding: "10px 12px"
       }
-    }, Number(s.ot) > 0 ? /*#__PURE__*/React.createElement("span", {
+    }, Number(s.otH) > 0 ? /*#__PURE__*/React.createElement("span", {
       style: {
         color: T.ok,
         fontWeight: 700
       }
-    }, s.ot, "\u0633") : /*#__PURE__*/React.createElement("span", {
+    }, s.otH, "\u0633") : /*#__PURE__*/React.createElement("span", {
+      style: {
+        color: T.dim
+      }
+    }, "\u2014")), /*#__PURE__*/React.createElement("td", {
+      style: {
+        padding: "10px 12px"
+      }
+    }, Number(s.satOtH) > 0 ? /*#__PURE__*/React.createElement(Badge, {
+      label: s.satOtH + "س",
+      color: T.warn,
+      bg: T.wLight
+    }) : /*#__PURE__*/React.createElement("span", {
       style: {
         color: T.dim
       }
@@ -2715,14 +2852,16 @@ function EmpsMgmt(_ref19) {
         name: form.name.trim(),
         dept: form.dept.trim(),
         pin: form.pin.trim(),
-        color: form.color
+        color: form.color,
+        shift: form.shift || DEFAULT_SHIFT
       }]);
     });
     setForm({
       name: "",
       dept: "",
       pin: "",
-      color: COLORS[Math.floor(Math.random() * COLORS.length)]
+      color: COLORS[Math.floor(Math.random() * COLORS.length)],
+      shift: DEFAULT_SHIFT
     });
     setEmpErr("");
     setNDI("");
@@ -2847,6 +2986,46 @@ function EmpsMgmt(_ref19) {
       });
     }
   })), /*#__PURE__*/React.createElement("div", {
+    style: {
+      marginBottom: 14
+    }
+  }, /*#__PURE__*/React.createElement("div", {
+    style: {
+      fontSize: 12,
+      color: T.muted,
+      marginBottom: 8,
+      fontWeight: 600
+    }
+  }, "\u0627\u0644\u0634\u064A\u0641\u062A (\u0648\u0642\u062A \u0627\u0644\u0639\u0645\u0644)"), /*#__PURE__*/React.createElement("div", {
+    style: {
+      display: "flex",
+      gap: 8,
+      flexWrap: "wrap"
+    }
+  }, Object.entries(SHIFTS).map(function (_ref20) {
+    var _ref21 = _slicedToArray(_ref20, 2),
+      k = _ref21[0],
+      s = _ref21[1];
+    return /*#__PURE__*/React.createElement("button", {
+      key: k,
+      onClick: function onClick() {
+        return setForm(function (f) {
+          return _objectSpread(_objectSpread({}, f), {}, {
+            shift: k
+          });
+        });
+      },
+      style: {
+        padding: "8px 16px",
+        background: (form.shift || DEFAULT_SHIFT) === k ? T.accent : T.hi,
+        color: (form.shift || DEFAULT_SHIFT) === k ? "#fff" : T.mid,
+        border: "1.5px solid ".concat((form.shift || DEFAULT_SHIFT) === k ? T.accent : T.border),
+        borderRadius: 20,
+        fontSize: 13,
+        fontWeight: (form.shift || DEFAULT_SHIFT) === k ? 600 : 400
+      }
+    }, s.label);
+  }))), /*#__PURE__*/React.createElement("div", {
     style: {
       marginBottom: 14
     }
@@ -3044,6 +3223,7 @@ function EmpsMgmt(_ref19) {
         flexDirection: "column"
       }
     }, deptEmps.map(function (e, i) {
+      var _SHIFTS2;
       return /*#__PURE__*/React.createElement("div", {
         key: e.id,
         style: {
@@ -3072,7 +3252,11 @@ function EmpsMgmt(_ref19) {
           color: T.muted,
           marginTop: 2
         }
-      }, e.id, " \xB7 PIN: \u2022\u2022\u2022\u2022")), (movingEmp === null || movingEmp === void 0 ? void 0 : movingEmp.id) === e.id ? /*#__PURE__*/React.createElement("div", {
+      }, e.id, " \xB7 PIN: \u2022\u2022\u2022\u2022 \xB7 ", /*#__PURE__*/React.createElement("span", {
+        style: {
+          color: T.accent
+        }
+      }, ((_SHIFTS2 = SHIFTS[e.shift || DEFAULT_SHIFT]) === null || _SHIFTS2 === void 0 ? void 0 : _SHIFTS2.label) || "9ص-5م"))), (movingEmp === null || movingEmp === void 0 ? void 0 : movingEmp.id) === e.id ? /*#__PURE__*/React.createElement("div", {
         style: {
           display: "flex",
           gap: 6,
@@ -3183,10 +3367,10 @@ function EmpsMgmt(_ref19) {
 /* ══════════════════════════════════════════════════
    MANAGERS MANAGEMENT  ✅ FIXED — state at top level
 ══════════════════════════════════════════════════ */
-function MgrsMgmt(_ref20) {
-  var managers = _ref20.managers,
-    setManagers = _ref20.setManagers,
-    allEmps = _ref20.allEmps;
+function MgrsMgmt(_ref22) {
+  var managers = _ref22.managers,
+    setManagers = _ref22.setManagers,
+    allEmps = _ref22.allEmps;
   var _useState63 = useState(false),
     _useState64 = _slicedToArray(_useState63, 2),
     adding = _useState64[0],
@@ -3901,10 +4085,10 @@ function MgrsMgmt(_ref20) {
 /* ══════════════════════════════════════════════════
    DEVICES
 ══════════════════════════════════════════════════ */
-function DevsMgmt(_ref21) {
-  var allEmps = _ref21.allEmps,
-    devices = _ref21.devices,
-    setDevices = _ref21.setDevices;
+function DevsMgmt(_ref23) {
+  var allEmps = _ref23.allEmps,
+    devices = _ref23.devices,
+    setDevices = _ref23.setDevices;
   var reg = allEmps.filter(function (e) {
     return devices[e.id];
   });
@@ -4066,16 +4250,16 @@ function DevsMgmt(_ref21) {
 /* ══════════════════════════════════════════════════
    SETTINGS
 ══════════════════════════════════════════════════ */
-function Settings(_ref22) {
-  var wLat = _ref22.wLat,
-    setWLat = _ref22.setWLat,
-    wLng = _ref22.wLng,
-    setWLng = _ref22.setWLng,
-    recs = _ref22.recs,
-    setRecs = _ref22.setRecs,
-    allEmps = _ref22.allEmps,
-    kioskMode = _ref22.kioskMode,
-    setKioskMode = _ref22.setKioskMode;
+function Settings(_ref24) {
+  var wLat = _ref24.wLat,
+    setWLat = _ref24.setWLat,
+    wLng = _ref24.wLng,
+    setWLng = _ref24.setWLng,
+    recs = _ref24.recs,
+    setRecs = _ref24.setRecs,
+    allEmps = _ref24.allEmps,
+    kioskMode = _ref24.kioskMode,
+    setKioskMode = _ref24.setKioskMode;
   var _useState73 = useState(""),
     _useState74 = _slicedToArray(_useState73, 2),
     locSt = _useState74[0],
@@ -4308,16 +4492,16 @@ function Settings(_ref22) {
       color: T.mid,
       lineHeight: 2
     }
-  }, "\u0633\u062C\u0644\u0627\u062A: ", /*#__PURE__*/React.createElement("b", null, recs.length), " \xB7 \u0645\u0648\u0638\u0641\u0648\u0646: ", /*#__PURE__*/React.createElement("b", null, allEmps.length), " \xB7 \u0646\u0637\u0627\u0642: ", /*#__PURE__*/React.createElement("b", null, GEO_R, "\u0645"))));
+  }, "\u0633\u062C\u0644\u0627\u062A: ", /*#__PURE__*/React.createElement("b", null, recs.length), " \xB7 \u0645\u0648\u0638\u0641\u0648\u0646: ", /*#__PURE__*/React.createElement("b", null, allEmps.length), " \xB7 \u0646\u0637\u0627\u0642: ", /*#__PURE__*/React.createElement("b", null, GEO_R, "\u0645"), /*#__PURE__*/React.createElement("br", null), "\u0623\u064A\u0627\u0645 \u0627\u0644\u0639\u0645\u0644: ", /*#__PURE__*/React.createElement("b", null, "\u0627\u0644\u0623\u062D\u062F \u2014 \u0627\u0644\u062E\u0645\u064A\u0633"), " \xB7 \u0627\u0644\u0633\u0628\u062A: ", /*#__PURE__*/React.createElement("b", null, "\u26A1 \u0623\u0648\u0641\u0631\u062A\u0627\u064A\u0645"), /*#__PURE__*/React.createElement("br", null), "\u0633\u0645\u0627\u062D \u0627\u0644\u062A\u0623\u062E\u064A\u0631: ", /*#__PURE__*/React.createElement("b", null, "\u062D\u062A\u0649 9:30 \u0635"), " \u0628\u063A\u0636 \u0627\u0644\u0646\u0638\u0631 \u0639\u0646 \u0627\u0644\u0634\u064A\u0641\u062A")));
 }
 
 /* ══════════════════════════════════════════════════
    MGR CHECK-IN — زرار تسجيل حضور المدير
 ══════════════════════════════════════════════════ */
-function MgrCheckIn(_ref23) {
-  var mgr = _ref23.mgr,
-    recs = _ref23.recs,
-    onRec = _ref23.onRec;
+function MgrCheckIn(_ref25) {
+  var mgr = _ref25.mgr,
+    recs = _ref25.recs,
+    onRec = _ref25.onRec;
   var _useState75 = useState("idle"),
     _useState76 = _slicedToArray(_useState75, 2),
     status = _useState76[0],
@@ -4456,25 +4640,25 @@ function MgrCheckIn(_ref23) {
 /* ══════════════════════════════════════════════════
    MANAGER PANEL
 ══════════════════════════════════════════════════ */
-function MgrPanel(_ref24) {
-  var mgr = _ref24.mgr,
-    allEmps = _ref24.allEmps,
-    setAllEmps = _ref24.setAllEmps,
-    recs = _ref24.recs,
-    setRecs = _ref24.setRecs,
-    leaves = _ref24.leaves,
-    setLeaves = _ref24.setLeaves,
-    devices = _ref24.devices,
-    setDevices = _ref24.setDevices,
-    managers = _ref24.managers,
-    setManagers = _ref24.setManagers,
-    wLat = _ref24.wLat,
-    setWLat = _ref24.setWLat,
-    wLng = _ref24.wLng,
-    setWLng = _ref24.setWLng,
-    kioskMode = _ref24.kioskMode,
-    setKioskMode = _ref24.setKioskMode,
-    onExit = _ref24.onExit;
+function MgrPanel(_ref26) {
+  var mgr = _ref26.mgr,
+    allEmps = _ref26.allEmps,
+    setAllEmps = _ref26.setAllEmps,
+    recs = _ref26.recs,
+    setRecs = _ref26.setRecs,
+    leaves = _ref26.leaves,
+    setLeaves = _ref26.setLeaves,
+    devices = _ref26.devices,
+    setDevices = _ref26.setDevices,
+    managers = _ref26.managers,
+    setManagers = _ref26.setManagers,
+    wLat = _ref26.wLat,
+    setWLat = _ref26.setWLat,
+    wLng = _ref26.wLng,
+    setWLng = _ref26.setWLng,
+    kioskMode = _ref26.kioskMode,
+    setKioskMode = _ref26.setKioskMode,
+    onExit = _ref26.onExit;
   var isSuper = mgr.role === "super";
   // الموظفون المرئيون حسب الصلاحية
   var visEmps = isSuper ? allEmps : allEmps.filter(function (e) {
@@ -4709,12 +4893,12 @@ function MgrPanel(_ref24) {
    KIOSK TABLET MODE — جهاز ثابت عند الباب
    بدون Device Fingerprint — السيلفي إجبارية
 ══════════════════════════════════════════════════ */
-function KioskTablet(_ref25) {
-  var emps = _ref25.emps,
-    recs = _ref25.recs,
-    onRec = _ref25.onRec,
-    wLat = _ref25.wLat,
-    wLng = _ref25.wLng;
+function KioskTablet(_ref27) {
+  var emps = _ref27.emps,
+    recs = _ref27.recs,
+    onRec = _ref27.onRec,
+    wLat = _ref27.wLat,
+    wLng = _ref27.wLng;
   var _useState81 = useState("pin"),
     _useState82 = _slicedToArray(_useState81, 2),
     step = _useState82[0],
@@ -4784,7 +4968,7 @@ function KioskTablet(_ref25) {
       date: today,
       time: time,
       type: act,
-      late: act === "in" ? isLate(time) : false,
+      late: act === "in" ? isLate(time, getShiftForEmp(emp)) : false,
       lat: gps === null || gps === void 0 ? void 0 : gps.lat,
       lng: gps === null || gps === void 0 ? void 0 : gps.lng,
       accuracy: gps === null || gps === void 0 ? void 0 : gps.accuracy,
