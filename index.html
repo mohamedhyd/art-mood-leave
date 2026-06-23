@@ -86,7 +86,7 @@ function Logo(_ref) {
 var CSS = "\n@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@500&display=swap');\n*{box-sizing:border-box;margin:0;padding:0}\nbody{background:".concat(T.bg, ";color:").concat(T.txt, ";font-family:'Cairo',sans-serif;direction:rtl}\n::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:").concat(T.border, ";border-radius:4px}\n.mono{font-family:'JetBrains Mono',monospace;direction:ltr}\ninput,select{background:").concat(T.surface, ";border:1.5px solid ").concat(T.border, ";color:").concat(T.txt, ";border-radius:12px;padding:10px 13px;font-family:'Cairo',sans-serif;font-size:14px;outline:none;width:100%;transition:border .15s,box-shadow .15s}\ninput:focus,select:focus{border-color:").concat(T.accent, ";box-shadow:0 0 0 3px rgba(99,102,241,.12)}\nselect option{background:").concat(T.surface, "}\nbutton{cursor:pointer;font-family:'Cairo',sans-serif;border:none;border-radius:12px;transition:all .18s}\na{color:").concat(T.accent, "}\n@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}\n@keyframes pop{from{opacity:0;transform:scale(.93)}to{opacity:1;transform:scale(1)}}\n@keyframes spin{to{transform:rotate(360deg)}}\n@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}\n.fade{animation:fadeUp .25s ease}\n.pop{animation:pop .22s ease}\n.sp{animation:spin 1s linear infinite;display:inline-block}\n.shk{animation:shake .3s ease}\n");
 
 /* ─── CONSTANTS ─── */
-var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxlvxxJRl3ddTdmfKiAacHB5x5e17x2OxYLr5nh9sjtIPcy_Xp4GVgyJBFacO60PxQ/exec";
+var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwbVUbHWkEaJveOmY7-2_2V9SAwDj1U0FittRity9mKhAF_dF_IKEHHO8FAcDHLyCg/exec";
 
 function sheetPost(body) {
   return fetch(SCRIPT_URL, {
@@ -3256,7 +3256,7 @@ function EmpsMgmt(_ref19) {
           color: T.muted,
           marginTop: 2
         }
-      }, e.id, " \xB7 PIN: \u2022\u2022\u2022\u2022 \xB7 ", /*#__PURE__*/React.createElement("span", {
+      }, e.id, " \xB7 PIN: ", isSuperAdmin ? /*#__PURE__*/React.createElement("span", { style: { color: "#6366F1", fontWeight: 700 } }, e.pin) : "\u2022\u2022\u2022\u2022", " \xB7 ", /*#__PURE__*/React.createElement("span", {
         style: {
           color: T.accent
         }
