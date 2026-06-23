@@ -86,7 +86,7 @@ function Logo(_ref) {
 var CSS = "\n@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@500&display=swap');\n*{box-sizing:border-box;margin:0;padding:0}\nbody{background:".concat(T.bg, ";color:").concat(T.txt, ";font-family:'Cairo',sans-serif;direction:rtl}\n::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:").concat(T.border, ";border-radius:4px}\n.mono{font-family:'JetBrains Mono',monospace;direction:ltr}\ninput,select{background:").concat(T.surface, ";border:1.5px solid ").concat(T.border, ";color:").concat(T.txt, ";border-radius:12px;padding:10px 13px;font-family:'Cairo',sans-serif;font-size:14px;outline:none;width:100%;transition:border .15s,box-shadow .15s}\ninput:focus,select:focus{border-color:").concat(T.accent, ";box-shadow:0 0 0 3px rgba(99,102,241,.12)}\nselect option{background:").concat(T.surface, "}\nbutton{cursor:pointer;font-family:'Cairo',sans-serif;border:none;border-radius:12px;transition:all .18s}\na{color:").concat(T.accent, "}\n@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}\n@keyframes pop{from{opacity:0;transform:scale(.93)}to{opacity:1;transform:scale(1)}}\n@keyframes spin{to{transform:rotate(360deg)}}\n@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}\n.fade{animation:fadeUp .25s ease}\n.pop{animation:pop .22s ease}\n.sp{animation:spin 1s linear infinite;display:inline-block}\n.shk{animation:shake .3s ease}\n");
 
 /* ─── CONSTANTS ─── */
-var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwbVUbHWkEaJveOmY7-2_2V9SAwDj1U0FittRity9mKhAF_dF_IKEHHO8FAcDHLyCg/exec";
+var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbynGlDvStGEsQQDNpRomsuafmjpOyAIXFtMwsBNyRMUmlH2Xt6FbgMH7IR_jDWEayA/exec";
 
 function sheetPost(body) {
   return fetch(SCRIPT_URL, {
@@ -113,7 +113,6 @@ function pushRecord(r) {
   });
 }
 
-// المديرون بيتبعتوا بدون PIN للأمان
 function syncAllToSheet(emps, mgrs, devs) {
   var safeMgrs = (mgrs || []).map(function(m) {
     return { id: m.id, name: m.name, title: m.title, role: m.role, depts: m.depts, color: m.color };
@@ -2791,18 +2790,12 @@ function Leaves(_ref18) {
 ══════════════════════════════════════════════════ */
 function PinEditor(_ref_pe) {
   var emp = _ref_pe.emp, onSave = _ref_pe.onSave;
-  var _useState_pe = useState(false),
-    _useState_pe2 = _slicedToArray(_useState_pe, 2),
-    editing = _useState_pe2[0], setEditing = _useState_pe2[1];
-  var _useState_pe3 = useState(emp.pin || ""),
-    _useState_pe4 = _slicedToArray(_useState_pe3, 2),
-    pin = _useState_pe4[0], setPin = _useState_pe4[1];
-
+  var _pe1 = useState(false), editing = _slicedToArray(_pe1, 2)[0], setEditing = _slicedToArray(_pe1, 2)[1];
+  var _pe2 = useState(emp.pin || ""), pin = _slicedToArray(_pe2, 2)[0], setPin = _slicedToArray(_pe2, 2)[1];
   if (!editing) return /*#__PURE__*/React.createElement("button", {
-    onClick: function() { setPin(emp.pin||""); setEditing(true); },
+    onClick: function() { setEditing(true); },
     style: { padding: "6px 12px", background: "#FEF3C7", color: "#D97706", border: "1px solid #FCD34D", borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }
   }, "\uD83D\uDD11 PIN");
-
   return /*#__PURE__*/React.createElement("div", { style: { display: "flex", gap: 6, alignItems: "center" } },
     /*#__PURE__*/React.createElement("input", {
       type: "tel", value: pin, maxLength: 6, placeholder: "PIN جديد",
@@ -3382,7 +3375,7 @@ function EmpsMgmt(_ref19) {
           fontSize: 12,
           fontWeight: 600
         }
-      }, "\u0646\u0642\u0644 \u2190"), isSuperAdmin && /*#__PURE__*/React.createElement(PinEditor, { emp: e, onSave: function(id, pin) { setEmps(function(prev) { return prev.map(function(x) { return x.id === id ? _objectSpread(_objectSpread({}, x), {pin: pin}) : x; }); }); } }), /*#__PURE__*/React.createElement("button", {
+      }, "\u0646\u0642\u0644 \u2190"), isSuperAdmin && /*#__PURE__*/React.createElement(PinEditor, { emp: e, onSave: function(id, newPin) { setEmps(function(prev) { return prev.map(function(x) { return x.id === id ? _objectSpread(_objectSpread({}, x), {pin: newPin}) : x; }); }); } }), /*#__PURE__*/React.createElement("button", {
         onClick: function onClick() {
           return handleDelete(e.id);
         },
@@ -5389,11 +5382,9 @@ function App() {
     setCurMgr = _useState98[1];
 
   useEffect(function() {
-    // الموظفون من الشيت
     sheetGet("getEmployees").then(function(data) {
       if (data && Array.isArray(data) && data.length > 0) setEmps(data);
     });
-    // سجلات الحضور من الشيت
     sheetGet("getRecords").then(function(data) {
       if (data && Array.isArray(data) && data.length > 0) {
         var converted = data.map(function(r) {
@@ -5404,7 +5395,6 @@ function App() {
         setRecs(converted);
       }
     });
-    // المديرون دايماً من الكود - مش من الشيت عشان الـ PIN
     setManagers(DEF_MGRS);
   }, []);
 
