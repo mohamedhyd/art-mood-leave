@@ -2789,6 +2789,10 @@ function EmpsMgmt(_ref19) {
   var emps = _ref19.emps,
     setEmps = _ref19.setEmps,
     managers = _ref19.managers;
+  // حساب الصلاحية من المدير الحالي المحفوز في localStorage
+  var _curMgrStr = localStorage.getItem("_curMgr");
+  var _curMgr = _curMgrStr ? (function() { try { return JSON.parse(_curMgrStr); } catch(e) { return null; } })() : null;
+  var isSuperAdmin = _curMgr && _curMgr.role === "super";
   var _useState51 = useState(false),
     _useState52 = _slicedToArray(_useState51, 2),
     adding = _useState52[0],
@@ -3256,7 +3260,7 @@ function EmpsMgmt(_ref19) {
           color: T.muted,
           marginTop: 2
         }
-      }, e.id, " \xB7 PIN: ", isSuperAdmin ? /*#__PURE__*/React.createElement("span", { style: { color: "#6366F1", fontWeight: 700 } }, e.pin) : "\u2022\u2022\u2022\u2022", " \xB7 ", /*#__PURE__*/React.createElement("span", {
+      }, e.id, " \xB7 PIN: ", /*#__PURE__*/React.createElement("span", { style: { color: "#6366F1", fontWeight: 700 } }, isSuperAdmin ? e.pin : "\u2022\u2022\u2022\u2022"), " \xB7 ", /*#__PURE__*/React.createElement("span", {
         style: {
           color: T.accent
         }
@@ -5567,6 +5571,7 @@ function App() {
   }), view === "login" && /*#__PURE__*/React.createElement(MgrLogin, {
     managers: managers,
     onLogin: function onLogin(m) {
+      localStorage.setItem("_curMgr", JSON.stringify(m));
       setCurMgr(m);
       setView("panel");
     }
@@ -5589,6 +5594,7 @@ function App() {
     kioskMode: kioskMode,
     setKioskMode: setKioskMode,
     onExit: function onExit() {
+      localStorage.removeItem("_curMgr");
       setCurMgr(null);
       setView("kiosk");
     }
