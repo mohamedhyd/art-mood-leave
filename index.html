@@ -98,6 +98,12 @@ function sheetPost(body) {
     .catch(function() { return null; });
 }
 
+function sheetGet(action) {
+  return fetch(SCRIPT_URL + "?action=" + action, { redirect: "follow" })
+    .then(function(r) { return r.json(); })
+    .catch(function() { return null; });
+}
+
 function pushRecord(r) {
   sheetPost({
     action: r.type === "in" ? "checkIn" : "checkOut",
@@ -325,7 +331,10 @@ function useLS(k, d) {
   var _useState = useState(function () {
       try {
         var s = localStorage.getItem(k);
-        return s ? JSON.parse(s) : d;
+        if (!s) return d;
+        var parsed = JSON.parse(s);
+        if (Array.isArray(parsed) && parsed.length === 0 && Array.isArray(d) && d.length > 0) return d;
+        return parsed;
       } catch (_unused) {
         return d;
       }
@@ -5338,6 +5347,35 @@ function App() {
     _useState98 = _slicedToArray(_useState97, 2),
     curMgr = _useState98[0],
     setCurMgr = _useState98[1];
+
+  // ── تحميل كل البيانات من الشيت عند الفتح ──
+  useEffect(function() {
+    // الموظفون
+    sheetGet("getEmployees").then(function(data) {
+      if (data && Array.isArray(data) && data.length > 0) setEmps(data);
+    });
+    // المديرون - مع الحفاظ على الـ default
+    sheetGet("getManagers").then(function(data) {
+      if (data && Array.isArray(data) && data.length > 0) {
+        var ids = data.map(function(m) { return m.id; });
+        var merged = data.concat(DEF_MGRS.filter(function(m) { return !ids.includes(m.id); }));
+        setManagers(merged);
+      }
+    });
+    // سجلات الحضور والانصراف
+    sheetGet("getRecords").then(function(data) {
+      if (data && Array.isArray(data) && data.length > 0) {
+        // تحويل النوع من عربي لـ in/out
+        var converted = data.map(function(r) {
+          return Object.assign({}, r, {
+            type: r.type === "حضور" ? "in" : r.type === "انصراف" ? "out" : r.type
+          });
+        });
+        setRecs(converted);
+      }
+    });
+  }, []);
+
   return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("style", null, CSS), view === "selectMode" && /*#__PURE__*/React.createElement("div", {
     style: {
       minHeight: "100vh",
