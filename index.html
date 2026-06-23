@@ -5382,14 +5382,15 @@ function App() {
     setCurMgr = _useState98[1];
 
   useEffect(function() {
-    // الموظفون: جيب من الشيت بس لو فيه بيانات
-    sheetGet("getEmployees").then(function(data) {
-      if (data && Array.isArray(data) && data.length > 0) {
-        setEmps(data);
-      }
-      // لو الشيت فاضي أو error - افضل على اللي في localStorage
-    });
-    // سجلات الحضور
+    // الموظفون: حمّل من الشيت بس لو الـ localStorage فاضي
+    var localEmps = localStorage.getItem("a9_emps");
+    var hasLocalEmps = localEmps && JSON.parse(localEmps).length > 0;
+    if (!hasLocalEmps) {
+      sheetGet("getEmployees").then(function(data) {
+        if (data && Array.isArray(data) && data.length > 0) setEmps(data);
+      });
+    }
+    // سجلات الحضور: دايماً من الشيت
     sheetGet("getRecords").then(function(data) {
       if (data && Array.isArray(data) && data.length > 0) {
         var converted = data.map(function(r) {
@@ -5400,7 +5401,6 @@ function App() {
         setRecs(converted);
       }
     });
-    // المديرون: لا تمس الـ localStorage - useLS بيتكلم بيه لوحده
   }, []);
 
   return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("style", null, CSS), view === "selectMode" && /*#__PURE__*/React.createElement("div", {
