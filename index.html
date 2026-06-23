@@ -2790,8 +2790,8 @@ function Leaves(_ref18) {
 ══════════════════════════════════════════════════ */
 function PinEditor(_ref_pe) {
   var emp = _ref_pe.emp, onSave = _ref_pe.onSave;
-  var _pe1 = useState(false), editing = _slicedToArray(_pe1, 2)[0], setEditing = _slicedToArray(_pe1, 2)[1];
-  var _pe2 = useState(emp.pin || ""), pin = _slicedToArray(_pe2, 2)[0], setPin = _slicedToArray(_pe2, 2)[1];
+  var _pe1 = _slicedToArray(useState(false), 2), editing = _pe1[0], setEditing = _pe1[1];
+  var _pe2 = _slicedToArray(useState(emp.pin || ""), 2), pin = _pe2[0], setPin = _pe2[1];
   if (!editing) return /*#__PURE__*/React.createElement("button", {
     onClick: function() { setEditing(true); },
     style: { padding: "6px 12px", background: "#FEF3C7", color: "#D97706", border: "1px solid #FCD34D", borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }
@@ -5382,9 +5382,11 @@ function App() {
     setCurMgr = _useState98[1];
 
   useEffect(function() {
+    // الموظفون من الشيت
     sheetGet("getEmployees").then(function(data) {
       if (data && Array.isArray(data) && data.length > 0) setEmps(data);
     });
+    // سجلات الحضور من الشيت
     sheetGet("getRecords").then(function(data) {
       if (data && Array.isArray(data) && data.length > 0) {
         var converted = data.map(function(r) {
@@ -5395,7 +5397,13 @@ function App() {
         setRecs(converted);
       }
     });
-    setManagers(DEF_MGRS);
+    // المديرون: لو في localStorage استخدمه، لو لا استخدم DEF_MGRS
+    // لا نمسح المديرين الجدد اللي أضافهم المدير
+    var storedMgrs = localStorage.getItem("a9_mgrs");
+    if (!storedMgrs) {
+      setManagers(DEF_MGRS);
+    }
+    // لو موجودين في localStorage الـ useLS هيحملهم تلقائياً
   }, []);
 
   return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("style", null, CSS), view === "selectMode" && /*#__PURE__*/React.createElement("div", {
