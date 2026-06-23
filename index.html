@@ -104,16 +104,6 @@ function sheetGet(action) {
     .catch(function() { return null; });
 }
 
-function normalizeMgr(m) {
-  // تحويل depts من string لـ array
-  var depts = m.depts;
-  if (typeof depts === "string") {
-    depts = depts ? depts.split(",").map(function(d) { return d.trim(); }).filter(Boolean) : [];
-  }
-  if (!Array.isArray(depts)) depts = [];
-  return Object.assign({}, m, { depts: depts });
-}
-
 function pushRecord(r) {
   sheetPost({
     action: r.type === "in" ? "checkIn" : "checkOut",
@@ -123,9 +113,12 @@ function pushRecord(r) {
   });
 }
 
-function syncAllToSheet(emps, mgrs, devs) {
+// المديرون مش بيتبعتوا للشيت عشان الـ PIN ميتكسرش
+function syncAllToSheet(emps, devs) {
   return sheetPost({
-    action: "syncAll", employees: emps, managers: mgrs,
+    action: "syncAll",
+    employees: emps,
+    managers: [],
     devices: Object.entries(devs || {}).map(function(e) { return Object.assign({empId: e[0]}, e[1]); })
   });
 }
@@ -4776,7 +4769,7 @@ function MgrPanel(_ref26) {
     }
   }, "\u062E\u0631\u0648\u062C \u2190"), /*#__PURE__*/React.createElement("button", {
     onClick: function onClick() {
-      syncAllToSheet(allEmps, managers, devices).then(function(r) {
+      syncAllToSheet(allEmps, devices).then(function(r) {
         alert(r && r.success ? "\u2705 \u062A\u0645\u062A \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0645\u0639 Google Sheets" : "\u274C \u062A\u0623\u0643\u062F \u0645\u0646 \u0627\u0644\u0646\u062A");
       });
     },
@@ -5359,22 +5352,11 @@ function App() {
     setCurMgr = _useState98[1];
 
   useEffect(function() {
-    // الموظفون
+    // الموظفون من الشيت
     sheetGet("getEmployees").then(function(data) {
       if (data && Array.isArray(data) && data.length > 0) setEmps(data);
     });
-    // المديرون مع تصحيح depts
-    sheetGet("getManagers").then(function(data) {
-      if (data && Array.isArray(data) && data.length > 0) {
-        var normalized = data.map(normalizeMgr);
-        var ids = normalized.map(function(m) { return m.id; });
-        var merged = normalized.concat(
-          DEF_MGRS.filter(function(m) { return !ids.includes(m.id); })
-        );
-        setManagers(merged);
-      }
-    });
-    // سجلات الحضور
+    // سجلات الحضور من الشيت
     sheetGet("getRecords").then(function(data) {
       if (data && Array.isArray(data) && data.length > 0) {
         var converted = data.map(function(r) {
@@ -5385,6 +5367,8 @@ function App() {
         setRecs(converted);
       }
     });
+    // المديرون دايماً من الكود - مش من الشيت
+    setManagers(DEF_MGRS);
   }, []);
 
   return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("style", null, CSS), view === "selectMode" && /*#__PURE__*/React.createElement("div", {
