@@ -113,8 +113,8 @@ function pushRecord(r) {
   });
 }
 
+// المديرون بيتبعتوا بدون PIN للأمان
 function syncAllToSheet(emps, mgrs, devs) {
-  // المديرون بيتبعتوا بدون الـ PIN عشان الأمان
   var safeMgrs = (mgrs || []).map(function(m) {
     return { id: m.id, name: m.name, title: m.title, role: m.role, depts: m.depts, color: m.color };
   });
@@ -2824,7 +2824,6 @@ function EmpsMgmt(_ref19) {
   var emps = _ref19.emps,
     setEmps = _ref19.setEmps,
     managers = _ref19.managers;
-  // حساب الصلاحية من المدير الحالي المحفوز في localStorage
   var _curMgrStr = localStorage.getItem("_curMgr");
   var _curMgr = _curMgrStr ? (function() { try { return JSON.parse(_curMgrStr); } catch(e) { return null; } })() : null;
   var isSuperAdmin = _curMgr && _curMgr.role === "super";
@@ -5390,9 +5389,11 @@ function App() {
     setCurMgr = _useState98[1];
 
   useEffect(function() {
+    // الموظفون من الشيت
     sheetGet("getEmployees").then(function(data) {
       if (data && Array.isArray(data) && data.length > 0) setEmps(data);
     });
+    // سجلات الحضور من الشيت
     sheetGet("getRecords").then(function(data) {
       if (data && Array.isArray(data) && data.length > 0) {
         var converted = data.map(function(r) {
@@ -5403,6 +5404,7 @@ function App() {
         setRecs(converted);
       }
     });
+    // المديرون دايماً من الكود - مش من الشيت عشان الـ PIN
     setManagers(DEF_MGRS);
   }, []);
 
