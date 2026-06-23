@@ -104,6 +104,16 @@ function sheetGet(action) {
     .catch(function() { return null; });
 }
 
+function normalizeMgr(m) {
+  // تحويل depts من string لـ array
+  var depts = m.depts;
+  if (typeof depts === "string") {
+    depts = depts ? depts.split(",").map(function(d) { return d.trim(); }).filter(Boolean) : [];
+  }
+  if (!Array.isArray(depts)) depts = [];
+  return Object.assign({}, m, { depts: depts });
+}
+
 function pushRecord(r) {
   sheetPost({
     action: r.type === "in" ? "checkIn" : "checkOut",
@@ -5348,24 +5358,25 @@ function App() {
     curMgr = _useState98[0],
     setCurMgr = _useState98[1];
 
-  // ── تحميل كل البيانات من الشيت عند الفتح ──
   useEffect(function() {
     // الموظفون
     sheetGet("getEmployees").then(function(data) {
       if (data && Array.isArray(data) && data.length > 0) setEmps(data);
     });
-    // المديرون - مع الحفاظ على الـ default
+    // المديرون مع تصحيح depts
     sheetGet("getManagers").then(function(data) {
       if (data && Array.isArray(data) && data.length > 0) {
-        var ids = data.map(function(m) { return m.id; });
-        var merged = data.concat(DEF_MGRS.filter(function(m) { return !ids.includes(m.id); }));
+        var normalized = data.map(normalizeMgr);
+        var ids = normalized.map(function(m) { return m.id; });
+        var merged = normalized.concat(
+          DEF_MGRS.filter(function(m) { return !ids.includes(m.id); })
+        );
         setManagers(merged);
       }
     });
-    // سجلات الحضور والانصراف
+    // سجلات الحضور
     sheetGet("getRecords").then(function(data) {
       if (data && Array.isArray(data) && data.length > 0) {
-        // تحويل النوع من عربي لـ in/out
         var converted = data.map(function(r) {
           return Object.assign({}, r, {
             type: r.type === "حضور" ? "in" : r.type === "انصراف" ? "out" : r.type
