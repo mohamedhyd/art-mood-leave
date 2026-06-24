@@ -86,45 +86,6 @@ function Logo(_ref) {
 var CSS = "\n@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@500&display=swap');\n*{box-sizing:border-box;margin:0;padding:0}\nbody{background:".concat(T.bg, ";color:").concat(T.txt, ";font-family:'Cairo',sans-serif;direction:rtl}\n::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:").concat(T.border, ";border-radius:4px}\n.mono{font-family:'JetBrains Mono',monospace;direction:ltr}\ninput,select{background:").concat(T.surface, ";border:1.5px solid ").concat(T.border, ";color:").concat(T.txt, ";border-radius:12px;padding:10px 13px;font-family:'Cairo',sans-serif;font-size:14px;outline:none;width:100%;transition:border .15s,box-shadow .15s}\ninput:focus,select:focus{border-color:").concat(T.accent, ";box-shadow:0 0 0 3px rgba(99,102,241,.12)}\nselect option{background:").concat(T.surface, "}\nbutton{cursor:pointer;font-family:'Cairo',sans-serif;border:none;border-radius:12px;transition:all .18s}\na{color:").concat(T.accent, "}\n@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}\n@keyframes pop{from{opacity:0;transform:scale(.93)}to{opacity:1;transform:scale(1)}}\n@keyframes spin{to{transform:rotate(360deg)}}\n@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}\n.fade{animation:fadeUp .25s ease}\n.pop{animation:pop .22s ease}\n.sp{animation:spin 1s linear infinite;display:inline-block}\n.shk{animation:shake .3s ease}\n");
 
 /* ─── CONSTANTS ─── */
-var SCRIPT_URL = "https://script.google.com/macros/s/AKfycbynGlDvStGEsQQDNpRomsuafmjpOyAIXFtMwsBNyRMUmlH2Xt6FbgMH7IR_jDWEayA/exec";
-
-function sheetPost(body) {
-  return fetch(SCRIPT_URL, {
-    redirect: "follow", method: "POST",
-    headers: {"Content-Type": "text/plain"},
-    body: JSON.stringify(body)
-  }).then(function(r) { return r.text(); })
-    .then(function(t) { try { return JSON.parse(t); } catch(e) { return {success:true}; } })
-    .catch(function() { return null; });
-}
-
-function sheetGet(action) {
-  return fetch(SCRIPT_URL + "?action=" + action, { redirect: "follow" })
-    .then(function(r) { return r.json(); })
-    .catch(function() { return null; });
-}
-
-function pushRecord(r) {
-  sheetPost({
-    action: r.type === "in" ? "checkIn" : "checkOut",
-    empId: r.empId, empName: r.empName, dept: r.dept,
-    lat: r.lat, lng: r.lng, inZone: r.inZone,
-    selfie: r.selfieUrl || "", deviceVerified: !!r.deviceVerified, late: !!r.late
-  });
-}
-
-function syncAllToSheet(emps, mgrs, devs) {
-  var safeMgrs = (mgrs || []).map(function(m) {
-    return { id: m.id, name: m.name, title: m.title, role: m.role, depts: m.depts, color: m.color };
-  });
-  return sheetPost({
-    action: "syncAll",
-    employees: emps,
-    managers: safeMgrs,
-    devices: Object.entries(devs || {}).map(function(e) { return Object.assign({empId: e[0]}, e[1]); })
-  });
-}
-
 var GEO_R = 50;
 var WORK_DAYS = [0, 1, 2, 3, 4]; // الأحد=0 الاثنين=1 ... الخميس=4
 var SATURDAY = 6;
@@ -1284,7 +1245,21 @@ function Kiosk(_ref13) {
       borderRadius: 12,
       opacity: gps ? 1 : .6
     }
-  }, "\u0627\u0644\u062A\u0627\u0644\u064A \u2190")), step === "selfie" && /*#__PURE__*/React.createElement("div", {
+  }, "\u0627\u0644\u062A\u0627\u0644\u064A \u2190"), /*#__PURE__*/React.createElement("button", {
+    onClick: function onClick() {
+      setGps({
+        ok: false,
+        inZone: null
+      });
+      setStep("selfie");
+    },
+    style: {
+      background: "none",
+      color: T.muted,
+      fontSize: 13,
+      padding: 8
+    }
+  }, "\u062A\u062E\u0637\u064A \u0627\u0644\u0645\u0648\u0642\u0639")), step === "selfie" && /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       flexDirection: "column",
@@ -1711,7 +1686,7 @@ function MgrLogin(_ref15) {
       fontSize: 22,
       fontWeight: 800
     }
-  }, "\u062F\u062E\u0648\u0644 \u0627\u0644\u0645\u062F\u064A\u0631\u0648\u0646"), /*#__PURE__*/React.createElement("div", {
+  }, "\u062F\u062E\u0648\u0644 \u0627\u0644\u0645\u062F\u064A\u0631\u064A\u0646"), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 13,
       color: T.muted,
@@ -3557,7 +3532,7 @@ function MgrsMgmt(_ref22) {
       fontWeight: 700,
       fontSize: 15
     }
-  }, "\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u062F\u064A\u0631\u0648\u0646"), /*#__PURE__*/React.createElement("div", {
+  }, "\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u062F\u064A\u0631\u064A\u0646"), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 12,
       color: T.muted,
@@ -4785,8 +4760,9 @@ function MgrPanel(_ref26) {
     }
   }, "\u062E\u0631\u0648\u062C \u2190"), /*#__PURE__*/React.createElement("button", {
     onClick: function onClick() {
-      syncAllToSheet(allEmps, managers, devices).then(function(r) {
-        alert(r && r.success ? "\u2705 \u062A\u0645\u062A \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0645\u0639 Google Sheets" : "\u274C \u062A\u0623\u0643\u062F \u0645\u0646 \u0627\u0644\u0646\u062A");
+      var fn = window._fbSyncEmps || function() { return Promise.resolve({success:false}); };
+      fn(allEmps, managers, devices).then(function() {
+        alert("\u2705 \u062A\u0645\u062A \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0645\u0639 Firebase");
       });
     },
     style: {
@@ -4794,7 +4770,7 @@ function MgrPanel(_ref26) {
       border: "1.5px solid #6EE7B7", fontSize: 12, fontWeight: 600,
       borderRadius: 10, flexShrink: 0, cursor: "pointer", fontFamily: "inherit"
     }
-  }, "\uD83D\uDD04 Sheet")), /*#__PURE__*/React.createElement("div", {
+  }, "\uD83D\uDD04 Sync")), /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       alignItems: "center",
@@ -4836,7 +4812,7 @@ function MgrPanel(_ref26) {
     recs: recs,
     onRec: function onRec(r) {
       setRecs(function (rs) { return [].concat(_toConsumableArray(rs), [r]); });
-      pushRecord(r);
+      window._fbPushRecord && window._fbPushRecord(r);
     }
   }))), !isSuper && /*#__PURE__*/React.createElement("div", {
     style: {
@@ -5367,40 +5343,51 @@ function App() {
     curMgr = _useState98[0],
     setCurMgr = _useState98[1];
 
-  // دالة PIN الموحدة
-  function handleUnifiedPin(pin) {
-    // دور في المديرون أول
-    var mgr = managers.find(function(m) { return m.pin === pin; });
-    if (mgr) {
-      localStorage.setItem("_curMgr", JSON.stringify(mgr));
-      setCurMgr(mgr);
-      setView("panel");
-      return;
-    }
-    // بعدين الموظفين
-    var emp = emps.find(function(e) { return e.pin === pin; });
-    if (emp) {
-      setView("empAction_" + emp.id);
-      return;
-    }
-    return false; // PIN غلط
-  }
-
   useEffect(function() {
-    // دايماً من الشيت
-    sheetGet("getEmployees").then(function(data) {
-      if (data && Array.isArray(data) && data.length > 0) setEmps(data);
-    });
-    sheetGet("getRecords").then(function(data) {
-      if (data && Array.isArray(data) && data.length > 0) {
-        var converted = data.map(function(r) {
-          return Object.assign({}, r, {
-            type: r.type === "حضور" ? "in" : r.type === "انصراف" ? "out" : r.type
-          });
-        });
-        setRecs(converted);
+    // Firebase real-time listeners - wait for Firebase to load
+    function initFirebase() {
+      if (!window._fbDB) {
+        window.addEventListener("fbReady", initFirebase, { once: true });
+        return;
       }
+    var db = window._fbDB;
+    var { collection, onSnapshot, addDoc, setDoc, doc, query, orderBy } = window._fbFirestore;
+
+    // الموظفون - real-time
+    var unsubEmps = onSnapshot(collection(db, "employees"), function(snap) {
+      var data = snap.docs.map(function(d) { return Object.assign({ _id: d.id }, d.data()); });
+      if (data.length > 0) setEmps(data);
     });
+
+    // سجلات الحضور - real-time
+    var unsubRecs = onSnapshot(
+      query(collection(db, "records"), orderBy("timestamp", "desc")),
+      function(snap) {
+        var data = snap.docs.map(function(d) { return Object.assign({ _id: d.id }, d.data()); });
+        setRecs(data);
+      }
+    );
+
+    // دالة إضافة سجل
+    window._fbPushRecord = function(r) {
+      addDoc(collection(db, "records"), Object.assign({}, r, { timestamp: new Date().toISOString() }));
+    };
+
+    // دالة مزامنة الموظفين
+    window._fbSyncEmps = function(emps, mgrs, devs) {
+      emps.forEach(function(e) {
+        setDoc(doc(db, "employees", e.id), e);
+      });
+      (mgrs || []).forEach(function(m) {
+        var safeMgr = { id: m.id, name: m.name, title: m.title, role: m.role, depts: m.depts, color: m.color };
+        setDoc(doc(db, "managers", m.id), safeMgr);
+      });
+      return Promise.resolve({ success: true });
+    };
+
+      return function() { unsubEmps(); unsubRecs(); };
+    }
+    initFirebase();
   }, []);
 
   return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("style", null, CSS), view === "selectMode" && /*#__PURE__*/React.createElement("div", {
@@ -5519,7 +5506,7 @@ function App() {
     recs: recs,
     onRec: function onRec(r) {
       setRecs(function (rs) { return [].concat(_toConsumableArray(rs), [r]); });
-      pushRecord(r);
+      window._fbPushRecord && window._fbPushRecord(r);
     },
     wLat: wLat,
     wLng: wLng,
@@ -5567,7 +5554,7 @@ function App() {
     recs: recs,
     onRec: function onRec(r) {
       setRecs(function (rs) { return [].concat(_toConsumableArray(rs), [r]); });
-      pushRecord(r);
+      window._fbPushRecord && window._fbPushRecord(r);
     },
     wLat: wLat,
     wLng: wLng
@@ -5607,8 +5594,7 @@ function App() {
       setCurMgr(m);
       setView("panel");
     }
-  })
-  /* unified PIN handled in kiosk via managers array */, view === "panel" && curMgr && /*#__PURE__*/React.createElement(MgrPanel, {
+  }), view === "panel" && curMgr && /*#__PURE__*/React.createElement(MgrPanel, {
     mgr: curMgr,
     allEmps: emps,
     setAllEmps: setEmps,
@@ -5627,7 +5613,6 @@ function App() {
     kioskMode: kioskMode,
     setKioskMode: setKioskMode,
     onExit: function onExit() {
-      localStorage.removeItem("_curMgr");
       setCurMgr(null);
       setView("kiosk");
     }
