@@ -922,6 +922,7 @@ function SelfieWidget(_ref12) {
 ══════════════════════════════════════════════════ */
 function Kiosk(_ref13) {
   var emps = _ref13.emps,
+    managers = _ref13.managers,
     recs = _ref13.recs,
     onRec = _ref13.onRec,
     wLat = _ref13.wLat,
@@ -4901,6 +4902,7 @@ function MgrPanel(_ref26) {
 ══════════════════════════════════════════════════ */
 function KioskTablet(_ref27) {
   var emps = _ref27.emps,
+    managers = _ref27.managers,
     recs = _ref27.recs,
     onRec = _ref27.onRec,
     wLat = _ref27.wLat,
@@ -4944,6 +4946,8 @@ function KioskTablet(_ref27) {
     return rs.length ? rs[rs.length - 1].type === "in" ? "in" : "done" : "absent";
   }
   function onPin(pin) {
+    var _tm=managers&&managers.find(function(x){return x.pin===pin;});
+    if(_tm){window._onMgrLogin&&window._onMgrLogin(_tm);return;}
     var e = emps.find(function (x) {
       return x.pin === pin;
     });
@@ -5518,10 +5522,12 @@ function App() {
     }
   }, "\u062C\u0647\u0627\u0632 \u0648\u0627\u062D\u062F \u0645\u0634\u062A\u0631\u0643 \u0639\u0646\u062F \u0627\u0644\u0628\u0627\u0628 \u2014 \u0627\u0644\u0633\u064A\u0644\u0641\u064A \u0625\u062C\u0628\u0627\u0631\u064A\u0629 \u0644\u0644\u062A\u062D\u0642\u0642")))), view === "kiosk" && kioskMode === "personal" && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(Kiosk, {
     emps: emps,
+    managers: managers,
     recs: recs,
     onRec: function onRec(r) {
       setRecs(function (rs) { return [].concat(_toConsumableArray(rs), [r]); });
       window._fbPushRecord && window._fbPushRecord(r);
+      window._fbAddRecord && window._fbAddRecord(r);
     },
     wLat: wLat,
     wLng: wLng,
@@ -5552,6 +5558,7 @@ function App() {
     }
   }, "\uD83D\uDCF1 \u062A\u0633\u062C\u064A\u0644 \u062C\u0647\u0627\u0632\u064A"))), view === "kiosk" && kioskMode === "tablet" && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(KioskTablet, {
     emps: emps,
+    managers: managers,
     recs: recs,
     onRec: function onRec(r) {
       setRecs(function (rs) { return [].concat(_toConsumableArray(rs), [r]); });
