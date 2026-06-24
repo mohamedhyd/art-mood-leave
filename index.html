@@ -18,6 +18,22 @@
   </style>
   <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script type="module">
+    import{initializeApp}from"https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+    import{getFirestore,collection,onSnapshot,addDoc,setDoc,doc,query,orderBy}from"https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+    const app=initializeApp({
+      apiKey: "AIzaSyDAOT-XL05ZoMrZxkQWS7W6zZbzP7IywGI",
+      authDomain: "art-mood-leave.firebaseapp.com",
+      projectId: "art-mood-leave",
+      storageBucket: "art-mood-leave.firebasestorage.app",
+      messagingSenderId: "1086084656311",
+      appId: "1:1086084656311:web:2587930aa4a0971034f132"
+    });
+    const db=getFirestore(app);
+    window._fbDB=db;
+    window._fbFirestore={collection,onSnapshot,addDoc,setDoc,doc,query,orderBy};
+    window.dispatchEvent(new Event("fbReady"));
+  </script>
 </head>
 <body>
   <div id="root"></div>
@@ -994,6 +1010,9 @@ function Kiosk(_ref13) {
       return _regenerator().w(function (_context2) {
         while (1) switch (_context2.n) {
           case 0:
+            // المديرون أول
+            var _mgrPin = managers.find(function(x){return x.pin===pin;});
+            if (_mgrPin) { window._onMgrLogin&&window._onMgrLogin(_mgrPin); return _context2.a(2); }
             e = emps.find(function (x) {
               return x.pin === pin;
             });
@@ -4760,7 +4779,7 @@ function MgrPanel(_ref26) {
     }
   }, "\u062E\u0631\u0648\u062C \u2190"), /*#__PURE__*/React.createElement("button", {
     onClick: function onClick() {
-      var fn = window._fbSyncEmps || function() { return Promise.resolve({success:false}); };
+      var fn = window._fbSyncAll || function() { return Promise.resolve({success:false}); };
       fn(allEmps, managers, devices).then(function() {
         alert("\u2705 \u062A\u0645\u062A \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629 \u0645\u0639 Firebase");
       });
@@ -5373,20 +5392,28 @@ function App() {
       addDoc(collection(db, "records"), Object.assign({}, r, { timestamp: new Date().toISOString() }));
     };
 
-    // دالة مزامنة الموظفين
-    window._fbSyncEmps = function(emps, mgrs, devs) {
-      emps.forEach(function(e) {
-        setDoc(doc(db, "employees", e.id), e);
+    // دالة مزامنة الموظفين والمديرون
+    window._fbSyncAll = function(emps, mgrs) {
+      var p = emps.map(function(e){
+        return setDoc(doc(db,"employees",String(e.id||e._id||Date.now())),e);
       });
-      (mgrs || []).forEach(function(m) {
-        var safeMgr = { id: m.id, name: m.name, title: m.title, role: m.role, depts: m.depts, color: m.color };
-        setDoc(doc(db, "managers", m.id), safeMgr);
+      (mgrs||[]).forEach(function(m){
+        p.push(setDoc(doc(db,"managers",String(m.id)),{
+          id:m.id,name:m.name,title:m.title,role:m.role,depts:m.depts||[],color:m.color
+        }));
       });
-      return Promise.resolve({ success: true });
+      return Promise.all(p).then(function(){return{success:true};});
     };
+    window._fbSyncAll = window._fbSyncAll; // backwards compat
 
       return function() { unsubEmps(); unsubRecs(); };
     }
+    // مدير يدخل من شاشة الكيوسك الموحدة
+    window._onMgrLogin = function(m) {
+      localStorage.setItem("_curMgr", JSON.stringify(m));
+      setCurMgr(m);
+      setView("panel");
+    };
     initFirebase();
   }, []);
 
