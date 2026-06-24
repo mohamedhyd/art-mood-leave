@@ -1284,21 +1284,7 @@ function Kiosk(_ref13) {
       borderRadius: 12,
       opacity: gps ? 1 : .6
     }
-  }, "\u0627\u0644\u062A\u0627\u0644\u064A \u2190"), /*#__PURE__*/React.createElement("button", {
-    onClick: function onClick() {
-      setGps({
-        ok: false,
-        inZone: null
-      });
-      setStep("selfie");
-    },
-    style: {
-      background: "none",
-      color: T.muted,
-      fontSize: 13,
-      padding: 8
-    }
-  }, "\u062A\u062E\u0637\u064A \u0627\u0644\u0645\u0648\u0642\u0639")), step === "selfie" && /*#__PURE__*/React.createElement("div", {
+  }, "\u0627\u0644\u062A\u0627\u0644\u064A \u2190")), step === "selfie" && /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       flexDirection: "column",
@@ -1322,7 +1308,7 @@ function Kiosk(_ref13) {
       width: "100%",
       borderRadius: 12
     }
-  }, selfie ? "التالي ←" : "تخطي →")), step === "confirm" && /*#__PURE__*/React.createElement("div", {
+  }, "التالي ←")), step === "confirm" && /*#__PURE__*/React.createElement("div", {
     style: {
       display: "flex",
       flexDirection: "column",
@@ -1725,7 +1711,7 @@ function MgrLogin(_ref15) {
       fontSize: 22,
       fontWeight: 800
     }
-  }, "\u062F\u062E\u0648\u0644 \u0627\u0644\u0645\u062F\u064A\u0631\u064A\u0646"), /*#__PURE__*/React.createElement("div", {
+  }, "\u062F\u062E\u0648\u0644 \u0627\u0644\u0645\u062F\u064A\u0631\u0648\u0646"), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 13,
       color: T.muted,
@@ -3571,7 +3557,7 @@ function MgrsMgmt(_ref22) {
       fontWeight: 700,
       fontSize: 15
     }
-  }, "\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u062F\u064A\u0631\u064A\u0646"), /*#__PURE__*/React.createElement("div", {
+  }, "\u0625\u062F\u0627\u0631\u0629 \u0627\u0644\u0645\u062F\u064A\u0631\u0648\u0646"), /*#__PURE__*/React.createElement("div", {
     style: {
       fontSize: 12,
       color: T.muted,
@@ -5381,16 +5367,30 @@ function App() {
     curMgr = _useState98[0],
     setCurMgr = _useState98[1];
 
-  useEffect(function() {
-    // الموظفون: حمّل من الشيت بس لو الـ localStorage فاضي
-    var localEmps = localStorage.getItem("a9_emps");
-    var hasLocalEmps = localEmps && JSON.parse(localEmps).length > 0;
-    if (!hasLocalEmps) {
-      sheetGet("getEmployees").then(function(data) {
-        if (data && Array.isArray(data) && data.length > 0) setEmps(data);
-      });
+  // دالة PIN الموحدة
+  function handleUnifiedPin(pin) {
+    // دور في المديرون أول
+    var mgr = managers.find(function(m) { return m.pin === pin; });
+    if (mgr) {
+      localStorage.setItem("_curMgr", JSON.stringify(mgr));
+      setCurMgr(mgr);
+      setView("panel");
+      return;
     }
-    // سجلات الحضور: دايماً من الشيت
+    // بعدين الموظفين
+    var emp = emps.find(function(e) { return e.pin === pin; });
+    if (emp) {
+      setView("empAction_" + emp.id);
+      return;
+    }
+    return false; // PIN غلط
+  }
+
+  useEffect(function() {
+    // دايماً من الشيت
+    sheetGet("getEmployees").then(function(data) {
+      if (data && Array.isArray(data) && data.length > 0) setEmps(data);
+    });
     sheetGet("getRecords").then(function(data) {
       if (data && Array.isArray(data) && data.length > 0) {
         var converted = data.map(function(r) {
@@ -5607,7 +5607,8 @@ function App() {
       setCurMgr(m);
       setView("panel");
     }
-  }), view === "panel" && curMgr && /*#__PURE__*/React.createElement(MgrPanel, {
+  })
+  /* unified PIN handled in kiosk via managers array */, view === "panel" && curMgr && /*#__PURE__*/React.createElement(MgrPanel, {
     mgr: curMgr,
     allEmps: emps,
     setAllEmps: setEmps,
