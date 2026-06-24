@@ -102,7 +102,7 @@ function Logo(_ref) {
 var CSS = "\n@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@500&display=swap');\n*{box-sizing:border-box;margin:0;padding:0}\nbody{background:".concat(T.bg, ";color:").concat(T.txt, ";font-family:'Cairo',sans-serif;direction:rtl}\n::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:").concat(T.border, ";border-radius:4px}\n.mono{font-family:'JetBrains Mono',monospace;direction:ltr}\ninput,select{background:").concat(T.surface, ";border:1.5px solid ").concat(T.border, ";color:").concat(T.txt, ";border-radius:12px;padding:10px 13px;font-family:'Cairo',sans-serif;font-size:14px;outline:none;width:100%;transition:border .15s,box-shadow .15s}\ninput:focus,select:focus{border-color:").concat(T.accent, ";box-shadow:0 0 0 3px rgba(99,102,241,.12)}\nselect option{background:").concat(T.surface, "}\nbutton{cursor:pointer;font-family:'Cairo',sans-serif;border:none;border-radius:12px;transition:all .18s}\na{color:").concat(T.accent, "}\n@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}\n@keyframes pop{from{opacity:0;transform:scale(.93)}to{opacity:1;transform:scale(1)}}\n@keyframes spin{to{transform:rotate(360deg)}}\n@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-7px)}75%{transform:translateX(7px)}}\n.fade{animation:fadeUp .25s ease}\n.pop{animation:pop .22s ease}\n.sp{animation:spin 1s linear infinite;display:inline-block}\n.shk{animation:shake .3s ease}\n");
 
 /* ─── CONSTANTS ─── */
-var GEO_R = 50;
+var GEO_R = 10;
 var WORK_DAYS = [0, 1, 2, 3, 4]; // الأحد=0 الاثنين=1 ... الخميس=4
 var SATURDAY = 6;
 
@@ -769,6 +769,8 @@ function SelfieWidget(_ref12) {
             sR.current = s;
             if (vR.current) vR.current.srcObject = s;
             setSt("live");
+            // تصوير تلقائي بعد 3 ثواني
+            setTimeout(function() { snap(); }, 3000);
             _context.n = 3;
             break;
           case 2:
@@ -4702,10 +4704,6 @@ function MgrPanel(_ref26) {
     id: "emps",
     ic: "👥",
     l: "الموظفون"
-  }, {
-    id: "set",
-    ic: "⚙️",
-    l: "إعدادات"
   }] : [{
     id: "dash",
     ic: "📊",
@@ -4883,17 +4881,7 @@ function MgrPanel(_ref26) {
     emps: allEmps,
     setEmps: setAllEmps,
     managers: managers
-  }), tab === "set" && isSuper && /*#__PURE__*/React.createElement(Settings, {
-    wLat: wLat,
-    setWLat: setWLat,
-    wLng: wLng,
-    setWLng: setWLng,
-    recs: recs,
-    setRecs: setRecs,
-    allEmps: allEmps,
-    kioskMode: kioskMode,
-    setKioskMode: setKioskMode
-  })));
+  }), ));
 }
 
 /* ══════════════════════════════════════════════════
@@ -5324,11 +5312,11 @@ function App() {
     _useLS0 = _slicedToArray(_useLS9, 2),
     managers = _useLS0[0],
     setManagers = _useLS0[1];
-  var _useLS1 = useLS("a9_lat", ""),
+  var _useLS1 = useLS("a9_lat", "29.970593"),
     _useLS10 = _slicedToArray(_useLS1, 2),
     wLat = _useLS10[0],
     setWLat = _useLS10[1];
-  var _useLS11 = useLS("a9_lng", ""),
+  var _useLS11 = useLS("a9_lng", "31.489092"),
     _useLS12 = _slicedToArray(_useLS11, 2),
     wLng = _useLS12[0],
     setWLng = _useLS12[1];
