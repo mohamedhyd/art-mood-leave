@@ -70,26 +70,18 @@ const T = {
 };
 
 function Logo({ width = 160 }) {
-  const [failed, setFailed] = useState(false);
-  if (failed) {
-    return React.createElement("div", {
-      style: { width: width, margin: "0 auto", textAlign: "center", fontFamily: "Cairo, sans-serif", fontWeight: 900, fontSize: width * 0.18, letterSpacing: 2, color: T.txt, lineHeight: 1.1 }
-    },
-      React.createElement("div", null, "ART MOOD"),
-      React.createElement("div", { style: { fontSize: width * 0.07, fontWeight: 600, color: T.muted, letterSpacing: 4, marginTop: 2 } }, "HR SYSTEM")
-    );
-  }
-  return React.createElement("img", {
-    src: "artmood%20logo%20copy%20small.png",
-    alt: "Art Mood",
-    width: width,
-    onError: () => setFailed(true),
-    style: { height: "auto", display: "block", margin: "0 auto", objectFit: "contain" }
-  });
+  return React.createElement("div", {
+    style: { width: width, margin: "0 auto", textAlign: "center", lineHeight: 1 }
+  },
+    React.createElement("div", {
+      style: { fontFamily: "'Manifesto', Cairo, sans-serif", fontSize: width * 0.26, color: T.txt, letterSpacing: 1 }
+    }, "ART MOOD")
+  );
 }
 
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&family=JetBrains+Mono:wght@500&display=swap');
+@font-face { font-family: 'Manifesto'; src: url(data:font/truetype;base64,AAEAAAAOAIAAAwBgR1BPU9Vx28cAAEFEAAACwkdTVUKpZ7aTAABECAAAAJRPUy8yfcBMUwAAAWgAAABgY21hcJcON8IAAALkAAAB3mdhc3D//wADAABBPAAAAAhnbHlm2Vme9AAABVQAAB7YaGVhZATUi1AAAADsAAAANmhoZWEHDQOVAAABJAAAACRobXR4vRgZ4QAAAcgAAAEca2VybmhzX+4AACQsAAAaoGxvY2EJHRHCAAAExAAAAJBtYXhwAEsAVAAAAUgAAAAgbmFtZSd93zAAAD7MAAABv3Bvc3QHkwc1AABAjAAAALAAAQAAAAEAAJZa9BVfDzz1AAsEAAAAAADRAnKHAAAAANED1c8AAP8KA68C8wAAAAgAAgAAAAAAAAABAAADXP7sAAAEEwAAAE4DrwABAAAAAAAAAAAAAAAAAAAARwABAAAARwBUAAMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQCvQGQAAUAAAAoACgAKAAoACgAKAAoACgAKADIAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAEJpcmQAQAANAHoDXP7sAGQDXAEUAAAAAQAAAAADXANcAAAAIAACAAAAAAAAAAABFAAAAj4A8wI+AAACPgBSAsQAZAEXAGQBlgBkAcYAZAIFAGQBxgBkAsQAZAKQAGQCxABkAsQAZAI+AAABswBkAvoAZAL6AGQDRwBkAvoAZAL6AGQC+QBkA7UAZAL6AGQA+wBkAVMAZAL6AGQCPwBkA7UAZAL6AGQDtQBkAvoAZAO1AGQC+gBkAkcAZAL6AGQC+gBkAvoAZAQTAGQC+gBkAvoAZAL6AGQC+gBkAvoAZANHAGQC+gBkAvoAZAL5AGQDtQBkAvoAZAD7AGQBUwBkAvoAZAI/AGQDtQBkAvoAZAO1AGQC+gBkA7UAZAL6AGQCRwBkAvoAZAL6AGQC+gBkBBMAZAL6AGQC+gBkAvoAZAI5AAAAAAADAAEAAAAAABwAAwABAAABIgADAAoAAAF6AAABBgAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAACAwAAAAAAAAAAAAAAAAQFBgcICQoLDA0ODxAAAAAAEQASExQVFhcYGRobHB0eHyAhIiMkJSYnKCkqKwAAAAAAACwtLi8wMTIzNDU2Nzg5Ojs8PT4/QEFCQ0RFAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAFgAAAASABAAAwACAAAADQAhACwAOgA/AFoAev//AAAAAAANACAALAAuAD8AQQBh//8AAP/0/+IAGv/W/9L/0f/LAAEAAAAAAAAAAAAAAAAAAAAAAAAADAAAAAAAZAAAAAAAAAAHAAAAAAAAAAAAAAAAAAAADQAAAA0AAAABAAAAIAAAACEAAAACAAAALgAAADoAAAAEAAAAPwAAAD8AAAARAAAAQQAAAFoAAAASAAAAYQAAAHoAAAAsAAAAAAAAAAAAAAAqAEgAWgCsAMAA/gE+AWYBogIMAioClAL+AzQDgAOsBBQEZgS2BNoE+AVeBYIFlAXABegF/gYiBkAGpAb4B3YH2AgyCFAIrgjICP4JJglGCWgJlAn8Ck4KoArECuILSAtsC34LqgvSC+gMDAwqDI4M4g1gDcIOHA46DpgOsg7oDxAPMA9SD2wAAgDzACMBUgLhAAsAGwAAJTQ1NDUyMxQRFBUiBzIXFhUUBwYjIicmNTQ3NgEJESIRCBMODg4OExQODg4OsID/O3eM/ucvXS4ODhMUDg4ODhQTDg4AAQAAAAAAKAAoABEAADMiJyY1NDc2MzIXFhUUMQYHBhQIBgYGBggIBgYBBQYGBggIBgYGBggBCAUGAAAAAQBS//gB8ALsAAcAABciIzYTMjMGgRAfevUQH3oI/AH4/AAAAgBkAAACYAH8AB8AMwAAATIXFhcWFxYVFAcGBwYHBiMiJyYnJicmNTQ3Njc2NzYTMjc2NTQnJiMiBwYVFBcWFxYXFgFiJSIiHTYhIQoKEiI5OUQlIiIdNiEhCgoSIjk4RVk+Pz8+WVk/PwkJEB4xMAH8CgoSIjk5RCUiIh02ISEKChIiOTlEJSIiHTYhIf4sPj9ZWT8/Pz9ZHx0cGS0cHAAAAAABAGQAAACzAfwACwAAMyIjNBEiIzQ1MjMUsw0aDhoaNZwBOQ0aqQAAAQBkAAABMgH6ACkAAAEUBwYHBgcGBwYHBgcGBwYHMjMUFSIjNjcwMTY3NjU0JyYjNDEwNTIXFgEyBAQHEw4OCwgHBgQSAwMUL19FiTVpBAICHh8rPCoqAWsREBAOJx0dFhEMDQkmBQUqDRts1woKCQsrHh8dCioqAAAAAAEAZAAAAWIC8wAvAAAlNCcmIzQxMDUyNzY1NCcmIzQxMDUyFxYVFAcGBxYXFhUUBwYHBgcGIzQxMDUyNzYBOz8/WSsfHh4fKzwqKhERG0swMAoKEiI5OEVZPz/+WT8/HQoeHysrHh4eCioqOyUeHxQZQkFUJSIiHTYhIR4KPj8AAQBk/woBoQH9AB0AACUUFRQVIiM0NSIjIiM0NTQ1NDUyMxQRMjM0NTIzFAGhDhpPng4aDRtPng0bKA0aUqVSpQ0aT5xOnJz+xxs1GwAAAAABAGQAAAFiAvMALQAAJTQnJiM0NTQ1NDU0NTQ1NDUyMxQVIiMUFTAxFhcWFRQHBgcGBwYjNDEwNTI3NgE7Pz9ZValHj1s9PgoKEiI5OURZPz/+WT8/KiAhFxMODgopBgYuDRtGjA5HR18lIiIdNiEhHgo+PwAAAAACAGQAAAJgAvMALwBFAAABMhcWFxYXFhUUBwYHBgcGIyInJicmJyY1NDc2NzYTMjMGBwYHBgcGBwYHBgc2NzYTMjc2NTQnJiMiBwYVFBcWFxYXFjMyAWIlIiIdNiEhCgoSIjk5REQ5OSISCgoGBgw+fA4eFQIDEwQGBwgKDw4UHSAhI1g/Pj4/WFk+PggJEB0xLzUBAfwKChIiOTlEJSIiHTYhISEhNh0iIiUdGxwYgwEGLQYGKAsNDhIXIB8rEQkJ/i4/PlhZPj8/PlkfHB0YLhwbAAEAZP8KAiwB/QAPAAABBgMiIzYTIiE0NTIzMjMGAgZu2w8dc+iC/vp79R46DQGu4f497wHdDRoaAAAAAAMAZAAAAmAC8wAnADcARwAAARYXFhUUBwYHBgcGIyInJicmJyY1NDc2NyYnJjU0NzYzMhcWFRQHBicUFxYzMjc2NTQnJiMiBwYTMjc2NTQnJiMiBwYVFBcWAbRLMDEKChIiOTlEJSIiHTYhITAxShsRESoqPDsqKhEQ1h4fKyseHh4eKysdHWVZPj8/PllZPz8+PgHuGUJBVCUiIh02ISEKChIiOTlEVEFCGRQfHiU7KioqKjslHh9iKx8eHh8rKx4eGxz9lD4/WVk/Pz8/WVk+PgAAAgBk/woCYAH9AC8ARQAAJSInJicmJyY1NDc2NzY3NjMyFxYXFhcWFRQHBgcGAyIjNjc2NzY3Njc2NzY3BgcGAyIHBhUUFxYzMjc2NTQnJicmJyYjIgFiJSIiHTYhIQoKEiI5OUREOTkiEgoKBgcLPnwPHRQDAxIFBgYJCg4PExwhICNZPj4+PllYPz4fHi4YHBcYBAEKChIiOTlEJSIiHTYhISEhNh0iIiUdGxwYg/76LQYGKAoODhIXIB8rEQkJAdI/PlhZPj8/Plk5MTAdDwgHAAACAAAA4gAoAfoAEQAjAAA3IicmNTQ3NjMyFxYVFAciFQYnIicmNTQ3NjMyFxYVFAcGBwYUCAYGBgYICAYGBQEGCAgGBgYGCAgGBgYCAgXiBgYICQUGBgUJBwYBBvAGBggIBgYGBggIBgIBAwACAGQAIwFPAuEADwA5AAA3FBcWMzI3NjU0JyYjIgcGNzQ1NDU0NTIzMjc2NTQnJiMiMTAjNDUyMzIXFhUUBwYHFBUUFRQVFBUiZA4OFBMODg4OExQODhYIETknKCgnORMGCRFNNzcvLkURUhMODg4OExQODg4OSx8+Hz4RIignOTgoKBEiNzZORzU0ChwVFQ8+AQIlAAAAAAIAZAAAApYC7QARABcAAAEWEyIjJiciIwYHIiM2EzY3NgMyMyYDBgF9XbwRIhQocuIUKBEiVaoDBQaLZMozZDMC7fn+DDVrNWvjAcYIDhD+BIYBDIYAAAADAGQAAQKWAu4AKQA9AEsAAAEUBwYHBgcGIyIjNDU0ETIzMjMyMzIzMhcWFRQHBgcyMTAzMhcWFxYXFgEUFTIzMjc2NzY1NCcmIzAjIiMiATQnJiMiIxQRMjMyNzYClgoLEyM9PElhxB4CATEMERAXNiYnBwcNCh1JPDwkEwsK/gIgQgkJFhEYGBghMRALFgHLP0BbUKFQoVtAPwEPJyQkHzojI167nAE4Jic2FhQVECMjOh4kJAGFNWsCBREYISEXF/5TWz9Akf7dQEAAAAAAAQBkAAAC4wLtADcAACUyNzY3FjEwFwYHBiMiJyYnJicmNTQ3Njc2NzYzMhcWFwYxMAcmJyYjIgcGBwYHBhUUFxYXFhcWAdpDOzssCRszRERONjIyK1AwMTEwUCsyMjZOREQzCRssOztDV0hJKxcMDQ0MFytJSDMaGSwJGzMeHQ8OGzJUVGVkVFQyGw4PHR4zCRssGhkqKkUlKywuLyssJUUqKgACAGQAAAKWAu0AGwA3AAATFBEyMzI3Njc2NzY1NCcmJyYnJiMiIyIjIiMiEzQRMjMyFxYXFhcWFRQHBgcGBwYjIiMiIyIjImQ/fTYyMitQMDExMFArMjI2HRUVDz0CAQ0uW1dISSsXDA0NDBcrSUhXFQ8PDC0BAQLt+v4NDw4bMlRUZWRUVDIbDg/9RtgBryoqRSUrLC4vKywlRSoqAAAAAQBkAAAClgLtABcAABMUETIhNDUiITQ1MjM0NSIjNBEyITQ1ImSMAaar/qxNmU2ZqgFUuwLtu/3OESIkSBEjogFFESIAAAAAAQBkAAAClQLtABMAAAEUFSIhFBEyMxQVIiMUFSIjNBEyApV//oFNmU2ZESK7Au0NJqL+uxIiNWr6AfMAAQBkAAADUQLtAEcAAAEyMzIzMjMyMxQHBgcGBwYjIicmJyYnJjU0NzY3Njc2MzIXFhcGMTAHJicmIyIHBgcGBwYVFBcWFxYXFjMyNzY3Njc2NyIjNAKXJQECPQ8VFRwPDhsyVFRkNzIyK1AwMQ8OGzJUVGVNRUQzCRssOztDLyssJUUqKg0NFypJSFgqJygiQSssDCxXAXc3MjIrUDAxDw4bMlRUZTYyMitQMDEdHjMJGywZGg0MFytJSFcvKywlRSoqCgsTIz09SxEAAQBkAAAClgLtABcAABMUETIhNBEyMxQRIiM0NSIhFBUiIzQRMpdzAVkRIhEimf7NESIRAu2H/m2zAWf6/g01ajVq+gHzAAAAAQBkAAAAlwLtAAkAABMUETAjIjE0ETKXGRoRAu27/c76AfMAAQBkAAAA7wLtACEAADc0ETIzFBUUFRQVFBUUFRQVFBUUFRQHBgcGIzQxMDUyNza8ESIOChEpOSQaGovLAZcTDw8MLRERRxUeHigyREVbIRwUESkNJRoaAAEAZAAAApYC7QAXAAATFBE2ATIzBgcWEyIjJgMGBxQVIiM0ETKXbAFDGzVt2m3aFClmyzFgESIRAu1Y/vdZAQhZtKD+wJUBKihPbdv6AfMAAQBkAAAB2wLtAAsAABMUETIzFBUiIzQRMpdR8336EQLtrv30ESL6AfMAAAABAGQAAANRAu0AEwAAATYBFBEiIzQRBgMmAxQRIiM0ERYB2l4BGREibNhr2BEifQEjcgFYu/3OygGUhP74hAEIyv5s+gHzmQABAGQAAAKWAu0ADwAAJTQRMjMUESYBFBEiIzQRFgJjDSaq/qsRIqqQlwHG+v4NyQGSyf5u+gHzygAAAAACAGQAAANRAu0AHwA/AAABMhcWFxYXFhUUBwYHBgcGIyInJicmJyY1NDc2NzY3NhMyNzY3Njc2NTQnJicmJyYjIgcGBwYHBhUUFxYXFhcWAds2MjIrUDAxDw4bMlRUZGVUVDIbDg8PDhsyVFRlLiwrJUUqKg0MFytJSFcvKywlRSoqDQwXK0hJAu0PDhsyVFRkNzIyK1AwMTEwUCsyMjc2MjIrUDAx/UYNDRcqSUhYLiwrJUUqKg0MFytJSFcvKywlRSoqAAAAAAIAZAAAApYC7QAlAD8AAAEyFxYXFhcWFRQHBgcGBwYjIiMUFSIjNDU0ETIzMjMyMzIzMjMyEzI3NjU0JyYjIiMUFRQVMjMyMzIzMjMyMzIBiUg9PCQTCgsLChMkPD1IUaERIi8GBioLDg4TGCEhLFpAQEBAWlGhJwUFIwgMDBATGxsC7SMjOR8kJCcnJCQfOSMjR4xeu5wBOP4ZQD9bWkBAN21btQAAAAIAZAAAA1EC7QArAFMAAAEUBwYHFhciIyYnJicmJyYnBgcGIyInJicmJyY1NDc2NzY3NjMyFxYXFhcWATI3NjcmJzIzFjEwFzY3NjU0JyYnJicmIyIHBgcGBwYVFBcWFxYXFgNRHBswIkUXLQ4BARgFCQgLMDs8QjcyMitQMDEPDhsyVFRlNjIyK1AwMf6KODMzKRo2Fy0MJigXFw0MFytJSFdYSEkqFw0NDQ4YLElJAXdMQkIzJk4QAQEbBgkKDCYWFg8OGzJUVGU2MjIrUDAxDg8aMlRU/lcSEyAePQ4qKzg5QC4sKyVFKioqKkUlKywuLyssJUUqKgAAAAIAZAAAApYC7QAtAEsAAAEUBwYHBgcGIyIjFhciIyYnIiMUFSIjNDU0ETIzMjMyMzIzMjMyMzIXFhcWFxYBMjMyMzIzMjMyMzIzMjc2NTQnJiMiIxQVFBUUFRQClgsKEyQ8PUgECB8/EyYfQDlzESIvBgYqCw4OExghISwnJCQfOSMj/gEnBQUjCAwMEBMbGyVaQEBAQFpRoQHgJyQkHzkjI0eMRo1HjF67nAE4CgsTJDw9/t5AP1taQEAmIiIiPkVEAAABAGQAAQHjAusAPQAAEzY3NjMyFwYxMAcmBwYHBhcWFxYxMBcWFxYXFhcWFRQHBgcGBwYjIicmJzYxMDcWNzY3NicmJyYxMCcmJyatFzMWFxsbEAUeHx4ODgsLHjQSIxwcFCUGARkfOTlDEBAVFSUjEAZSVFUnJh8fUjQSMRITAp8xEwgNIwwOCwseHR8fDhYHERgZHzhGDAs5N0IoKAgCBAURIgwmHx9SUVVVJhYHFzMzAAABAGQAAAKWAu0AEwAAASIjFBEiIzQRIiM0NTIzMjMyMxQClkC/ESNVqlWqEiJVqgK6r/316QHRESIRAAABAGQAAAKWAu0ARwAAATIzFBUUFRQVFBUUFRQVFBUUFRQHBgcGBwYjIicmJyYnJjU0ETIzFBUUFRQVFBUUFRQVFBUUFRQXFhcWFxYzMjc2NzY3NjU0AmIRIwsLFCU/P0xMPz8lFAsLESIJCREeNDM+IR8fGjEeHgLtDwsLCSQNDTURFxcfJjQ1RiklJiA8JCUlJDwgJiUpnAE4DwsLCSQNDTURFxcfJjQ1RiEfHxoxHh4JCREeNDM+nAAAAAEAZAAAApYC7QALAAAlNhMyMwYDJgMyMxYBfTqsDSZeu167ESJNiJkBzPr+DfoB88wAAAABAGQAAAOvAu0AHwAAISYDBgMmAzIzFhM2NyYnMjMWFzY3MjMGBxYXNhMyMwYCliNpJGleuxEiTZkmTSZNESIePB08ESImTSZNTZkRIl5eARle/uf6AfPM/mdmzWbMT59Pn2bMZ8zMAZn6AAABAGQAAAKWAu0AFwAAISIjJicGByIjNjcmJzIzFhc2NzIzBgcWApYUKUqSSZMUKVOnU6cUKUqSSZMUKVOnU23bbdt9+X36bttu2336fAAAAAEAZAAAApYC7QARAAABNhMyMwYDFBUiIzQ1JgMyMxYBfTmrDShVqhEjVaoSI0wBDngBZ7P+mUeMRo2zAWegAAABAGQAAAKWAu0AEwAANzIhFBUiITY3NgEiITQ1MiEGBwbEmwE3u/6JCxeQASCb/sm7AXcLF5AzESIRItgBrxEiESLYAAIAZAAAApYC7QARABcAAAEWEyIjJiciIwYHIiM2EzY3NgMyMyYDBgF9XrsRIhQoceMUKBEiVaoDBgaMZckyZTIC7fr+DTVqNWrjAcYHDw/+BYYBDIYAAAADAGQAAAKWAu0AKQA9AE0AAAEUBwYHBgcGIyIjNDU0ETIzMjMyMzIzMhcWFRQHBgcyMTAzMhcWFxYXFgEUFTIzMjc2NzY1NCcmIzAjIiMiATQnJiMiIxQVFBUyMzI3NgKWCwoTJDw9SGLDHgEBMQwRERc2JiYHBwwJHickJB85IyP+ASFBCgkWERcXGCIxEAsWAcxAQFpRoVGhWkBAAQ4nJCQfOiMjXrucATgmJzYWFBQRCwoTJDw9AWQ1agEFERghIRcX/lNbQD9IkkiSQEAAAQBkAAAC4wLtADcAACUyNzY3FjEwFwYHBiMiJyYnJicmNTQ3Njc2NzYzMhcWFwYxMAcmJyYjIgcGBwYHBhUUFxYXFhcWAdtDOjssCRsyRURNNzIyK1AwMTEwUCsyMjdNREUyCRssOzpDWEhJKhcNDQ0NFypJSDMaGSwJGzMeHQ8OGzJUVGVkVFQyGw4PHR4zCRssGhkqKkUlKywuLyssJUUqKgACAGQAAAKWAu0AHQA5AAABMhcWFxYXFhUUBwYHBgcGIyIjNDU0ETIzMjMyMzITMjc2NzY3NjU0JyYnJicmIyIjFBEyMzIzMjMyASA2MjIrUDAxMTBQKzIyNj99JgECPQ8VFR0uLCslRSoqDQwXK0lIVy5bGwEBLQwPDwLtDw4bMlRUZGVUVDIbDg9eu5wBOP1GDQ0XKklIWC4sKyVFKirY/lEAAAEAZAAAApYC7QAXAAATFBEyITQ1IiE0NTIzNDUiIzQRMiE0NSJkjAGmq/6sTZlNmaoBVLsC7bv9zg0mJEgRI6IBRREiAAAAAAEAZAAAApUC7QATAAABFBUiIRQRMjMUFSIjFBUiIzQRMgKVf/6BTZlNmREiuwLtDSZ6/pMSIjVq+gHzAAEAZAAAA1EC7QBHAAABMjMyMzIzMjMUBwYHBgcGIyInJicmJyY1NDc2NzY3NjMyFxYXBjEwByYnJiMiBwYHBgcGFRQXFhcWFxYzMjc2NzY3NjciIzQClyUBAj0PFRUcDw4bMlRUZDcyMitQMDEPDhsyVFRlTUVEMwkbLDs7Qy8rLCVFKioNDRcqSUhYKicoIkErLAwsVwF3NzIyK1AwMQ8OGzJUVGU2MjIrUDAxHR4zCRssGRoNDBcrSUhXLyssJUUqKgoLEyM9PUsRAAEAZAAAApYC7QAXAAATFBEyITQRMjMUESIjNDUiIRQVIiM0ETKXcwFZESIRIpn+zREiEQLth/5thgGU+v4NNWo1avoB8wAAAAEAZAAAAJcC7QAJAAATFBEwIyIxNBEylxkaEQLtu/3O+gHzAAEAZAAAAO8C7QAhAAA3NBEyMxQVFBUUFRQVFBUUFRQVFBUUBwYHBiM0MTA1Mjc2vBEiDgoRKTkkGhqLywGXEw8PDC0REUcVHh4oMkRFWyEcFBEpDSUaGgABAGQAAAKWAu0AFwAAExQRNgEyMwYHFhMiIyYDBgcUFSIjNBEyl2wBQxQ8bdpt2hQpZssxYBEiEQLtWP73WQEIWbSg/sCVASooT23b+gHzAAEAZAAAAdsC7QALAAATFBEyMxQVIiM0ETKXUfN9+hEC7a799A0m+gHzAAAAAQBkAAADUQLtABMAAAE2ARQRIiM0EQYDJgMUESIjNBEWAdpeARkNJmzYa9gRIn0BI3IBWLv9zsoBlIT++IQBCMr+bPoB85kAAQBkAAAClgLtAA8AACU0ETIzFBEmARQRIiM0ERYCYw0mqv6rESKqkJcBxrv9zskBksn+bvoB88oAAAAAAgBkAAADUQLtAB8APwAAATIXFhcWFxYVFAcGBwYHBiMiJyYnJicmNTQ3Njc2NzYTMjc2NzY3NjU0JyYnJicmIyIHBgcGBwYVFBcWFxYXFgHbNjIyK1AwMQ8OGzJUVGRlVFQyGw4PDw4bMlRUZS4sKyVFKioNDBcrSUhXLyssJUUqKg0MFytISQLtDw4bMlRUZDcyMitQMDExMFArMjI3NjIyK1AwMf1GDQ0XKklIWC4sKyVFKioNDBcrSUhXLyssJUUqKgAAAAACAGQAAAKWAu0AJQA/AAABMhcWFxYXFhUUBwYHBgcGIyIjFBUiIzQ1NBEyMzIzMjMyMzIzMhMyNzY1NCcmIyIjFBUUFTIzMjMyMzIzMjMyAYlIPTwkEwoLCwoTJDw9SFGhESIvBgYqCw4OExghISxaQEBAQFpRoScFBSMIDAwQExsbAu0jIzkfJCQnJyQkHzkjI0eMXrucATj+GUA/W1pAQDdtW7UAAAACAGQAAANRAu0AKwBTAAABFAcGBxYXIiMmJyYnJicmJwYHBiMiJyYnJicmNTQ3Njc2NzYzMhcWFxYXFgEyNzY3JicyMxYxMBc2NzY1NCcmJyYnJiMiBwYHBgcGFRQXFhcWFxYDURwbMCJFFy0OAQEYBQkICzA7PEI3MjIrUDAxDw4bMlRUZTYyMitQMDH+ijgzMykaNhctDCYoFxcNDBcrSUhXWEhJKhcNDQ0OGCxJSQF3TEJCMyZOEAEBGwYJCgwmFhYPDhsyVFRlNjIyK1AwMQ4PGjJUVP5XEhMgHj0OKis4OUAuLCslRSoqKipFJSssLi8rLCVFKioAAAACAGQAAAKWAu0ALQBLAAABFAcGBwYHBiMiIxYXIiMmJyIjFBUiIzQ1NBEyMzIzMjMyMzIzMjMyFxYXFhcWATIzMjMyMzIzMjMyMzI3NjU0JyYjIiMUFRQVFBUUApYLChMkPD1IBAgfPxMmH0A5cxEiLwYGKgsODhMYISEsJyQkHzkjI/4BJwUFIwgMDBATGxslWkBAQEBaUaEB4CckJB85IyNHjEaNR4xeu5wBOAoLEyQ8Pf7eQD9bWkBAJiIiIj5FRAAAAQBkAAEB4wLrAD0AABM2NzYzMhcGMTAHJgcGBwYXFhcWMTAXFhcWFxYXFhUUBwYHBgcGIyInJic2MTA3Fjc2NzYnJicmMTAnJicmrRczFhcbGxAFHh8eDg4LCx40EiMcHBQlBgEZHzk5QxAQFRUlIxAGUlRVJyYfH1I0EjESEwKfMRMIDSMMDgsLHh0fHw4WBxEYGR84RgwLOTdCKCgIAgQFESIMJh8fUlFVVSYWBxczMwAAAQBkAAAClgLtABMAAAEiIxQRIiM0ESIjNDUyMzIzMjMUApZAvw0nVapVqhIiVaoCuq/99ekB0REiEQAAAQBkAAAClgLtAEcAAAEyMxQVFBUUFRQVFBUUFRQVFBUUBwYHBgcGIyInJicmJyY1NBEyMxQVFBUUFRQVFBUUFRQVFBUUFxYXFhcWMzI3Njc2NzY1NAJiESMLCxQlPz9MTD8/JRQLCxEiCQkRHjQzPiEfHxoxHh4C7Q8LCwkkDQ01ERcXHyY0NUYpJSYgPCQlJSQ8ICYlKZwBOA8LCwkkDQ01ERcXHyY0NUYhHx8aMR4eCQkRHjQzPpwAAAABAGQAAAKWAu0ACwAAJTYTMjMGAyYDMjMWAX06rA0mRtNeuxEiTYiZAcy7/c76AfPMAAAAAQBkAAADrwLtAB8AACEmAwYDJgMyMxYTNjcmJzIzFhc2NzIzBgcWFzYTMjMGApYjaSRpRtMRIk2ZJk0mTREiHjwdPBEiJk0mTU2ZESJeXgEZXv7nuwIyzP5nZs1mzE+fT59mzGfMzAGZ+gAAAQBkAAAClgLtABcAACEiIyYnBgciIzY3JicyMxYXNjcyMwYHFgKWFClKkkmTFClTp1OnFClKkkmTFClTp1Nt223bffl9+m7bbtt9+nwAAAABAGQAAAKWAu0AEQAAATYTMjMGAxQVIiM0NSYDMjMWAX05qw0oQL8RI1WqEiNMAQ54AWeH/m1HjEaNswFnoAAAAQBkAAAClgLtABMAADcyIRQVIiE2NzYBIiE0NTIhBgcGxJsBN7v+iQsXkAEgm/7JuwF3CxeQMxEiESLYAa8RIhEi2AABAAD/2AAoACgADgAAMyInJjU0NzYzMhcWHQEjFAgGBgYGCAgGBhQGBggIBgYGBgc9AAAAAAABAAAanAABBG0YAAAKAo4AAwAD/q0AAwAH/ssAAwAI/wMAAwAJ/wMAAwAL/wkAAwAR/rsABAAD/VsABAAE/nUABAAF/jMABAAG/iYABAAH/WoABAAI/dEABAAJ/dEABAAK/ggABAAL/dcABAAM/ioABAAN/fYABAAO/iYABAAP/iYABAAR/aMABAAS/owABAAT/oQABAAU/nMABAAV/oUABAAW/oUABAAX/oUABAAY/iUABAAZ/oUABAAa/08ABAAb/08ABAAc/08ABAAd/08ABAAe/08ABAAf/08ABAAg/oIABAAh/08ABAAi/nMABAAj/08ABAAk/0AABAAl/lMABAAm/rIABAAn/jQABAAo/jQABAAp/okABAAq/lMABAAr/okABAAs/okABAAt/oUABAAu/ikABAAv/pAABAAw/o0ABAAx/oEABAAy/ikABAAz/okABAA0/oUABAA1/oEABAA2/pAABAA3/oUABAA4/oUABAA5/oUABAA6/ikABAA7/okABAA8/ikABAA9/pAABAA+/lcABAA//lMABABA/osABABB/iQABABC/iQABABD/oUABABE/iQABABF/okABQAE/7EABQAF/ocABQAG/1gABQAH/x0ABQAI/54ABQAM/4UABQAO/7QABQAP/3EABQAR/0MABQAS/zcABQAU/8YABQAY/8YABQAg/8YABQAi/8YABQAs/zgABQAu/8YABQAy/8YABQA6/8YABQA8/8YABgAF/78ABgAR/28ABgAl/3MABgAq/7IABgA//3MABgBE/7IABwAD/rEABwAH/qEABwAI/tEABwAJ/tEABwAK/wgABwAL/tcABwAR/7YABwAl/5sABwA//5sACAAD/ucACAAH/usACAAR/58ACAAl/5QACAA//5QACQAD/uwACQAH/u8ACQAI/vAACQAJ/y4ACQAL/zQACQAR/5IACgAR/7QACgAl/5kACgAn/6kACgAo/6kACgAq/5kACgA//5kACgBB/6kACgBC/6kACgBE/5kACwAD/vYACwAH/vEACwAI/v0ACwAR/5MADAAR/5EADAAl/5UADAA//5UADQAF/0IADQAR/2AADQAl/5QADQAr/5QADQA//5QADQBF/5QADgAR/4wADwAR/6AADwAl/6UADwA//6UAEAAD/VQAEAAF/dgAEAAG/gwAEAAH/UsAEAAI/V8AEAAJ/WsAEAAK/Z4AEAAL/XUAEAAM/ggAEAAN/fgAEAAO/gwAEAAP/ggAEAAQ/lYAEAAR/WIAEAAS/ioAEAAT/lkAEAAU/iQAEAAV/lYAEAAW/lIAEAAX/lIAEAAY/iQAEAAZ/lIAEAAa/lYAEAAb/isAEAAc/lIAEAAd/lIAEAAe/lYAEAAf/lYAEAAg/iAAEAAh/lYAEAAi/iQAEAAj/lYAEAAk/iYAEAAl/iAAEAAm/loAEAAn/icAEAAo/isAEAAp/ikAEAAq/ioAEAAr/iYAEAAs/icAEAAt/lIAEAAu/iQAEAAv/lYAEAAw/lYAEAAx/lYAEAAy/iAAEAAz/lIAEAA0/l4AEAA1/icAEAA2/loAEAA3/lIAEAA4/lYAEAA5/l4AEAA6/igAEAA7/lYAEAA8/igAEAA9/loAEAA+/iYAEAA//igAEABA/loAEABB/ioAEABC/i8AEABD/lwAEABE/lgAEABF/lgAEQAF/yYAEQAG/6gAEQAM/8UAEQAO/8UAEQAP/7EAEQAR/uYAEQAS/4cAEQAb/8cAEQAp/8cAEQAs/4gAEQA1/8cAEQBD/8cAEgAR/5sAEgASAD4AEgATAC8AEgAU/+kAEgAVAC8AEgAWADYAEgAXADMAEgAY/+kAEgAZADMAEgAaAC8AEgAbADMAEgAcAC8AEgAdADYAEgAeAD8AEgAfADYAEgAg/+0AEgAhACsAEgAi/+UAEgAjAC8AEgAkAC8AEgAl/58AEgAmAAAAEgAn/4AAEgAo/4QAEgApADYAEgAq/4AAEgArADMAEgAsADYAEgAtAC8AEgAu/+UAEgAvADMAEgAwAC8AEgAxAC8AEgAy/+EAEgAzAC8AEgA0ADYAEgA1AC8AEgA2ADMAEgA3AC8AEgA4ADMAEgA5ADMAEgA6/+EAEgA7ACsAEgA8/90AEgA9ACsAEgA+ADYAEgA//4QAEgBAAAQAEgBB/4AAEgBC/4QAEgBDADoAEgBE/4QAEgBFADoAEwAR/5sAEwAS//gAEwATACMAEwAUACsAEwAVACsAEwAWACsAEwAXACsAEwAYAC8AEwAZAEIAEwAaAD4AEwAb//wAEwAcADoAEwAdAD4AEwAeAD4AEwAfAD4AEwAgADYAEwAhADoAEwAiAEIAEwAjAD4AEwAk/+kAEwAl/58AEwAmAEIAEwAn/7YAEwAo/7oAEwApAAAAEwAq/7IAEwArABcAEwAsAAAAEwAtAEIAEwAuAEoAEwAvAEYAEwAwAEoAEwAxAE4AEwAyAEYAEwAzAFIAEwA0AE4AEwA1AAAAEwA2AE4AEwA3AE4AEwA4AEoAEwA5AEYAEwA6AEoAEwA7AE4AEwA8AEoAEwA9AEYAEwA+AAQAEwA//58AEwBAAEYAEwBB/7oAEwBC/7oAEwBDAAAAEwBE/7YAEwBFAAAAFAAN/8UAFAAQAK4AFAAR/6wAFAASAHwAFAATAK8AFAAUAIAAFAAVALMAFAAWALMAFAAXAK8AFAAYAIAAFAAZALMAFAAaALMAFAAbAHwAFAAcALcAFAAdALMAFAAeALcAFAAfALcAFAAgAIAAFAAhALMAFAAiAIAAFAAjAK8AFAAkAHwAFAAlAIAAFAAmAK8AFAAnAIAAFAAoAHkAFAApAHwAFAAqAIAAFAArAIAAFAAsAHkAFAAtALMAFAAuAIAAFAAvALcAFAAwALcAFAAxALMAFAAyAIQAFAAzAK8AFAA0AK8AFAA1AGEAFAA2ALcAFAA3ALMAFAA4ALcAFAA5ALcAFAA6AIAAFAA7AK8AFAA8AHwAFAA9ALcAFAA+AIAAFAA/AIAAFABAALcAFABBAHwAFABCAIAAFABDAHwAFABEAHwAFABFALMAFQAF/7oAFQAR/5oAFQASAAAAFQATAFkAFQAUAF0AFQAVAF0AFQAWAFkAFQAXAFkAFQAYAGkAFQAZAFkAFQAaAF0AFQAbAAAAFQAcAF0AFQAdAFkAFQAeAFYAFQAfAFIAFQAgAFYAFQAhAFYAFQAiAF0AFQAjAFIAFQAkABcAFQAlAAAAFQAmAF0AFQAnAAAAFQAoAAAAFQApAAAAFQAqAAAAFQArAAAAFQAsAAAAFQAtAFkAFQAuAFYAFQAvAFkAFQAwAF0AFQAxAFkAFQAyAF0AFQAzAFkAFQA0AFIAFQA1AAAAFQA2AFYAFQA3AEoAFQA4AFIAFQA5AFIAFQA6AE4AFQA7AFIAFQA8AFIAFQA9AFkAFQA+AAAAFQA/AAAAFQBAAE4AFQBBAAAAFQBCAAAAFQBDAAAAFQBEAAAAFQBFAAAAFgAQAJIAFgAR/6wAFgASAF0AFgATAGUAFgAUAAAAFgAVAFkAFgAWAF0AFgAXAFkAFgAYAAAAFgAZAGUAFgAaAF0AFgAbAEoAFgAcAF0AFgAdAGEAFgAeAF0AFgAfAFYAFgAgAAAAFgAhAF0AFgAiAAAAFgAjAFkAFgAkAE4AFgAlAEoAFgAmAGEAFgAnAFIAFgAoAFIAFgApAF0AFgAqAFkAFgArAFYAFgAsAGEAFgAtAF0AFgAuAAAAFgAvAF0AFgAwAFYAFgAxAGEAFgAyAAAAFgAzAF0AFgA0AFYAFgA1AFIAFgA2AGEAFgA3AGEAFgA4AFkAFgA5AF0AFgA6AAAAFgA7AF0AFgA8AAAAFgA9AFYAFgA+AEoAFgA/AFIAFgBAAGUAFgBBAFYAFgBCAEYAFgBDAE4AFgBEAFIAFgBFAGEAFwAEAHsAFwAF/vMAFwAG/2UAFwAH/4EAFwAI/y0AFwAK/4EAFwAN/pwAFwAP/24AFwAQAJYAFwAR/58AFwAS/6IAFwATAFkAFwAUAAAAFwAVAF0AFwAWAFYAFwAXAF0AFwAYAAAAFwAZAFYAFwAaAFkAFwAbAAAAFwAcAFkAFwAdAFkAFwAeAFYAFwAfAFYAFwAgAAAAFwAhAFYAFwAiAAAAFwAjAFkAFwAkAAAAFwAlAFIAFwAmAFkAFwAnAFYAFwAoAFYAFwApAFkAFwAqAFYAFwArAGEAFwAs/6MAFwAtAFYAFwAuAAAAFwAvAFkAFwAwAFkAFwAxAFYAFwAyAAQAFwAzAFYAFwA0AFYAFwA1AAAAFwA2AF0AFwA3AE4AFwA4AF0AFwA5AFkAFwA6AAAAFwA7AFYAFwA8AAAAFwA9AF0AFwA+AAAAFwA/AFkAFwBAAFIAFwBBAE4AFwBCAFYAFwBDAFIAFwBEAFYAFwBFAFkAGAAF/60AGAAN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/4sAHQAo/4sAHQAq/5sAHQA//5sAHQBB/4sAHQBC/4sAHQBE/5sAHgAR/70AHgASARgAHgATARQAHwAR/7kAIAAF/6sAIAAR/5oAIQAEAHsAIQAF/3kAIQAR/4gAIgAR/54AIwAF/5AAIwAR/48AJAAD/t0AJAAH/sUAJAAI/s0AJAAJ/vAAJAAL/voAJAAR/44AJQAF/zwAJQAG/28AJQAH/4IAJQAI/3wAJQAK/4sAJQAN/5MAJQAP/4gAJQAR/5oAJQAS/50AJQAs/54AJgAR/50AJwAF/ysAJwAR/5gAJwAS/3wAJwAs/30AKAAF/y0AKAAR/5oAKAAS/34AKAAs/38AKQAR/48AKgAF/zwAKgAG/64AKgAM/8sAKgAP/7gAKgAR/5oAKgAS/40AKgAs/44AKwAR/7AALAAR/5gALAAl/5wALAAn/30ALAAo/30ALAAq/5wALAA//5wALABB/30ALABC/30ALABE/5wALQAR/58ALQAl/6MALQA//6MALgAN/78ALgAQAKYALgAR/6YALwAF/7oALwAR/5oAMAAQAFgAMAAR/64AMQAEAGcAMQAF/vEAMQAG/2MAMQAH/34AMQAI/ysAMQAK/38AMQAN/poAMQAP/2wAMQAQAFQAMQAR/50AMQAS/6AAMQAs/6EAMgAF/68AMgAN/2gAMgAR/54AMwAR/7wANAAD/ZIANAAE/oUANAAF/e0ANAAG/jsANAAH/XYANAAI/ZIANAAJ/aIANAAK/dkANAAL/awANAAM/jsANAAN/isANAAO/jsANAAP/j8ANAAQ/okANAAR/7MANAAS/iYANAAT/ioANAAU/icANAAV/icANAAW/iMANAAX/icANAAY/iMANAAZ/icANAAa/icANAAb/icANAAc/icANAAd/icANAAe/iMANAAf/icANAAg/isANAAh/iMANAAi/icANAAj/iMANAAk/icANAAl/icANAAm/icANAAn/icANAAo/icANAAp/iAANAAq/icANAAr/icANAAs/iAANAAt/iMANAAu/icANAAv/icANAAw/icANAAx/iMANAAy/iAANAAz/icANAA0/icANAA1/iMANAA2/iAANAA3/icANAA4/icANAA5/icANAA6/iMANAA7/icANAA8/icANAA9/iAANAA+/icANAA//iMANABA/iAANABB/iAANABC/icANABD/icANABE/icANABF/iAANQAD/eEANQAE/usANQAF/jQANQAG/p4ANQAH/dUANQAI/doANQAJ/gUANQAK/jQANQAL/gsANQAM/pYANQAN/ooANQAO/p4ANQAP/poANQAQ/ugANQAR/6AANQAS/nEANQAT/oUANQAU/oYANQAV/oYANQAW/oIANQAX/oYANQAY/ooANQAZ/ooANQAa/oYANQAb/moANQAc/oYANQAd/oYANQAe/ooANQAf/ooANQAg/oYANQAh/oYANQAi/ooANQAj/oYANQAk/nIANQAl/oIANQAm/oIANQAn/oYANQAo/oYANQAp/ooANQAq/oYANQAr/oYANQAs/m4ANQAt/oIANQAu/oYANQAv/oYANQAw/oIANQAx/ooANQAy/ooANQAz/ooANQA0/oYANQA1/okANQA2/oIANQA3/ooANQA4/ooANQA5/oYANQA6/oIANQA7/ooANQA8/ooANQA9/o4ANQA+/oUANQA//ooANQBA/ooANQBB/oYANQBC/oYANQBD/oYANQBE/ooANQBF/pYANgAR/4gANwAD/r0ANwAH/p4ANwAN/zIANwAQ/4kANwAR/6gANwAl/50ANwAn/40ANwAo/40ANwAq/50ANwA//50ANwBB/40ANwBC/40ANwBE/50AOAAR/78AOQAR/74AOgAF/68AOgAR/54AOwAEAAIAOwAF/3kAOwAR/4gAPAAR/54APQAF/5AAPQAR/48APgAD/rIAPgAH/p4APgAI/sUAPgAJ/tQAPgAL/wUAPgAR/44APwAF/zEAPwAG/2QAPwAH/4UAPwAI/1EAPwAK/4AAPwAN/4gAPwAP/30APwAR/48APwAS/5IAPwAs/5MAQAAR/5gAQQAF/y0AQQAR/5oAQQAS/34AQQAs/38AQgAF/zEAQgAR/54AQgAS/4IAQgAs/4MAQwAR/40ARAAF/zoARAAG/6wARAAM/8kARAAP/7YARAAR/5gARAAS/4sARAAs/4wARQAR/6cAAAAUAPYAAQAAAAAAAAAbAAAAAQAAAAAAAQAJACIAAQAAAAAAAgAHABsAAQAAAAAAAwAWACIAAQAAAAAABAAJACIAAQAAAAAABQALADgAAQAAAAAABgAJACIAAQAAAAAACgAAAEMAAQAAAAAAEAAJACIAAQAAAAAAEQAHABsAAwABBAkAAAA2AEMAAwABBAkAAQASAIcAAwABBAkAAgAOAHkAAwABBAkAAwAwAIcAAwABBAkABAASAIcAAwABBAkABQASALcAAwABBAkABgASAIcAAwABBAkACgAAAMkAAwABBAkAEAASAIcAAwABBAkAEQAOAHlTSUwgT3BlbiBGb250IExpY2Vuc2UgKE9GTClSZWd1bGFyTUFOSUZFU1RPVE9NQVpMRVNLT1ZFQ1ZlcnNpb24gMS4wAFMASQBMACAATwBwAGUAbgAgAEYAbwBuAHQAIABMAGkAYwBlAG4AcwBlACAAKABPAEYATAApAFIAZQBnAHUAbABhAHIATQBBAE4ASQBGAEUAUwBUAE8AXwBUAE8ATQBBAFoAXwBMAEUAUwBLAE8AVgBFAEMAVgBlAHIAcwBpAG8AbgAgADEAAAIAAAAAAAD//gABAAAAAAAAAAAAAAAAAAAAAAAAAAAARwABAAIAAwAEABEAEgATABQAFQAWABcAGAAZABoAGwAcAB0AIgAkACUAJgAnACgAKQAqACsALAAtAC4ALwAwADEAMgAzADQANQA2ADcAOAA5ADoAOwA8AD0ARABFAEYARwBIAEkASgBLAEwATQBOAE8AUABRAFIAUwBUAFUAVgBXAFgAWQBaAFsAXABdAA8AAAAB//8AAgABAAAACgAeACwAAURGTFQACAAEAAAAAAAAAAEAAAABa2VybgAIAAAAAQAAAAEABAACAAAAAQAIAAECOgAEAAAAJgBWAFwAYgBoAHIAeACuAMQA2gDsAQYBGAEeASwBRgFQAV4BaAFuAXgBngGsAbYBxAHSAdwB5gHsAfIB+AH+AgQCCgIQAhYCHAIuAjQAAQAS/s0AAQAI/zMAAQAH/0gAAgAI/s0ACv8fAAEACf8KAA0ABP+FAAUAFAAI/0gACf+aAAr/mgAL/8MAEQBSABMAFAAUABQAFf/XABYAKQAbACkAIAApAAUAE//sABQAKQAVACkAFgApACEAKQAFABMAewAUAI8AFQCPABYAjwAdAI8ABAAT/9cAFAApABUAKQAWACkABgAYACkAGgApABsAKQAeACkAJAApACUAKQAEABcAKQAYACkAGwApACcAKQABABMAewADABcAKQAbACkAIQApAAYAF/4pABj+KQAa/ikAHP4fACX+PQAm/ikAAgAb/oUAIf6PAAMAEwApAB4AKQAh/9cAAgAY/4UAIf8zAAEAEwDhAAIAGwApACQAKQAJAAcAzQAUAPYAGQD2ABoA4QAdAPYAHgDsACIA9gAmAKQAKAB7AAMAFwApAB4AKQAhACkAAgAS/4UAGwApAAMAF/9xACb/MwAn/3EAAwAT/64AFwApACH/7AACABUAKQAgACkAAgATAGYAIQD2AAEAIf/sAAEAOgApAAEAPwApAAEAMQApAAEAMv4pAAEAO//DAAEAO/9IAAEALQDhAAEANQApAAQAHQDhADcA4QA4AOEAOwD2AAEAQP9IAAEAO//XAAEAJgAEAAcACAAJAAoAEwAUABUAFgAXABgAGQAaABsAHAAdAB4AHwAgACEAIgAkACUAJgAnACkALAAtADEAMgA1ADcAOAA5ADoAOwA/AEAAAAABAAAACgAeAC4AAURGTFQACAAEAAAAAAAAAAEAAAABY2xpZwAIAAAAAgABAAAAAwAIABAAGAAEAAAAAQAYAAYAAAABABoABAAAAAEAOAABAAYAAAABAAAAAwABABQAAQAaAAEAIAABAAAAAgABAAEALQABAAEAPgABAAEAQAABAAgAAQAOAAEAAQA+AAEABAAAAAE=) format('truetype'); font-display: swap; }
 .mono { font-family: 'JetBrains Mono', monospace; direction: ltr; }
 .fade { animation: fadeUp .25s ease; }
 .pop { animation: pop .22s ease; }
@@ -125,6 +117,20 @@ function geoDistance(lat1, lng1, lat2, lng2) {
 const LATE_GRACE = 90; 
 const WORK_HOURS = 8;
 const WORK_START = "09:00";
+// قواعد الحضور: تأخير بعد 9:30، غياب بعد 10:30، غياب لو انصرف قبل 4:00
+const LATE_AFTER = 9 * 60 + 30;     // 09:30
+const ABSENT_AFTER = 10 * 60 + 30;  // 10:30
+const EARLY_LEAVE_BEFORE = 16 * 60; // 16:00
+function toMins(t) { if (!t) return null; const [h, m] = t.split(":").map(Number); return h * 60 + m; }
+// يحسب حالة يوم واحد لموظف من سجلاته
+function dayStatus(inTime, outTime) {
+  if (!inTime) return "absent"; // لم يحضر
+  const inM = toMins(inTime);
+  if (inM >= ABSENT_AFTER) return "absent";          // حضر بعد 10:30 = غياب
+  if (outTime && toMins(outTime) < EARLY_LEAVE_BEFORE) return "absent"; // انصرف قبل 4 = غياب
+  if (inM >= LATE_AFTER) return "late";              // بين 9:30 و 10:30 = تأخير
+  return "present";                                  // حاضر
+}
 
 function isLateForShift(time, shiftKey) {
   if (!time) return false;
@@ -235,14 +241,14 @@ function useLS(k, d) {
 /* MICRO UI COMPONENTS */
 function Av({ e, sz = 38 }) {
   return React.createElement("div", {
-    style: { width: sz, height: sz, borderRadius: "50%", background: e.color || "#6366F1", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: sz * .28, fontWeight: 700, color: "#fff" }
-  }, ini(e.name));
+    style: { width: sz, height: sz, borderRadius: "50%", background: e.color || "#6366F1", flexShrink: 0 }
+  });
 }
 
 function MgrAv({ m, sz = 38 }) {
   return React.createElement("div", {
-    style: { width: sz, height: sz, borderRadius: sz * .25, background: m.color || "#6366F1", flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: sz * .28, fontWeight: 700, color: "#fff" }
-  }, ini(m.name));
+    style: { width: sz, height: sz, borderRadius: sz * .25, background: m.color || "#6366F1", flexShrink: 0 }
+  });
 }
 
 function Badge({ label, color, bg }) {
@@ -354,20 +360,23 @@ function GpsWidget({ onResult }) {
       onResult({ ok: false, inZone: false });
       return;
     }
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const d = geoDistance(pos.coords.latitude, pos.coords.longitude, FACTORY_LAT, FACTORY_LNG);
-        const inZone = d <= GEO_RADIUS;
-        setDist(Math.round(d));
-        setSt(inZone ? "ok" : "out");
-        onResult({ ok: true, lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: Math.round(pos.coords.accuracy), inZone: inZone, distance: Math.round(d) });
-      },
-      () => {
-        setSt("denied");
+    const onOk = (pos) => {
+      const d = geoDistance(pos.coords.latitude, pos.coords.longitude, FACTORY_LAT, FACTORY_LNG);
+      const inZone = d <= GEO_RADIUS;
+      setDist(Math.round(d));
+      setSt(inZone ? "ok" : "out");
+      onResult({ ok: true, lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: Math.round(pos.coords.accuracy), inZone: inZone, distance: Math.round(d) });
+    };
+    const onFail = (err) => {
+      // err.code: 1=denied, 2=unavailable, 3=timeout
+      if (err && err.code === 1) { setSt("denied"); onResult({ ok: false, inZone: false }); return; }
+      // try once more with low accuracy / longer timeout (better indoors)
+      navigator.geolocation.getCurrentPosition(onOk, () => {
+        setSt("timeout");
         onResult({ ok: false, inZone: false });
-      },
-      { enableHighAccuracy: true, timeout: 12000 }
-    );
+      }, { enableHighAccuracy: false, timeout: 20000, maximumAge: 60000 });
+    };
+    navigator.geolocation.getCurrentPosition(onOk, onFail, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
   }, [onResult]);
   useEffect(() => { check(); }, []);
 
@@ -375,7 +384,8 @@ function GpsWidget({ onResult }) {
     loading: { bg: T.aLight, bd: "#C7D2FE", c: T.accent, txt: "جاري تحديد الموقع..." },
     ok: { bg: T.oLight, bd: "#6EE7B7", c: T.ok, txt: "تم التحقق من تواجدك داخل الموقع" },
     out: { bg: T.dLight, bd: "#FCA5A5", c: T.danger, txt: dist != null ? `أنت خارج النطاق المسموح (تبعد ${dist} متر)` : "أنت خارج نطاق الموقع المسموح" },
-    denied: { bg: T.wLight, bd: "#FCD34D", c: T.warn, txt: "تعذّر الوصول للموقع — فعّل صلاحية الموقع" },
+    denied: { bg: T.wLight, bd: "#FCD34D", c: T.warn, txt: "صلاحية الموقع مرفوضة — فعّلها من إعدادات المتصفح ثم اضغط تحديث" },
+    timeout: { bg: T.wLight, bd: "#FCD34D", c: T.warn, txt: "تعذّر تحديد الموقع — اخرج للعراء أو اضغط تحديث" },
     ns: { bg: T.wLight, bd: "#FCD34D", c: T.warn, txt: "الجهاز لا يدعم تحديد الموقع" }
   };
   const s = cfg[st] || cfg.loading;
@@ -522,7 +532,8 @@ function Kiosk({ emps, managers, recs, onRec, devices, onNavigateToLogin, onMgrL
     if (!e) {
       const mg = managers.find(x => x.pin === pin);
       if (mg) {
-        if (onMgrLogin) { onMgrLogin(mg); return; }
+        // المدير يسجل حضور/انصراف عادي من الكيوسك
+        e = { id: mg.id, name: mg.name, dept: mg.title || "الإدارة", pin: mg.pin, color: mg.color, shift: DEFAULT_SHIFT, _isMgr: true };
       }
     }
     if (!e) {
@@ -600,7 +611,7 @@ function Kiosk({ emps, managers, recs, onRec, devices, onNavigateToLogin, onMgrL
       React.createElement("div", { style: { fontSize: 22, fontWeight: 700 } }, act === "in" ? "تم تسجيل حضورك بنجاح" : "تم تسجيل انصرافك بنجاح"),
       emp && React.createElement("div", { style: { fontSize: 15, color: T.mid, fontWeight: 500 } }, emp.name),
       React.createElement("div", { className: "mono", style: { fontSize: 40, fontWeight: 700, color: T.accent, letterSpacing: -2 } }, nowStr()),
-      React.createElement(Badge, { label: "جهاز معتمد وموثق سحابيا", color: T.ok, bg: T.oLight })
+      React.createElement(Badge, { label: "جهاز معتمد وموثق", color: T.ok, bg: T.oLight })
     );
   }
 
@@ -630,7 +641,7 @@ function Kiosk({ emps, managers, recs, onRec, devices, onNavigateToLogin, onMgrL
             React.createElement(Row, { l: "التوقيت الحالي", v: React.createElement("span", { className: "mono" }, nowStr()) }),
             React.createElement(Row, { l: "الصورة الحية", v: selfie ? "ملتقطة ومرفقة" : "لم يتم الإرفاق" })
           ),
-          React.createElement("button", { onClick: doRec, style: { padding: 14, background: T.accent, color: "#fff", fontWeight: 700, fontSize: 15, borderRadius: 12 } }, "تأكيد وإرسال السجل السحابي")
+          React.createElement("button", { onClick: doRec, style: { padding: 14, background: T.accent, color: "#fff", fontWeight: 700, fontSize: 15, borderRadius: 12 } }, "تأكيد وإرسال السجل")
         )
       )
     );
@@ -775,7 +786,7 @@ function RegisterDevice({ emps, managers, devices, setDevices, onBack, onMgrLogi
     if (!e) {
       const mg = managers.find(x => x.pin === pin);
       if (mg) {
-        if (onMgrLogin) { onMgrLogin(mg); return; }
+        e = { id: mg.id, name: mg.name, dept: mg.title || "الإدارة", pin: mg.pin, color: mg.color, shift: DEFAULT_SHIFT, _isMgr: true };
       }
     }
     if (!e) {
@@ -1001,7 +1012,7 @@ function MgrsMgmt({ managers, setManagers, allEmps }) {
   return React.createElement("div", { style: { padding: "20px 0", display: "flex", flexDirection: "column", gap: 16 } },
     React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
       React.createElement("h3", null, "المديرين"),
-      React.createElement("button", { onClick: () => setAdding(!adding), style: { padding: "10px 20px", background: T.accent, color: "#fff", fontWeight: 700 } }, adding ? "إلغاء الأمر" : "إنشاء حساب مسؤول جديد")
+      React.createElement("button", { onClick: () => setAdding(!adding), style: { padding: "10px 20px", background: T.accent, color: "#fff", fontWeight: 700 } }, adding ? "إلغاء" : "إضافة مدير")
     ),
     adding && React.createElement("div", { className: "fade", style: { background: T.surface, border: `1.5px solid ${T.accent}`, borderRadius: 18, padding: 22 } },
       React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(170px,1fr))", gap: 12, marginBottom: 14 } },
@@ -1014,13 +1025,13 @@ function MgrsMgmt({ managers, setManagers, allEmps }) {
         )
       ),
       err && React.createElement(Note, { color: T.danger, bg: T.dLight }, err),
-      React.createElement("button", { onClick: add, style: { padding: "11px 28px", background: T.accent, color: "#fff", fontWeight: 700 } }, "حفظ واعتماد المسؤول سحابياً")
+      React.createElement("button", { onClick: add, style: { padding: "11px 28px", background: T.accent, color: "#fff", fontWeight: 700 } }, "حفظ المدير")
     ),
     managers.map(m => React.createElement("div", { key: m.id, style: { background: T.surface, border: `1px solid ${T.border}`, borderRadius: 16, padding: "16px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" } },
       React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 14 } },
         React.createElement(MgrAv, { m, sz: 46 }),
         React.createElement("div", null,
-          React.createElement("div", { style: { fontWeight: 700, fontSize: 15 } }, m.name, " (", m.role === "super" ? "إدارة عليا" : "مسؤول قسم", ")"),
+          React.createElement("div", { style: { fontWeight: 700, fontSize: 15 } }, m.name, " (", m.role === "super" ? "مدير" : "مسؤول قسم", ")"),
           React.createElement("div", { style: { fontSize: 12, color: T.muted } }, m.title || "مسؤول إداري")
         )
       ),
@@ -1063,7 +1074,7 @@ function EmpsMgmt({ emps, setEmps, managers }) {
   return React.createElement("div", { style: { padding: "20px 0", display: "flex", flexDirection: "column", gap: 16 } },
     React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
       React.createElement("h3", null, "الموظفين"),
-      React.createElement("button", { onClick: () => setAdding(!adding), style: { padding: "10px 20px", background: T.accent, color: "#fff", fontWeight: 700 } }, adding ? "إلغاء" : "إضافة ملف موظف جديد")
+      React.createElement("button", { onClick: () => setAdding(!adding), style: { padding: "10px 20px", background: T.accent, color: "#fff", fontWeight: 700 } }, adding ? "إلغاء" : "إضافة موظف")
     ),
     adding && React.createElement("div", { className: "fade", style: { background: T.surface, border: `1.5px solid ${T.accent}`, borderRadius: 18, padding: 22 } },
       React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(170px,1fr))", gap: 12, marginBottom: 14 } },
@@ -1183,6 +1194,7 @@ function AttendDash({ emps, recs, leaves, isSuper }) {
 
 function Reports({ emps, recs }) {
   const [range, setRange] = useState("month");
+  const [empFilter, setEmpFilter] = useState("all");
   const now = new Date();
   const cutoff = new Date();
   if (range === "week") cutoff.setDate(now.getDate() - 7);
@@ -1190,15 +1202,44 @@ function Reports({ emps, recs }) {
   else if (range === "3month") cutoff.setMonth(now.getMonth() - 3);
   else cutoff.setFullYear(now.getFullYear() - 1);
   const cutoffStr = cutoff.toISOString().split("T")[0];
-
   const periodRecs = recs.filter(r => r.date >= cutoffStr);
 
+  // إحصاء أيام كل موظف حسب القواعد
   function empStats(id) {
     const rs = periodRecs.filter(x => x.empId === id);
-    const days = [...new Set(rs.map(r => r.date))];
-    const ins = rs.filter(r => r.type === "in");
-    const lates = ins.filter(r => r.late);
-    return { days: days.length, late: lates.length, total: ins.length };
+    const byDate = {};
+    rs.forEach(r => {
+      if (!byDate[r.date]) byDate[r.date] = { in: null, out: null };
+      if (r.type === "in" && !byDate[r.date].in) byDate[r.date].in = r.time;
+      if (r.type === "out") byDate[r.date].out = r.time;
+    });
+    let present = 0, late = 0, absent = 0, early = 0;
+    Object.values(byDate).forEach(d => {
+      const s = dayStatus(d.in, d.out);
+      if (s === "present") present++;
+      else if (s === "late") late++;
+      else if (s === "absent") absent++;
+      if (d.out && toMins(d.out) < EARLY_LEAVE_BEFORE) early++;
+    });
+    return { days: Object.keys(byDate).length, present, late, absent, early };
+  }
+
+  const shownEmps = empFilter === "all" ? emps : emps.filter(e => e.id === empFilter);
+
+  function exportCSV() {
+    const headers = ["الموظف", "القسم", "أيام الحضور", "حاضر", "تأخير", "غياب", "انصراف مبكر"];
+    const rows = shownEmps.map(e => {
+      const s = empStats(e.id);
+      return [e.name, e.dept, s.days, s.present, s.late, s.absent, s.early];
+    });
+    const csv = "\uFEFF" + [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `تقرير_الحضور_${todayStr()}.csv`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   }
 
   const ranges = [
@@ -1209,27 +1250,38 @@ function Reports({ emps, recs }) {
   ];
 
   return React.createElement("div", { style: { padding: "20px 0", display: "flex", flexDirection: "column", gap: 18 } },
-    React.createElement("div", { style: { display: "flex", gap: 8 } },
+    React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", alignItems: "center" } },
       ranges.map(r => React.createElement("button", {
         key: r.id, onClick: () => setRange(r.id),
         style: { padding: "8px 18px", background: range === r.id ? T.accent : T.surface, color: range === r.id ? "#fff" : T.mid, border: `1px solid ${range === r.id ? T.accent : T.border}`, borderRadius: 10, fontSize: 13, fontWeight: 600, cursor: "pointer", fontFamily: "inherit" }
-      }, r.l))
+      }, r.l)),
+      React.createElement("select", {
+        value: empFilter, onChange: (e) => setEmpFilter(e.target.value),
+        style: { padding: "8px 14px", border: `1px solid ${T.border}`, borderRadius: 10, fontSize: 13, fontFamily: "inherit", background: T.surface, color: T.txt, marginRight: "auto" }
+      },
+        React.createElement("option", { value: "all" }, "كل الموظفين"),
+        emps.map(e => React.createElement("option", { key: e.id, value: e.id }, e.name))
+      ),
+      React.createElement("button", {
+        onClick: exportCSV,
+        style: { padding: "8px 18px", background: T.oLight, color: T.ok, border: "1px solid #6EE7B7", borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }
+      }, "تصدير CSV")
     ),
     React.createElement(Card, { title: "تقرير الحضور" },
       React.createElement("div", { style: { overflowX: "auto", marginTop: 8 } },
         React.createElement("table", { style: { width: "100%", borderCollapse: "collapse", fontSize: 13 } },
           React.createElement("thead", null,
             React.createElement("tr", { style: { borderBottom: `2px solid ${T.border}` } },
-              ["الموظف", "أيام الحضور", "أيام التأخير", "إجمالي التسجيلات"].map((h, i) =>
-                React.createElement("th", { key: i, style: { padding: "10px 8px", textAlign: i === 0 ? "right" : "center", color: T.mid, fontWeight: 700 } }, h)
+              ["الموظف", "أيام الحضور", "حاضر", "تأخير", "غياب", "انصراف مبكر"].map((h, i) =>
+                React.createElement("th", { key: i, style: { padding: "10px 8px", textAlign: i === 0 ? "right" : "center", color: T.mid, fontWeight: 700, whiteSpace: "nowrap" } }, h)
               )
             )
           ),
           React.createElement("tbody", null,
-            emps.length === 0 && React.createElement("tr", null,
-              React.createElement("td", { colSpan: 4, style: { padding: 20, textAlign: "center", color: T.muted } }, "لا توجد بيانات")
+            shownEmps.length === 0 && React.createElement("tr", null,
+              React.createElement("td", { colSpan: 6, style: { padding: 20, textAlign: "center", color: T.muted } }, "لا توجد بيانات")
             ),
-            emps.map(e => {
+            shownEmps.map(e => {
               const s = empStats(e.id);
               return React.createElement("tr", { key: e.id, style: { borderBottom: `1px solid ${T.border}` } },
                 React.createElement("td", { style: { padding: "10px 8px" } },
@@ -1241,9 +1293,11 @@ function Reports({ emps, recs }) {
                     )
                   )
                 ),
-                React.createElement("td", { style: { padding: "10px 8px", textAlign: "center", fontWeight: 700, color: T.accent } }, s.days),
+                React.createElement("td", { style: { padding: "10px 8px", textAlign: "center", fontWeight: 700, color: T.txt } }, s.days),
+                React.createElement("td", { style: { padding: "10px 8px", textAlign: "center", fontWeight: 700, color: T.ok } }, s.present),
                 React.createElement("td", { style: { padding: "10px 8px", textAlign: "center", fontWeight: 700, color: s.late > 0 ? T.warn : T.muted } }, s.late),
-                React.createElement("td", { style: { padding: "10px 8px", textAlign: "center", color: T.mid } }, s.total)
+                React.createElement("td", { style: { padding: "10px 8px", textAlign: "center", fontWeight: 700, color: s.absent > 0 ? T.danger : T.muted } }, s.absent),
+                React.createElement("td", { style: { padding: "10px 8px", textAlign: "center", color: s.early > 0 ? T.warn : T.muted } }, s.early)
               );
             })
           )
@@ -1253,7 +1307,6 @@ function Reports({ emps, recs }) {
   );
 }
 
-
 function MgrPanel({ mgr, allEmps, setAllEmps, recs, setRecs, leaves, setLeaves, devices, setDevices, managers, setManagers, kioskMode, setKioskMode, onExit }) {
   const [tab, setTab] = useState("dash");
   const isSuper = mgr.role === "super";
@@ -1261,7 +1314,7 @@ function MgrPanel({ mgr, allEmps, setAllEmps, recs, setRecs, leaves, setLeaves, 
   const visEmps = isSuper ? allEmps : allEmps.filter(e => (mgr.depts || []).includes(e.dept));
   const visMgrs = isSuper ? managers : [mgr];
   
-  const visAll = [...visEmps, ...visMgrs.map(m => ({ id: m.id, name: m.name, dept: m.title || "إدارة عليا", color: m.color, _isMgr: true }))];
+  const visAll = [...visEmps, ...visMgrs.map(m => ({ id: m.id, name: m.name, dept: m.title || "الإدارة", color: m.color, _isMgr: true }))];
 
   const TABS = isSuper ? [
     { id: "dash", l: "لوحة المتابعة الفورية" },
@@ -1372,8 +1425,9 @@ function App() {
     React.createElement("style", null, CSS),
     view === "kiosk" && kioskMode === "personal" && React.createElement(React.Fragment, null,
       React.createElement(Kiosk, { emps, managers, recs, onRec: (r) => { setRecs(rs => [...rs, r]); if (window._fbDB) { const { addDoc, collection } = window._fbFirestore; addDoc(collection(window._fbDB, "records"), { ...r, timestamp: new Date().toISOString() }); } }, devices, onNavigateToLogin: () => setView("login"), onMgrLogin: (m) => { setCurMgr(m); setView("panel"); } }),
-      React.createElement("div", { style: { position: "fixed", bottom: 20, left: "50%", transform: "translateX(-50%)", zIndex: 200 } },
-        React.createElement("button", { onClick: () => setView("reg"), style: { padding: "9px 18px", background: T.surface, color: T.accent, border: `1.5px solid ${T.accent}`, fontSize: 13, fontWeight: 600, borderRadius: 12, boxShadow: T.shM } }, "تسجيل هاتف الموظف")
+      React.createElement("div", { style: { position: "fixed", bottom: 20, left: "50%", transform: "translateX(-50%)", zIndex: 200, display: "flex", gap: 8 } },
+        React.createElement("button", { onClick: () => setView("reg"), style: { padding: "9px 18px", background: T.surface, color: T.accent, border: `1.5px solid ${T.accent}`, fontSize: 13, fontWeight: 600, borderRadius: 12, boxShadow: T.shM } }, "تسجيل هاتف الموظف"),
+        React.createElement("button", { onClick: () => setView("login"), style: { padding: "9px 18px", background: T.surface, color: T.mid, border: `1.5px solid ${T.border}`, fontSize: 13, fontWeight: 600, borderRadius: 12, boxShadow: T.shM, marginRight: 8 } }, "دخول المديرين")
       )
     ),
     view === "kiosk" && kioskMode === "tablet" && React.createElement(React.Fragment, null,
