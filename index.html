@@ -73,7 +73,7 @@ function Logo({ width = 160 }) {
   return React.createElement("img", {
     src: "artmood logo copy small.png",
     alt: "Art Mood",
-    style: { width, height: "auto", display: "block", objectFit: "contain" }
+    style: { width: width, height: "auto", display: "block", margin: "0 auto", objectFit: "contain" }
   });
 }
 
@@ -357,7 +357,7 @@ function SelfieWidget({ onCapture }) {
   const [st, setSt] = useState("idle");
   const [prev, setPrev] = useState(null);
 
-  function snap() {
+  const snap = useCallback(() => {
     const v = vR.current, c = cR.current;
     if (!v || !c) return;
     
@@ -376,7 +376,7 @@ function SelfieWidget({ onCapture }) {
     setSt("done");
     if (sR.current) sR.current.getTracks().forEach(t => t.stop());
     onCapture(url);
-  }
+  }, [onCapture]);
 
   function start() {
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
@@ -386,24 +386,31 @@ function SelfieWidget({ onCapture }) {
           if (vR.current) {
             vR.current.srcObject = s;
             vR.current.setAttribute("playsinline", true);
-            vR.current.play();
+            vR.current.play().catch(e => console.log(e));
           }
           setSt("live");
-          
-          const checkTrack = setInterval(() => {
-            if (vR.current && vR.current.videoWidth > 0 && vR.current.readyState >= 3) {
-              clearInterval(checkTrack);
-              setTimeout(() => { snap(); }, 600);
-            }
-          }, 200);
-          
-          setTimeout(() => clearInterval(checkTrack), 8000);
         })
         .catch(() => { if (fileRef.current) fileRef.current.click(); });
     } else {
       if (fileRef.current) fileRef.current.click();
     }
   }
+
+  useEffect(() => {
+    if (st === "live" && vR.current) {
+      let checkTrack = setInterval(() => {
+        if (vR.current && vR.current.videoWidth > 0 && vR.current.readyState >= 3) {
+          clearInterval(checkTrack);
+          setTimeout(() => {
+            snap();
+          }, 1500);
+        }
+      }, 200);
+      return () => clearInterval(checkTrack);
+    }
+  }, [st, snap]);
+
+  useEffect(() => { return () => { if (sR.current) sR.current.getTracks().forEach(t => t.stop()); }; }, []);
 
   function handleFile(e) {
     const file = e.target.files && e.target.files[0];
@@ -413,14 +420,13 @@ function SelfieWidget({ onCapture }) {
     r.readAsDataURL(file);
   }
 
-  useEffect(() => { return () => { if (sR.current) sR.current.getTracks().forEach(t => t.stop()); }; }, []);
-
   return React.createElement("div", { style: { display: "flex", flexDirection: "column", alignItems: "center", gap: 12 } },
     React.createElement("input", { ref: fileRef, type: "file", accept: "image/*", capture: "user", style: { display: "none" }, onChange: handleFile }),
     st === "idle" && React.createElement("button", { onClick: start, style: { padding: "11px 28px", background: "#EEF0FF", color: "#6366F1", border: "1.5px solid #6366F1", fontSize: 14, fontWeight: 600, borderRadius: 12 } }, "التقاط صورة للتحقق"),
     st === "live" && React.createElement("div", { style: { position: "relative", borderRadius: 16, overflow: "hidden", border: "2px solid #6366F1" } },
       React.createElement("video", { ref: vR, autoPlay: true, playsInline: true, muted: true, style: { width: 220, height: 165, display: "block", objectFit: "cover", transform: "scaleX(-1)" } }),
-      React.createElement("div", { style: { position: "absolute", bottom: 8, left: "50%", transform: "translateX(-50%)", background: "rgba(99,102,241,0.9)", color: "#fff", fontSize: 12, padding: "4px 12px", borderRadius: 20 } }, "جاري التقاط الصورة تلقائيا...")
+      React.createElement("div", { style: { position: "absolute", bottom: 8, left: "50%", transform: "translateX(-50%)", background: "rgba(99,102,241,0.9)", color: "#fff", fontSize: 12, padding: "4px 12px", borderRadius: 20 } }, "جاري التقاط الصورة تلقائياً..."),
+      React.createElement("button", { onClick: snap, style: { position: "absolute", top: 8, right: 8, background: T.accent, color: "#fff", fontSize: 11, padding: "4px 8px", borderRadius: 8 } }, "التقاط الآن")
     ),
     st === "done" && prev && React.createElement("div", { style: { position: "relative", display: "inline-block" } },
       React.createElement("img", { src: prev, style: { width: 90, height: 90, borderRadius: "50%", objectFit: "cover", border: "3px solid #10B981", display: "block" } })
@@ -774,7 +780,7 @@ function RegisterDevice({ emps, managers, devices, setDevices, onBack }) {
   return React.createElement(CenteredPage, null,
     React.createElement(IcoBox, { icon: "هاتف", bg: T.aLight }),
     React.createElement("div", { style: { textAlign: "center" } },
-      React.createElement("div", { style: { fontSize: 19, fontWeight: 800 } }, "توثيق واقتران الهاتف الشخصي للموظف")
+      React.createElement("div", { style: { fontSize: 19, fontWeight: 800 } }, "تسجيل هاتف الموظف")
     ),
     err && React.createElement(Note, { color: T.danger, bg: T.dLight }, err),
     React.createElement(PinPad, { key: sk, onConfirm: onPin, doShake: !!err }),
@@ -933,7 +939,7 @@ function MgrsMgmt({ managers, setManagers, allEmps }) {
 
   return React.createElement("div", { style: { padding: "20px 0", display: "flex", flexDirection: "column", gap: 16 } },
     React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
-      React.createElement("h3", null, "قائمة المديرين المسؤولين"),
+      React.createElement("h3", null, "المديرين"),
       React.createElement("button", { onClick: () => setAdding(!adding), style: { padding: "10px 20px", background: T.accent, color: "#fff", fontWeight: 700 } }, adding ? "إلغاء الأمر" : "إنشاء حساب مسؤول جديد")
     ),
     adding && React.createElement("div", { className: "fade", style: { background: T.surface, border: `1.5px solid ${T.accent}`, borderRadius: 18, padding: 22 } },
@@ -1053,7 +1059,7 @@ function MgrPanel({ mgr, allEmps, setAllEmps, recs, setRecs, leaves, setLeaves, 
   const [tab, setTab] = useState("dash");
   const isSuper = mgr.role === "super";
 
-  const visEmps = isSuper ? allEmps : allEmps.filter(e => mgr.depts.includes(e.dept));
+  const visEmps = isSuper ? allEmps : allEmps.filter(e => (mgr.depts || []).includes(e.dept));
   const visMgrs = isSuper ? managers : [mgr];
   
   const visAll = [...visEmps, ...visMgrs.map(m => ({ id: m.id, name: m.name, dept: m.title || "إدارة عليا", color: m.color, _isMgr: true }))];
@@ -1088,6 +1094,7 @@ function MgrPanel({ mgr, allEmps, setAllEmps, recs, setRecs, leaves, setLeaves, 
         )
       )
     ),
+    !isSuper && React.createElement("div", { style: { background: T.aLight, borderBottom: "1px solid rgba(99,102,241,.2)", padding: "8px 20px", fontSize: 12, color: T.accent } }, "قسم مخول برؤيته: ", React.createElement("b", null, (mgr.depts || []).join("، ")), " — ", visEmps.length, " موظف"),
     React.createElement("div", { style: { background: T.surface, borderBottom: `1px solid ${T.border}`, padding: "0 20px", display: "flex", overflowX: "auto" } },
       TABS.map(t => React.createElement("button", {
         key: t.id,
