@@ -73,7 +73,8 @@ function Logo({ width = 160 }) {
   return React.createElement("img", {
     src: "artmood logo copy small.png",
     alt: "Art Mood",
-    style: { width: width, height: "auto", display: "block", margin: "0 auto", objectFit: "contain" }
+    width: width,
+    style: { height: "auto", display: "block", margin: "0 auto", objectFit: "contain" }
   });
 }
 
@@ -356,13 +357,18 @@ function SelfieWidget({ onCapture }) {
   const vR = useRef(null), cR = useRef(null), sR = useRef(null);
   const [st, setSt] = useState("idle");
   const [prev, setPrev] = useState(null);
+  const hasSnapped = useRef(false);
 
   const snap = useCallback(() => {
+    if (hasSnapped.current) return;
     const v = vR.current, c = cR.current;
     if (!v || !c) return;
     
     const w = v.videoWidth || 320;
     const h = v.videoHeight || 240;
+    if (w === 0 || h === 0) return;
+    
+    hasSnapped.current = true;
     c.width = w;
     c.height = h;
     
@@ -370,8 +376,6 @@ function SelfieWidget({ onCapture }) {
     ctx.drawImage(v, 0, 0, w, h);
     
     const url = c.toDataURL("image/jpeg", 0.85);
-    if (url === "data:," || url === "data:image/jpeg;base64,") return;
-    
     setPrev(url); 
     setSt("done");
     if (sR.current) sR.current.getTracks().forEach(t => t.stop());
@@ -379,6 +383,7 @@ function SelfieWidget({ onCapture }) {
   }, [onCapture]);
 
   function start() {
+    hasSnapped.current = false;
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
       navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
         .then(s => {
@@ -386,9 +391,15 @@ function SelfieWidget({ onCapture }) {
           if (vR.current) {
             vR.current.srcObject = s;
             vR.current.setAttribute("playsinline", true);
-            vR.current.play().catch(e => console.log(e));
+            vR.current.play().then(() => {
+              setSt("live");
+              setTimeout(() => {
+                if (!hasSnapped.current && vR.current && vR.current.readyState >= 3) snap();
+              }, 2200);
+            }).catch(() => setSt("live"));
+          } else {
+            setSt("live");
           }
-          setSt("live");
         })
         .catch(() => { if (fileRef.current) fileRef.current.click(); });
     } else {
@@ -396,19 +407,11 @@ function SelfieWidget({ onCapture }) {
     }
   }
 
-  useEffect(() => {
-    if (st === "live" && vR.current) {
-      let checkTrack = setInterval(() => {
-        if (vR.current && vR.current.videoWidth > 0 && vR.current.readyState >= 3) {
-          clearInterval(checkTrack);
-          setTimeout(() => {
-            snap();
-          }, 1500);
-        }
-      }, 200);
-      return () => clearInterval(checkTrack);
-    }
-  }, [st, snap]);
+  const handlePlaying = () => {
+    setTimeout(() => {
+      if (!hasSnapped.current) snap();
+    }, 1500);
+  };
 
   useEffect(() => { return () => { if (sR.current) sR.current.getTracks().forEach(t => t.stop()); }; }, []);
 
@@ -424,7 +427,7 @@ function SelfieWidget({ onCapture }) {
     React.createElement("input", { ref: fileRef, type: "file", accept: "image/*", capture: "user", style: { display: "none" }, onChange: handleFile }),
     st === "idle" && React.createElement("button", { onClick: start, style: { padding: "11px 28px", background: "#EEF0FF", color: "#6366F1", border: "1.5px solid #6366F1", fontSize: 14, fontWeight: 600, borderRadius: 12 } }, "التقاط صورة للتحقق"),
     st === "live" && React.createElement("div", { style: { position: "relative", borderRadius: 16, overflow: "hidden", border: "2px solid #6366F1" } },
-      React.createElement("video", { ref: vR, autoPlay: true, playsInline: true, muted: true, style: { width: 220, height: 165, display: "block", objectFit: "cover", transform: "scaleX(-1)" } }),
+      React.createElement("video", { ref: vR, autoPlay: true, playsInline: true, muted: true, onPlaying: handlePlaying, style: { width: 220, height: 165, display: "block", objectFit: "cover", transform: "scaleX(-1)" } }),
       React.createElement("div", { style: { position: "absolute", bottom: 8, left: "50%", transform: "translateX(-50%)", background: "rgba(99,102,241,0.9)", color: "#fff", fontSize: 12, padding: "4px 12px", borderRadius: 20 } }, "جاري التقاط الصورة تلقائياً..."),
       React.createElement("button", { onClick: snap, style: { position: "absolute", top: 8, right: 8, background: T.accent, color: "#fff", fontSize: 11, padding: "4px 8px", borderRadius: 8 } }, "التقاط الآن")
     ),
@@ -1162,6 +1165,12 @@ function App() {
     }
     initFirebase();
   }, []);
+
+  window._onMgrLoginDirect = (m) => {
+    localStorage.setItem("_curMgr", JSON.stringify(m));
+    setCurMgr(m);
+    setView("panel");
+  };
 
   return React.createElement(React.Fragment, null,
     React.createElement("style", null, CSS),
