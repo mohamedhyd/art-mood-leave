@@ -242,6 +242,21 @@ function RoleBadge({ role }) {
     : React.createElement(Badge, { label: "مدير قسم", color: T.accent, bg: T.aLight });
 }
 
+/* CORRECTED TERNARY OPERATOR LOGIC HERE */
+function StepBar({ cur, steps }) {
+  return React.createElement("div", {
+    style: { display: "flex", alignItems: "center", background: T.surface, border: `1px solid ${T.border}`, borderRadius: 40, padding: "5px 6px", boxShadow: T.sh }
+  }, steps.map((s, i, arr) => {
+    const done = cur > i, active = cur === i;
+    return React.createElement("div", { key: s, style: { display: "flex", alignItems: "center" } },
+      React.createElement("div", {
+        style: { display: "flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 30, transition: "all .2s", background: active ? T.accent : done ? T.aLight : "transparent", color: active ? "#fff" : done ? T.accent : T.muted, fontSize: 12, fontWeight: (active || done) ? 600 : 400 }
+      }, React.createElement("span", null, done ? "✓" : i + 1), s),
+      i < arr.length - 1 && React.createElement("div", { style: { width: 1, height: 16, background: T.border, margin: "0 2px" } })
+    );
+  }));
+}
+
 function Note({ children, color, bg }) {
   return React.createElement("div", {
     style: { background: bg, border: `1px solid ${color}44`, borderRadius: 12, padding: "10px 16px", fontSize: 13, color: color, textAlign: "center", lineHeight: 1.8 }
@@ -260,20 +275,6 @@ function Card({ title, children, hi }) {
   }, title && React.createElement("div", { style: { fontWeight: 700, fontSize: 14, color: hi ? T.accent : T.txt, marginBottom: 14 } }, title), children);
 }
 
-function StepBar({ cur, steps }) {
-  return React.createElement("div", {
-    style: { display: "flex", alignItems: "center", background: T.surface, border: `1px solid ${T.border}`, borderRadius: 40, padding: "5px 6px", boxShadow: T.sh }
-  }, steps.map((s, i, arr) => {
-    const done = cur > i, active = cur === i;
-    return React.createElement("div", { key: s, style: { display: "flex", alignItems: "center" } },
-      React.createElement("div", {
-        style: { display: "flex", alignItems: "center", gap: 5, padding: "6px 12px", borderRadius: 30, transition: "all .2s", background: active ? T.accent : done ? T.aLight : "transparent", color: active ? "#fff" : done ? T.accent : T.muted, fontSize: 12, fontWeight: active || done store: 600 : 400 }
-      }, React.createElement("span", null, done ? "✓" : i + 1), s),
-      i < arr.length - 1 && React.createElement("div", { style: { width: 1, height: 16, background: T.border, margin: "0 2px" } })
-    );
-  }));
-}
-
 function IcoBox({ icon, bg, glow, sz = 64 }) {
   return React.createElement("div", {
     style: { width: sz, height: sz, borderRadius: "50%", background: bg, display: "flex", alignItems: "center", justifyContent: "center", fontSize: sz * .44, boxShadow: glow ? `0 0 0 14px ${glow}` : "none" }
@@ -284,49 +285,6 @@ function CenteredPage({ children }) {
   return React.createElement("div", {
     style: { minHeight: "100vh", background: T.bg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 18, padding: 32, textAlign: "center" }
   }, children);
-}
-
-function LiveClock() {
-  const [t, set] = useState(new Date());
-  useEffect(() => {
-    const i = setInterval(() => set(new Date()), 1000);
-    return () => clearInterval(i);
-  }, []);
-  const D = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
-  const M = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
-  return React.createElement("div", { style: { textAlign: "center" } },
-    React.createElement("div", { className: "mono", style: { fontSize: "clamp(36px,9vw,58px)", fontWeight: 700, color: T.txt, letterSpacing: -3, lineHeight: 1 } }, t.toTimeString().slice(0, 8)),
-    React.createElement("div", { style: { color: T.muted, fontSize: 13, marginTop: 6 } }, D[t.getDay()], "، ", t.getDate(), " ", M[t.getMonth()], " ", t.getFullYear())
-  );
-}
-
-function PinPad({ onConfirm, doShake }) {
-  const [pin, set] = useState("");
-  useEffect(() => {
-    if (pin.length === 4) {
-      setTimeout(() => {
-        onConfirm(pin);
-        set("");
-      }, 180);
-    }
-  }, [pin]);
-  useEffect(() => {
-    if (doShake) set("");
-  }, [doShake]);
-  const add = (d) => { if (pin.length < 4) set(p => p + d); };
-  const del = () => set(p => p.slice(0, -1));
-  return React.createElement("div", { style: { display: "flex", flexDirection: "column", alignItems: "center", gap: 16 } },
-    React.createElement("div", { style: { display: "flex", gap: 12 } },
-      [0, 1, 2, 3].map(i => React.createElement("div", { key: i, style: { width: 13, height: 13, borderRadius: "50%", transition: "all .2s", background: pin.length > i ? T.accent : T.border, transform: pin.length > i ? "scale(1.2)" : "scale(1)" } }))
-    ),
-    React.createElement("div", { className: doShake ? "shk" : "", style: { display: "grid", gridTemplateColumns: "repeat(3,72px)", gap: 10 } },
-      [1, 2, 3, 4, 5, 6, 7, 8, 9, "", 0, "محل"].map((v, i) => v === "" ? React.createElement("div", { key: i }) : React.createElement("button", {
-        key: i,
-        onClick: () => v === "محل" ? del() : add(String(v)),
-        style: { height: 72, fontSize: v === "محل" ? 14 : 22, fontWeight: 600, background: v === "محل" ? T.dLight : T.hi, color: v === "محل" ? T.danger : T.txt, border: `1.5px solid ${v === "محل" ? "#FCA5A5" : T.border}`, borderRadius: 16, boxShadow: T.sh }
-      }, v))
-    )
-  );
 }
 
 function GpsWidget({ onResult }) {
@@ -366,6 +324,7 @@ function SelfieWidget({ onCapture }) {
   const vR = useRef(null), cR = useRef(null), sR = useRef(null);
   const [st, setSt] = useState("idle");
   const [prev, setPrev] = useState(null);
+  const [countdown, setCountdown] = useState(3);
   const hasSnapped = useRef(false);
 
   const snap = useCallback(() => {
@@ -394,6 +353,7 @@ function SelfieWidget({ onCapture }) {
   function start() {
     setPrev(null);
     hasSnapped.current = false;
+    setCountdown(3);
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
       navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
         .then(s => {
@@ -415,18 +375,20 @@ function SelfieWidget({ onCapture }) {
   }
 
   useEffect(() => {
+    let cdInterval;
     if (st === "live") {
-      let warmUpTimer = setTimeout(() => {
-        let attempts = 0;
-        let captureInterval = setInterval(() => {
-          attempts++;
-          if (snap() || attempts > 20) {
-            clearInterval(captureInterval);
+      cdInterval = setInterval(() => {
+        setCountdown(prevCd => {
+          if (prevCd <= 1) {
+            clearInterval(cdInterval);
+            setTimeout(() => { snap(); }, 200);
+            return 0;
           }
-        }, 200);
-      }, 1500);
-      return () => clearTimeout(warmUpTimer);
+          return prevCd - 1;
+        });
+      }, 1000);
     }
+    return () => { if (cdInterval) clearInterval(cdInterval); };
   }, [st, snap]);
 
   useEffect(() => { return () => { if (sR.current) sR.current.getTracks().forEach(t => t.stop()); }; }, []);
@@ -444,7 +406,9 @@ function SelfieWidget({ onCapture }) {
     st === "idle" && React.createElement("button", { onClick: start, style: { padding: "11px 28px", background: "#EEF0FF", color: "#6366F1", border: "1.5px solid #6366F1", fontSize: 14, fontWeight: 600, borderRadius: 12 } }, "التقاط صورة للتحقق"),
     st === "live" && React.createElement("div", { style: { position: "relative", borderRadius: 16, overflow: "hidden", border: "2px solid #6366F1" } },
       React.createElement("video", { ref: vR, autoPlay: true, playsInline: true, muted: true, style: { width: 220, height: 165, display: "block", objectFit: "cover", transform: "scaleX(-1)" } }),
-      React.createElement("div", { style: { position: "absolute", bottom: 8, left: "50%", transform: "translateX(-50%)", background: "rgba(99,102,241,0.9)", color: "#fff", fontSize: 12, padding: "4px 12px", borderRadius: 20 } }, "جاري التقاط الصورة تلقائياً..."),
+      React.createElement("div", { style: { position: "absolute", bottom: 8, left: "50%", transform: "translateX(-50%)", background: "rgba(99,102,241,0.9)", color: "#fff", fontSize: 12, padding: "4px 12px", borderRadius: 20 } }, 
+        countdown > 0 ? `التقاط تلقائي خلال ${countdown}...` : "جاري المعالجة..."
+      ),
       React.createElement("button", { onClick: () => snap(), style: { position: "absolute", top: 8, right: 8, background: T.accent, color: "#fff", fontSize: 11, padding: "4px 8px", borderRadius: 8 } }, "التقاط الآن")
     ),
     st === "done" && prev && React.createElement("div", { style: { position: "relative", display: "inline-block" } },
@@ -1203,7 +1167,7 @@ function Settings({ kioskMode, setKioskMode, setRecs }) {
   );
 }
 
-/* MANAGEMENT CONTROLLER PANEL */
+/* MANAGEMENT CONTROLLER PANEL Component Code Block */
 function MgrPanel({ mgr, allEmps, setAllEmps, recs, setRecs, leaves, setLeaves, devices, setDevices, managers, setManagers, kioskMode, setKioskMode, onExit }) {
   const [tab, setTab] = useState("dash");
   const isSuper = mgr.role === "super";
@@ -1311,6 +1275,12 @@ function App() {
     }
     initFirebase();
   }, []);
+
+  window._onMgrLoginDirect = (m) => {
+    localStorage.setItem("_curMgr", JSON.stringify(m));
+    setCurMgr(m);
+    setView("panel");
+  };
 
   return React.createElement(React.Fragment, null,
     React.createElement("style", null, CSS),
