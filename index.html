@@ -113,7 +113,7 @@ const SHIFTS = {
 const DEFAULT_SHIFT = "9-5";
 const FACTORY_LAT = 29.970593;
 const FACTORY_LNG = 31.489092;
-const GEO_RADIUS = 60000;
+const GEO_RADIUS = 300;
 
 function geoDistance(lat1, lng1, lat2, lng2) {
   const R = 6371000;
@@ -1736,30 +1736,6 @@ function Settings({ kioskMode, setKioskMode, setRecs, depts, setDepts }) {
     if (confirm("هل أنت متأكد من رغبتك في مسح كافة السجلات الحالية نهائياً من النظام؟")) {
       setRecs([]);
       alert("تم تصفير سجلات العمل المحلية بنجاح");
-    }
-  }
-  async function wipe() {
-    if (confirm("هل أنت متأكد من رغبتك في مسح كافة السجلات الحالية نهائياً من النظام ومن السحابة (Firebase)؟")) {
-      
-      // 1. مسح السجلات من الفايربيز سحابياً أولاً لو متصل بالإنترنت
-      if (window._fbDB && recs && recs.length > 0) {
-        const { deleteDoc, doc } = window._fbFirestore;
-        const db = window._fbDB;
-        try {
-          // اللف على كل سجل ومسحه بالـ ID الخاص به
-          for (const r of recs) {
-            if (r.id) {
-              await deleteDoc(doc(db, "records", String(r.id)));
-            }
-          }
-        } catch (err) {
-          console.error("خطأ أثناء مسح السجلات من قاعدة البيانات:", err);
-        }
-      }
-
-      // 2. تصفير السجلات محلياً على الشاشة
-      setRecs([]);
-      alert("تم تصفير كافة السجلات من المتصفح وقاعدة البيانات السحابية بنجاح ✅");
     }
   }
   return React.createElement("div", { style: { padding: "20px 0", display: "flex", flexDirection: "column", gap: 14, maxWidth: 520 } },
