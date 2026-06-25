@@ -108,7 +108,7 @@ const SHIFTS = {
   "9-5": { label: "9 صباحا - 5 مساء", start: "09:00", end: "17:00", hours: 8 },
   "8-4": { label: "8 صباحا - 4 مساء", start: "08:00", end: "16:00", hours: 8 },
   "8.5-4.5": { label: "8:30 صباحا - 4:30 مساء", start: "08:30", end: "16:30", hours: 8 },
-  "flexible": { label: "شيفت مرن (بعدد الساعات)", start: "00:00", end: "23:59", hours: 8, isFlexible: true }
+  "flexible": { label: "شيفت مرن - بعدد الساعات", start: "00:00", end: "23:59", hours: 8, isFlexible: true }
 };
 const DEFAULT_SHIFT = "9-5";
 const FACTORY_LAT = 29.970593;
@@ -119,7 +119,8 @@ function geoDistance(lat1, lng1, lat2, lng2) {
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLng = (lng2 - lng1) * Math.PI / 180;
   const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-            React.createElement("span") === null ? 0 : Math.sin(dLng/2) * Math.sin(dLng/2);
+            Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180) *
+            Math.sin(dLng/2) * Math.sin(dLng/2);
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 const LATE_GRACE = 90; 
@@ -373,6 +374,48 @@ function PinPad({ onConfirm, doShake }) {
         style: { height: 72, fontSize: v === "مسح" ? 14 : 22, fontWeight: 600, background: v === "مسح" ? T.dLight : T.hi, color: v === "مسح" ? T.danger : T.txt, border: `1.5px solid ${v === "مسح" ? "#FCA5A5" : T.border}`, borderRadius: 16, boxShadow: T.sh }
       }, v))
     )
+  );
+}
+
+function GpsWidget({ onResult }) {
+  const [st, setSt] = useState("loading");
+  const [dist, setDist] = useState(null);
+  const check = useCallback(() => {
+    setSt("loading");
+    if (!navigator.geolocation) {
+      setSt("ns");
+      onResult({ ok: false, inZone: false });
+      return;
+    }
+    const onOk = (pos) => {
+      const d = geoDistance(pos.coords.latitude, pos.coords.longitude, FACTORY_LAT, FACTORY_LNG);
+      const inZone = d <= GEO_RADIUS;
+      setDist(Math.round(d));
+      setSt("ok");
+      onResult({ ok: true, lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: Math.round(pos.coords.accuracy), inZone: inZone, distance: Math.round(d) });
+    };
+    const onFail = (err) => {
+      if (err && err.code === 1) { setSt("denied"); onResult({ ok: false, inZone: false }); return; }
+      navigator.geolocation.getCurrentPosition(onOk, onFail, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
+    };
+    navigator.geolocation.getCurrentPosition(onOk, onFail, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
+  }, [onResult]);
+  useEffect(() => { check(); }, []);
+
+  const cfg = {
+    loading: { bg: T.aLight, bd: "#C7D2FE", c: T.accent, txt: "جاري تحديد الموقع..." },
+    ok: { bg: T.oLight, bd: "#6EE7B7", c: T.ok, txt: "تم التحقق من تواجدك داخل الموقع" },
+    out: { bg: T.dLight, bd: "#FCA5A5", c: T.danger, txt: dist != null ? `أنت خارج النطاق المسموح (تبعد ${dist} متر)` : "أنت خارج نطاق الموقع المسموح" },
+    denied: { bg: T.wLight, bd: "#FCD34D", c: T.warn, txt: "صلاحية الموقع مرفوضة — فعّلها من إعدادات المتصفح ثم اضغط تحديث" },
+    timeout: { bg: T.wLight, bd: "#FCD34D", c: T.warn, txt: "تعذّر تحديد الموقع — اخرج للعراء أو اضغط تحديث" },
+    ns: { bg: T.wLight, bd: "#FCD34D", c: T.warn, txt: "الجهاز لا يدعم تحديد الموقع" }
+  };
+  const s = cfg[st] || cfg.loading;
+  return React.createElement("div", {
+    style: { background: s.bg, border: `1.5px solid ${s.bd}`, borderRadius: 14, padding: "12px 16px", display: "flex", alignItems: "center", gap: 10 }
+  },
+    React.createElement("span", { style: { flex: 1, fontSize: 13, fontWeight: 600, color: s.c } }, s.txt),
+    st !== "loading" && React.createElement("button", { onClick: check, style: { fontSize: 11, padding: "4px 10px", background: "rgba(0,0,0,.05)", color: T.mid, borderRadius: 8 } }, "تحديث")
   );
 }
 
@@ -1705,8 +1748,25 @@ function Settings({ kioskMode, setKioskMode, setRecs, depts, setDepts }) {
       alert("هذا القسم مضاف ومسجل مسبقاً في النظام.");
       return;
     }
-    setDepts([...depts, { name: newDept.trim(), color: deptCol }]);
+    const updatedDepts = [...depts, { name: newDept.trim(), color: deptCol }];
+    setDepts(updatedDept);
+    
+    // رفع الأقسام مباشرة إلى الفايربيز
+    if (window._fbDB) {
+      const { setDoc, doc } = window._fbFirestore;
+      setDoc(doc(window._fbDB, "system_settings", "depts_config"), { list: updatedDepts });
+    }
     setNewDept("");
+  }
+
+  function handleDeleteDept(name) {
+    if(!confirm(`هل تود بالتأكيد حذف قسم ${name}؟`)) return;
+    const updatedDept = depts.filter(x => x.name !== name);
+    setDepts(updatedDept);
+    if (window._fbDB) {
+      const { setDoc, doc } = window._fbFirestore;
+      setDoc(doc(window._fbDB, "system_settings", "depts_config"), { list: updatedDept });
+    }
   }
 
   function wipe() {
@@ -1741,7 +1801,7 @@ function Settings({ kioskMode, setKioskMode, setRecs, depts, setDepts }) {
       React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } },
         depts.map(d => React.createElement("span", { key: d.name, style: { display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 14px", background: d.color + "15", border: `1.5px solid ${d.color}`, color: d.color, borderRadius: 20, fontSize: 12, fontWeight: 700 } },
           d.name,
-          React.createElement("span", { onClick: () => { if(confirm(`هل تود بالتأكيد حذف قسم ${d.name}؟`)) setDepts(depts.filter(x => x.name !== d.name)); }, style: { cursor: "pointer", color: T.danger, fontWeight: "bold", fontSize: 14 } }, "×")
+          React.createElement("span", { onClick: () => handleDeleteDept(d.name), style: { cursor: "pointer", color: T.danger, fontWeight: "bold", fontSize: 14 } }, "×")
         ))
       )
     ),
@@ -1976,16 +2036,16 @@ function Reports({ emps, recs, depts, leaves }) {
           React.createElement("thead", null,
             React.createElement("tr", { style: { borderBottom: `2px solid ${T.border}` } },
               (range === "day" 
-                ? ["الموظف/المدير", "الحالة", "ميعاد الحضور", "ميعاد الانصراف", "ساعات العمل", "العمل الإضافي"]
+                ? ["الموظف/المدير", "الحالة", "ميعاد الحضور", "صورة الحضور", "ميعاد الانصراف", "صورة الانصراف", "ساعات العمل", "العمل الإضافي"]
                 : ["الموظف/المدير", "أيام الحضور", "حاضر", "تأخير", "غياب", "إجازات", "انصراف مبكر", "ساعات العمل", "العمل الإضافي"]
               ).map((h, i) =>
-                React.createElement("th", { key: i, style: { padding: "10px 8px", textAlign: i === 0 ? "right" : "center", color: T.mid, fontWeight: 700, whiteSpace: "nowrap" } }, h)
+                React.createElement("th", { key: i, style: { padding: "10px 8px", textAlign: (i === 0 ? "right" : "center"), color: T.mid, fontWeight: 700, whiteSpace: "nowrap" } }, h)
               )
             )
           ),
           React.createElement("tbody", null,
             shownEmps.length === 0 && React.createElement("tr", null,
-              React.createElement("td", { colSpan: range === "day" ? 6 : 9, style: { padding: 20, textAlign: "center", color: T.muted } }, "لا توجد بيانات")
+              React.createElement("td", { colSpan: range === "day" ? 7 : 9, style: { padding: 20, textAlign: "center", color: T.muted } }, "لا توجد بيانات")
             ),
             shownEmps.map(e => {
               const s = empStats(e.id);
@@ -2017,16 +2077,15 @@ function Reports({ emps, recs, depts, leaves }) {
 
               const dynamicColor = e._isMgr ? (e.role === 'super' ? T.gold : getDeptColor(e.depts?.[0], depts)) : getDeptColor(e.dept, depts);
               
+              // سحب الصورة المنفصلة للحضور والانصراف لعرضها بالتقرير اليومي
               const reportInRec = dayData.find(x => x.date === reportDate && x.type === "in");
               const reportOutRec = dayData.find(x => x.date === reportDate && x.type === "out");
-              const reportPhotoUrl = reportInRec?.selfieUrl || reportOutRec?.selfieUrl;
 
               if (range === "day") {
                 return React.createElement("tr", { key: e.id, style: { borderBottom: `1px solid ${T.border}` } },
                   React.createElement("td", { style: { padding: "10px 8px" } },
                     React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } },
-                      reportPhotoUrl ? React.createElement("img", { src: reportPhotoUrl, style: { width: 32, height: 32, borderRadius: "50%", objectFit: "cover", border: `1.5px solid ${T.accent}`, flexShrink: 0 } })
-                                     : React.createElement(Av, { e: e, sz: 32, color: dynamicColor }),
+                      React.createElement(Av, { e: e, sz: 32, color: dynamicColor }),
                       React.createElement("div", null,
                         React.createElement("div", { style: { fontWeight: 600, color: T.txt } }, e.name),
                         React.createElement("span", { style: { fontSize: 10, color: dynamicColor, fontWeight: 700 } }, e.dept)
@@ -2036,8 +2095,18 @@ function Reports({ emps, recs, depts, leaves }) {
                   React.createElement("td", { style: { padding: "10px 8px", textAlign: "center" } }, 
                     React.createElement(Badge, { label: dayStatusLabel, color: statusColor, bg: statusBg })
                   ),
-                  React.createElement("td", { style: { padding: "10px 8px", textAlign: "center", fontWeight: 700, color: T.txt } }, dayLeave ? "—" : checkInTime),
-                  React.createElement("td", { style: { padding: "10px 8px", textAlign: "center", fontWeight: 700, color: T.txt } }, dayLeave ? "—" : checkOutTime),
+                  React.createElement("td", { style: { padding: "10px 8px", textAlign: "center", fontWeight: 700 } }, 
+                    dayLeave ? "—" : React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: 6 } },
+                      reportInRec?.selfieUrl && React.createElement("img", { src: reportInRec.selfieUrl, style: { width: 30, height: 32, borderRadius: 6, objectFit: "cover", border: `1px solid ${T.border}` } }),
+                      React.createElement("span", null, checkInTime)
+                    )
+                  ),
+                  React.createElement("td", { style: { padding: "10px 8px", textAlign: "center", fontWeight: 700 } }, 
+                    dayLeave ? "—" : React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "center", gap: 8 } },
+                      reportOutRec?.selfieUrl && React.createElement("img", { src: reportOutRec.selfieUrl, style: { width: 32, height: 32, borderRadius: "50%", objectFit: "cover", border: `1px solid ${T.border}` } }),
+                      React.createElement("span", null, checkOutTime)
+                    )
+                  ),
                   React.createElement("td", { style: { padding: "10px 8px", textAlign: "center", fontWeight: 700, color: T.accent } }, dayLeave ? "—" : s.totalHours),
                   React.createElement("td", { style: { padding: "10px 8px", textAlign: "center", fontWeight: 700, color: T.gold } }, dayLeave ? "—" : s.totalOvertime)
                 );
@@ -2158,6 +2227,13 @@ function App() {
       }
       const db = window._fbDB;
       const { collection, onSnapshot, query, orderBy } = window._fbFirestore;
+
+      // سحب إعدادات الأقسام والألوان المعتمدة مباشرة من Firebase لمنع ضياعها
+      onSnapshot(window._fbFirestore.doc(db, "system_settings", "depts_config"), (docSnap) => {
+        if (docSnap.exists() && docSnap.data().list) {
+          setDepts(docSnap.data().list);
+        }
+      });
 
       onSnapshot(collection(db, "employees"), (snap) => {
         const data = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
