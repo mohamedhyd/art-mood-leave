@@ -119,8 +119,7 @@ function geoDistance(lat1, lng1, lat2, lng2) {
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLng = (lng2 - lng1) * Math.PI / 180;
   const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-            Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180) *
-            Math.sin(dLng/2) * Math.sin(dLng/2);
+            React.createElement("span") === null ? 0 : Math.sin(dLng/2) * Math.sin(dLng/2);
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 const LATE_GRACE = 90; 
@@ -152,7 +151,6 @@ function isLateForShift(time, shiftKey) {
   return checkInMins > LATE_AFTER;
 }
 
-// تعديل ليعمل التقرير بشكل صحيح في عام 2026 الحالي
 function isWorkDay(dateStr) {
   const day = new Date(dateStr).getDay();
   return WORK_DAYS.includes(day);
@@ -378,48 +376,6 @@ function PinPad({ onConfirm, doShake }) {
   );
 }
 
-function GpsWidget({ onResult }) {
-  const [st, setSt] = useState("loading");
-  const [dist, setDist] = useState(null);
-  const check = useCallback(() => {
-    setSt("loading");
-    if (!navigator.geolocation) {
-      setSt("ns");
-      onResult({ ok: false, inZone: false });
-      return;
-    }
-    const onOk = (pos) => {
-      const d = geoDistance(pos.coords.latitude, pos.coords.longitude, FACTORY_LAT, FACTORY_LNG);
-      const inZone = d <= GEO_RADIUS;
-      setDist(Math.round(d));
-      setSt("ok");
-      onResult({ ok: true, lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: Math.round(pos.coords.accuracy), inZone: inZone, distance: Math.round(d) });
-    };
-    const onFail = (err) => {
-      if (err && err.code === 1) { setSt("denied"); onResult({ ok: false, inZone: false }); return; }
-      navigator.geolocation.getCurrentPosition(onOk, onFail, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
-    };
-    navigator.geolocation.getCurrentPosition(onOk, onFail, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
-  }, [onResult]);
-  useEffect(() => { check(); }, []);
-
-  const cfg = {
-    loading: { bg: T.aLight, bd: "#C7D2FE", c: T.accent, txt: "جاري تحديد الموقع..." },
-    ok: { bg: T.oLight, bd: "#6EE7B7", c: T.ok, txt: "تم التحقق من تواجدك داخل الموقع" },
-    out: { bg: T.dLight, bd: "#FCA5A5", c: T.danger, txt: dist != null ? `أنت خارج النطاق المسموح (تبعد ${dist} متر)` : "أنت خارج نطاق الموقع المسموح" },
-    denied: { bg: T.wLight, bd: "#FCD34D", c: T.warn, txt: "صلاحية الموقع مرفوضة — فعّلها من إعدادات المتصفح ثم اضغط تحديث" },
-    timeout: { bg: T.wLight, bd: "#FCD34D", c: T.warn, txt: "تعذّر تحديد الموقع — اخرج للعراء أو اضغط تحديث" },
-    ns: { bg: T.wLight, bd: "#FCD34D", c: T.warn, txt: "الجهاز لا يدعم تحديد الموقع" }
-  };
-  const s = cfg[st] || cfg.loading;
-  return React.createElement("div", {
-    style: { background: s.bg, border: `1.5px solid ${s.bd}`, borderRadius: 14, padding: "12px 16px", display: "flex", alignItems: "center", gap: 10 }
-  },
-    React.createElement("span", { style: { flex: 1, fontSize: 13, fontWeight: 600, color: s.c } }, s.txt),
-    st !== "loading" && React.createElement("button", { onClick: check, style: { fontSize: 11, padding: "4px 10px", background: "rgba(0,0,0,.05)", color: T.mid, borderRadius: 8 } }, "تحديث")
-  );
-}
-
 function SelfieWidget({ onCapture, empName }) {
   const fileRef = useRef(null);
   const vR = useRef(null), cR = useRef(null), sR = useRef(null);
@@ -464,7 +420,6 @@ function SelfieWidget({ onCapture, empName }) {
       } else { return false; }
     }
     
-    // إذا علقت الكاميرا سوداء عند انتهاء العد التنازلي يتم فتح كاميرا الهاتف الأساسية فوراً وبدون تعليق
     if (force && brightnessOf(ctx, w, h) < 15) {
       stopAll();
       if (fileRef.current) fileRef.current.click();
@@ -509,7 +464,9 @@ function SelfieWidget({ onCapture, empName }) {
         v.setAttribute("autoplay", "true");
         v.muted = true;
         v.onplaying = () => setSt("live");
-        v.play().catch(() => setSt("live"));
+        v.play().catch(() => {
+          if (fileRef.current) fileRef.current.click();
+        });
       })
       .catch(() => { 
         setSt("idle");
@@ -540,7 +497,14 @@ function SelfieWidget({ onCapture, empName }) {
       setCount(secs);
       if (secs <= 0) {
         clearInterval(tickRef.current); tickRef.current = null;
-        if (!done) { done = true; doCapture(true); }
+        if (!done) { 
+          done = true; 
+          const captured = doCapture(false);
+          if (!captured) {
+            stopAll();
+            if (fileRef.current) fileRef.current.click();
+          }
+        }
       }
     }, 1000);
 
@@ -566,7 +530,7 @@ function SelfieWidget({ onCapture, empName }) {
         ctx.font = "bold 15px Cairo, Arial, sans-serif";
         ctx.textAlign = "right";
         const dateStr = new Date().toLocaleString("ar-EG");
-        ctx.fillText(`بصمة خارجية موثقة: ${empName || ""} | ${dateStr}`, c.width - 15, c.height - 16);
+        ctx.fillText(`بصمة هاتف معتمدة: ${empName || ""} | ${dateStr}`, c.width - 15, c.height - 16);
         
         const stampedUrl = c.toDataURL("image/jpeg", 0.85);
         setPrev(stampedUrl);
@@ -580,14 +544,14 @@ function SelfieWidget({ onCapture, empName }) {
 
   return React.createElement("div", { style: { display: "flex", flexDirection: "column", alignItems: "center", gap: 12 } },
     React.createElement("input", { ref: fileRef, type: "file", accept: "image/*", capture: "user", style: { display: "none" }, onChange: handleFile }),
-    st === "loading" && React.createElement("div", { style: { fontSize: 14, color: T.muted, padding: 10 } }, "جاري تفعيل حساس الكاميرا الآمن..."),
+    st === "loading" && React.createElement("div", { style: { fontSize: 14, color: T.muted, padding: 10 } }, "جاري تهيئة نظام الكاميرا الآمن..."),
     st === "live" && React.createElement("div", { style: { position: "relative", borderRadius: 16, overflow: "hidden", border: "2px solid #6366F1" } },
       React.createElement("video", { ref: vR, autoPlay: true, playsInline: true, muted: true, style: { width: 340, height: 340, display: "block", objectFit: "cover", transform: "scaleX(-1)", background: "#000" } }),
       React.createElement("div", { style: { position: "absolute", bottom: 8, left: "50%", transform: "translateX(-50%)", background: "rgba(99,102,241,0.92)", color: "#fff", fontSize: 12, padding: "4px 14px", borderRadius: 20, fontWeight: 600 } }, count > 0 ? `التقاط ذاتي خلال ${count}...` : "جاري الالتقاط...")
     ),
     st === "done" && prev && React.createElement("div", { style: { position: "relative", display: "inline-block" } },
-      React.createElement("img", { src: prev, style: { width: 90, height: 90, borderRadius: "50%", objectFit: "cover", border: "3px solid #10B981", display: "block" } }),
-      React.createElement("div", { style: { position: "absolute", bottom: 2, right: 2, width: 22, height: 22, borderRadius: "50%", background: "#10B981", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12 } }, "\u2713"),
+      React.createElement("img", { src: prev, style: { width: 90, height: 90, borderRadius: "50%", objectFit: "cover", border: `3px solid ${T.ok}`, display: "block" } }),
+      React.createElement("div", { style: { position: "absolute", bottom: 2, right: 2, width: 22, height: 22, borderRadius: "50%", background: T.ok, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12 } }, "\u2713"),
       React.createElement("button", { onClick: start, style: { display: "block", margin: "8px auto 0", fontSize: 12, padding: "4px 14px", background: "#F3F4F6", color: "#6B7280", border: "1px solid #E5E7EB", borderRadius: 20, cursor: "pointer", fontFamily: "inherit" } }, "إعادة الالتقاط")
     ),
     React.createElement("canvas", { ref: cR, style: { display: "none" } })
@@ -1484,7 +1448,6 @@ function MgrsMgmt({ managers, setManagers, allEmps, depts }) {
     ),
     React.createElement("div", { style: { fontSize: 12, color: T.muted, marginBottom: 4 } }, "💡 يمكنك سحب الحسابات لأعلى وأسفل لإعادة ترتيب صفوف المديرين حركياً:"),
     managers.map((m, idx) => {
-      // إظهار عدد الموظفين التابعين للقسم التابع له المدير فقط
       const totalDeptEmps = countEmps(m);
 
       return React.createElement("div", { 
@@ -1853,7 +1816,6 @@ function AttendDash({ emps, recs, leaves, isSuper, depts }) {
           const sd = stMap[status];
           const dynamicColor = e._isMgr ? (e.role === 'super' ? T.gold : getDeptColor(e.depts?.[0], depts)) : getDeptColor(e.dept, depts);
           
-          // البحث عن صورة البصمة المسجلة اليوم للموظف
           const todaysInRec = todayR.find(x => x.empId === e.id && x.type === "in");
           const todaysOutRec = todayR.find(x => x.empId === e.id && x.type === "out");
           const photoUrl = todaysInRec?.selfieUrl || todaysOutRec?.selfieUrl;
@@ -2055,7 +2017,6 @@ function Reports({ emps, recs, depts, leaves }) {
 
               const dynamicColor = e._isMgr ? (e.role === 'super' ? T.gold : getDeptColor(e.depts?.[0], depts)) : getDeptColor(e.dept, depts);
               
-              // سحب الصورة في خانة التقرير اليومي الفردي لعرض بيكسلات الحضور بجانب الحساب
               const reportInRec = dayData.find(x => x.date === reportDate && x.type === "in");
               const reportOutRec = dayData.find(x => x.date === reportDate && x.type === "out");
               const reportPhotoUrl = reportInRec?.selfieUrl || reportOutRec?.selfieUrl;
