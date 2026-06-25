@@ -177,7 +177,7 @@ function calcOvertime(hours, dateStr, shiftKey) {
 const DEF_MGRS = [{
   id: "M002",
   name: "محمد حسين",
-  title: "المدير العام",
+  title: "صلاحيات كاملة",
   pin: "2222",
   role: "super",
   depts: [],
@@ -1025,7 +1025,7 @@ function MgrsMgmt({ managers, setManagers, allEmps }) {
       return;
     }
     const id = "M" + String(Date.now()).slice(-5);
-    const depts = form.role === "super" ? [] : [form.dept.trim()];
+    const depts = form.role === "super" ? [] : form.dept.split(",").map(d => d.trim()).filter(Boolean);
     const newMgr = { id, name: form.name.trim(), title: form.title.trim(), pin: form.pin.trim(), role: form.role, depts, color: "#6366F1", shift: form.shift };
     setManagers(p => [...p, newMgr]);
     if (window._fbDB) {
@@ -1039,10 +1039,10 @@ function MgrsMgmt({ managers, setManagers, allEmps }) {
 
   function del(id) {
     if (managers.filter(m => m.role === "super").length <= 1 && managers.find(m => m.id === id)?.role === "super") {
-      alert("حماية النظام: لا يمكن حذف المدير العام الأخير");
+      alert("حماية النظام: لا يمكن حذف حساب الصلاحيات الكاملة الأخير");
       return;
     }
-    if (!confirm("هل أنت متأكد من حذف هذا المدير?")) return;
+    if (!confirm("هل أنت متأكد من حذف هذا المدير؟")) return;
     setManagers(p => p.filter(m => m.id !== id));
     if (window._fbDB) {
       const { deleteDoc, doc } = window._fbFirestore;
@@ -1052,13 +1052,13 @@ function MgrsMgmt({ managers, setManagers, allEmps }) {
 
   function startEdit(m) {
     setEditId(m.id);
-    setEditForm({ title: m.title || "", pin: m.pin, role: m.role, dept: (m.depts && m.depts[0]) || "", shift: m.shift || DEFAULT_SHIFT });
+    setEditForm({ title: m.title || "", pin: m.pin, role: m.role, dept: (m.depts && m.depts.join(", ")) || "", shift: m.shift || DEFAULT_SHIFT });
   }
 
   function saveEdit(id) {
     if (editForm.pin.length < 4) { alert("الـ PIN لا يقل عن 4 أرقام"); return; }
     if (editForm.role === "dept" && !editForm.dept.trim()) { alert("يرجى اختيار أو كتابة القسم"); return; }
-    const depts = editForm.role === "super" ? [] : [editForm.dept.trim()];
+    const depts = editForm.role === "super" ? [] : editForm.dept.split(",").map(d => d.trim()).filter(Boolean);
     setManagers(p => p.map(m => m.id === id ? { ...m, title: editForm.title.trim(), pin: editForm.pin.trim(), role: editForm.role, depts, shift: editForm.shift } : m));
     if (window._fbDB) {
       const { updateDoc, doc } = window._fbFirestore;
@@ -1078,11 +1078,11 @@ function MgrsMgmt({ managers, setManagers, allEmps }) {
         React.createElement("input", { placeholder: "المسمى الوظيفي", value: form.title, onChange: e => setForm({ ...form, title: e.target.value }) }),
         React.createElement("input", { placeholder: "رمز الـ PIN السري *", maxLength: 6, value: form.pin, onChange: e => setForm({ ...form, pin: e.target.value.replace(/\D/g, "") }) }),
         React.createElement("select", { value: form.role, onChange: e => setForm({ ...form, role: e.target.value }) },
-          React.createElement("option", { value: "dept" }, "صلاحية إدارة قسم محدد"),
-          React.createElement("option", { value: "super" }, "صلاحيات إدارة النظام الكاملة")
+          React.createElement("option", { value: "dept" }, "مدير قسم"),
+          React.createElement("option", { value: "super" }, "صلاحيات كاملة")
         ),
         form.role === "dept" && React.createElement(React.Fragment, null,
-          React.createElement("input", { placeholder: "القسم المسؤول عنه *", list: "mgrDeptOptions", value: form.dept, onChange: e => setForm({ ...form, dept: e.target.value }) }),
+          React.createElement("input", { placeholder: "الأقسام المسؤول عنها (افصل بينها بفاصلة ,) *", list: "mgrDeptOptions", value: form.dept, onChange: e => setForm({ ...form, dept: e.target.value }) }),
           React.createElement("datalist", { id: "mgrDeptOptions" }, deptList.map(d => React.createElement("option", { key: d, value: d })))
         ),
         React.createElement("select", { value: form.shift, onChange: e => setForm({ ...form, shift: e.target.value }) },
@@ -1097,8 +1097,8 @@ function MgrsMgmt({ managers, setManagers, allEmps }) {
         React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 14 } },
           React.createElement(MgrAv, { m, sz: 46 }),
           React.createElement("div", null,
-            React.createElement("div", { style: { fontWeight: 700, fontSize: 15 } }, m.name, "  ", React.createElement("span", { style: { fontSize: 12, fontWeight: 700, color: T.accent, background: T.aLight, padding: "2px 10px", borderRadius: 20 } }, countEmps(m), " موظف")),
-            React.createElement("div", { style: { fontSize: 12, color: T.muted, marginTop: 3 } }, (m.role === "super" ? "مدير عام" : ("مسؤول قسم: " + ((m.depts && m.depts[0]) || "—"))), " | الشيفت: ", (SHIFTS[m.shift || DEFAULT_SHIFT]?.label), " | PIN: ", m.pin)
+            React.createElement("div", { style: { fontWeight: 700, fontSize: 15 } }, m.name, m.role === "super" ? " (كل الأقسام)" : ` (${m.depts.join("، ")})`, "  ", React.createElement("span", { style: { fontSize: 12, fontWeight: 700, color: T.accent, background: T.aLight, padding: "2px 10px", borderRadius: 20 } }, countEmps(m), " موظف")),
+            React.createElement("div", { style: { fontSize: 12, color: T.muted, marginTop: 3 } }, (m.role === "super" ? "صلاحيات كاملة" : ("مدير قسم - الأقسام: " + ((m.depts && m.depts.join("، ")) || "—"))), " | الشيفت: ", (SHIFTS[m.shift || DEFAULT_SHIFT]?.label), " | PIN: ", m.pin)
           )
         ),
         React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } },
@@ -1114,13 +1114,13 @@ function MgrsMgmt({ managers, setManagers, allEmps }) {
         React.createElement("div", { style: { flex: 1, minWidth: 130 } },
           React.createElement("label", { style: { fontSize: 11, color: T.muted, display: "block", marginBottom: 4 } }, "الصلاحية"),
           React.createElement("select", { value: editForm.role, onChange: ev => setEditForm({ ...editForm, role: ev.target.value }), style: { width: "100%" } },
-            React.createElement("option", { value: "dept" }, "مسؤول قسم"),
-            React.createElement("option", { value: "super" }, "مدير عام")
+            React.createElement("option", { value: "dept" }, "مدير قسم"),
+            React.createElement("option", { value: "super" }, "صلاحيات كاملة")
           )
         ),
         editForm.role === "dept" && React.createElement("div", { style: { flex: 1, minWidth: 130 } },
-          React.createElement("label", { style: { fontSize: 11, color: T.muted, display: "block", marginBottom: 4 } }, "القسم المسؤول عنه"),
-          React.createElement("input", { placeholder: "القسم", list: "mgrDeptOptionsEdit", value: editForm.dept, onChange: ev => setEditForm({ ...editForm, dept: ev.target.value }), style: { width: "100%" } }),
+          React.createElement("label", { style: { fontSize: 11, color: T.muted, display: "block", marginBottom: 4 } }, "الأقسام المسؤول عنها (افصل بـ ,)"),
+          React.createElement("input", { placeholder: "الأقسام", list: "mgrDeptOptionsEdit", value: editForm.dept, onChange: ev => setEditForm({ ...editForm, dept: ev.target.value }), style: { width: "100%" } }),
           React.createElement("datalist", { id: "mgrDeptOptionsEdit" }, deptList.map(d => React.createElement("option", { key: d, value: d })))
         ),
         React.createElement("div", { style: { flex: 1, minWidth: 130 } },
@@ -1214,7 +1214,7 @@ function EmpsMgmt({ emps, setEmps, managers }) {
     emps.map(e => React.createElement("div", { key: e.id, style: { background: T.surface, border: `1px solid ${T.border}`, borderRadius: 16, padding: "12px 18px" } },
       React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 } },
         React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12 } },
-          React.createElement(Av, { e, sz: 38 }),
+          React.createElement(Av, { e: e, sz: 38 }),
           React.createElement("div", null,
             React.createElement("div", { style: { fontWeight: 600 } }, e.name),
             React.createElement("div", { style: { fontSize: 11, color: T.muted } }, "القسم: ", e.dept, " | PIN: ", e.pin)
@@ -1222,7 +1222,7 @@ function EmpsMgmt({ emps, setEmps, managers }) {
         ),
         React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } },
           React.createElement("button", { onClick: () => editId === e.id ? setEditId(null) : startEdit(e), style: { padding: "6px 14px", background: T.aLight, color: T.accent, borderRadius: 10, fontSize: 12, fontWeight: 600 } }, editId === e.id ? "إغلاق" : "تعديل / نقل"),
-          React.createElement("button", { onClick: () => del(id), style: { padding: "6px 14px", background: T.dLight, color: T.danger, borderRadius: 10, fontSize: 12, fontWeight: 600 } }, "حذف")
+          React.createElement("button", { onClick: () => del(e.id), style: { padding: "6px 14px", background: T.dLight, color: T.danger, borderRadius: 10, fontSize: 12, fontWeight: 600 } }, "حذف")
         )
       ),
       editId === e.id && React.createElement("div", { className: "fade", style: { marginTop: 12, paddingTop: 12, borderTop: `1px solid ${T.border}`, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" } },
@@ -1575,7 +1575,7 @@ function MgrPanel({ mgr, allEmps, setAllEmps, recs, setRecs, leaves, setLeaves, 
           React.createElement(MgrAv, { m: mgr, sz: 32 }),
           React.createElement("div", null,
             React.createElement("div", { style: { fontWeight: 700, fontSize: 13 } }, mgr.name),
-            React.createElement("div", { style: { fontSize: 10, color: T.muted } }, mgr.title, " | ", mgr.role === "super" ? "مدير النظام العام" : "مدير قسم تنفيذي")
+            React.createElement("div", { style: { fontSize: 10, color: T.muted } }, mgr.title, " | ", mgr.role === "super" ? "صلاحيات كاملة" : "مدير قسم")
           )
         )
       )
