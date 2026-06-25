@@ -535,7 +535,7 @@ function SelfieWidget({ onCapture }) {
     React.createElement("input", { ref: fileRef, type: "file", accept: "image/*", capture: "user", style: { display: "none" }, onChange: handleFile }),
     (st === "idle" || st === "loading") && React.createElement("button", { onClick: start, style: { padding: "11px 28px", background: "#EEF0FF", color: "#6366F1", border: "1.5px solid #6366F1", fontSize: 14, fontWeight: 600, borderRadius: 12, cursor: "pointer", fontFamily: "inherit" } }, st === "loading" ? "جاري تشغيل الكاميرا..." : "بدء التقاط صورة التحقق"),
     st === "live" && React.createElement("div", { style: { position: "relative", borderRadius: 16, overflow: "hidden", border: "2px solid #6366F1" } },
-      React.createElement("video", { ref: vR, autoPlay: true, playsInline: true, muted: true, style: { width: 240, height: 180, display: "block", objectFit: "cover", transform: "scaleX(-1)", background: "#000" } }),
+      React.createElement("video", { ref: vR, autoPlay: true, playsInline: true, muted: true, style: { width: 340, height: 340, display: "block", objectFit: "cover", transform: "scaleX(-1)", background: "#000" } }),
       React.createElement("div", { style: { position: "absolute", bottom: 8, left: "50%", transform: "translateX(-50%)", background: "rgba(99,102,241,0.92)", color: "#fff", fontSize: 12, padding: "4px 14px", borderRadius: 20, fontWeight: 600 } }, count > 0 ? `التقاط ذاتي خلال ${count}...` : "جاري الالتقاط...")
     ),
     st === "done" && prev && React.createElement("div", { style: { position: "relative", display: "inline-block" } },
@@ -547,10 +547,26 @@ function SelfieWidget({ onCapture }) {
   );
 }
 
-/* EMPLOYEE LIVE STATISTICS & LEAVES WIDGET */
+/* EMPLOYEE LIVE STATISTICS & LEAVES WIDGET (DETAILED REPORTS FOR SELF) */
 function EmpDashboardWidget({ emp, recs, leaves }) {
   if (!emp) return null;
-  const myRecs = recs.filter(r => r.empId === emp.id);
+  const [range, setRange] = useState("month");
+  const [reportDate, setReportDate] = useState(todayStr());
+
+  const baseDate = new Date(reportDate + "T00:00:00");
+  const cutoff = new Date(baseDate);
+  if (range === "week") cutoff.setDate(baseDate.getDate() - 7);
+  else if (range === "month") cutoff.setMonth(baseDate.getMonth() - 1);
+  else if (range === "3month") cutoff.setMonth(baseDate.getMonth() - 3);
+  else cutoff.setFullYear(baseDate.getFullYear() - 1);
+  const cutoffStr = cutoff.toISOString().split("T")[0];
+
+  const periodRecs = recs.filter(r => {
+    if (range === "day") return r.date === reportDate;
+    return r.date >= cutoffStr && r.date <= reportDate;
+  });
+
+  const myRecs = periodRecs.filter(r => r.empId === emp.id);
   const byDate = {};
   myRecs.forEach(r => {
     if (!byDate[r.date]) byDate[r.date] = { in: null, out: null };
@@ -558,40 +574,121 @@ function EmpDashboardWidget({ emp, recs, leaves }) {
     if (r.type === "out") byDate[r.date].out = r.time;
   });
   
-  let present = 0, late = 0, absent = 0, totalHours = 0;
+  let present = 0, late = 0, absent = 0, early = 0, totalMins = 0, totalOvertimeMins = 0;
   const empShift = emp.shift || "9-5";
   Object.entries(byDate).forEach(([dateStr, d]) => {
     const s = dayStatus(d.in, d.out, empShift);
     if (s === "present") present++;
     else if (s === "late") late++;
     else if (s === "absent") absent++;
+    
+    const isFlex = SHIFTS[empShift]?.isFlexible;
+    if (d.out && toMins(d.out) < EARLY_LEAVE_BEFORE && !isFlex) early++;
+    
     if (d.in && d.out) {
       const diff = toMins(d.out) - toMins(d.in);
-      if (diff > 0) totalHours += (diff / 60);
+      if (diff > 0) {
+        totalMins += diff;
+        const hoursDiff = diff / 60;
+        const otInfo = calcOvertime(hoursDiff, dateStr, empShift);
+        totalOvertimeMins += (otInfo.overtime * 60);
+      }
     }
   });
   
-  const myLeaves = leaves.filter(l => l.empId === emp.id);
+  const approvedLeaves = leaves?.filter(l => l.empId === emp.id && l.date >= cutoffStr && l.date <= reportDate && l.status === "approved") || [];
+  const leaveDays = approvedLeaves.length;
+  const totalHours = Math.round(totalMins / 60 * 10) / 10;
+  const totalOvertime = Math.round(totalOvertimeMins / 60 * 10) / 10;
+
+  let checkInTime = "—";
+  let checkOutTime = "—";
+  let dayStatusLabel = "غائب";
+  let statusColor = T.danger;
+  let statusBg = T.dLight;
+
+  const specificIn = myRecs.find(x => x.date === reportDate && x.type === "in")?.time;
+  const specificOut = myRecs.find(x => x.date === reportDate && x.type === "out")?.time;
+  if (specificIn) checkInTime = specificIn;
+  if (specificOut) checkOutTime = specificOut;
+
+  const currentStatus = dayStatus(specificIn, specificOut, empShift);
+  const dayLeave = leaves?.find(l => l.empId === emp.id && l.date === reportDate && l.status === "approved");
   
+  if (dayLeave) {
+    dayStatusLabel = `إجازة (${dayLeave.type})`; statusColor = T.gold; statusBg = T.gLight;
+  } else if (currentStatus === "present") {
+    dayStatusLabel = "حاضر"; statusColor = T.ok; statusBg = T.oLight;
+  } else if (currentStatus === "late") {
+    dayStatusLabel = "متأخر"; statusColor = T.warn; statusBg = T.wLight;
+  } else {
+    dayStatusLabel = "غائب"; statusColor = T.danger; statusBg = T.dLight;
+  }
+
+  const ranges = [
+    { id: "day", l: "اليوم" },
+    { id: "week", l: "أسبوع" },
+    { id: "month", l: "شهر" },
+    { id: "3month", l: "3 شهور" }
+  ];
+
   return React.createElement("div", {
-    style: { background: "#FFFFFF", border: "1.5px solid #E4E8F0", borderRadius: 16, padding: 14, marginTop: 12, width: "100%", maxWidth: 420, textAlign: "right", boxShadow: "0 1px 3px rgba(0,0,0,.06)" }
+    style: { background: "#FFFFFF", border: "1.5px solid #6366F1", borderRadius: 18, padding: 18, marginTop: 14, width: "100%", maxWidth: 420, textAlign: "right", boxShadow: T.shM }
   },
-    React.createElement("div", { style: { fontWeight: 700, fontSize: 13, color: "#6366F1", marginBottom: 10, borderBottom: "1px solid #F1F3F8", paddingBottom: 6 } }, "📊 تقاريرك وحالة إجازاتك لشهر الجاري (للقراءة فقط)"),
-    React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 6, marginBottom: 12, textAlign: "center" } },
-      React.createElement("div", { style: { background: "#ECFDF5", padding: 6, borderRadius: 10 } }, React.createElement("div", { style: { fontSize: 14, fontWeight: 700, color: "#10B981" } }, present), React.createElement("div", { style: { fontSize: 10, color: "#475569" } }, "حضور")),
-      React.createElement("div", { style: { background: "#FFFBEB", padding: 6, borderRadius: 10 } }, React.createElement("div", { style: { fontSize: 14, fontWeight: 700, color: "#F59E0B" } }, late), React.createElement("div", { style: { fontSize: 10, color: "#475569" } }, "تأخير")),
-      React.createElement("div", { style: { background: "#FEF2F2", padding: 6, borderRadius: 10 } }, React.createElement("div", { style: { fontSize: 14, fontWeight: 700, color: "#EF4444" } }, absent), React.createElement("div", { style: { fontSize: 10, color: "#475569" } }, "غياب")),
-      React.createElement("div", { style: { background: "#EEF0FF", padding: 6, borderRadius: 10 } }, React.createElement("div", { style: { fontSize: 14, fontWeight: 700, color: "#6366F1" } }, Math.round(totalHours)), React.createElement("div", { style: { fontSize: 10, color: "#475569" } }, "ساعات"))
+    React.createElement("div", { style: { fontWeight: 700, fontSize: 14, color: "#6366F1", marginBottom: 12, borderBottom: "1px solid #E4E8F0", paddingBottom: 8 } }, "📊 تقاريرك الإحصائية التفصيلية الحالية"),
+    
+    React.createElement("div", { style: { display: "flex", gap: 4, marginBottom: 12, overflowX: "auto", paddingBottom: 4 } },
+      ranges.map(r => React.createElement("button", {
+        key: r.id, onClick: () => setRange(r.id),
+        style: { padding: "6px 12px", background: range === r.id ? T.accent : T.hi, color: range === r.id ? "#fff" : T.txt, borderRadius: 8, fontSize: 11, fontWeight: 600 }
+      }, r.l)),
+      React.createElement("input", {
+        type: "date", value: reportDate, onChange: (e) => setReportDate(e.target.value),
+        style: { padding: "4px 8px", border: `1px solid ${T.border}`, borderRadius: 8, fontSize: 11, background: T.surface, color: T.txt, width: "auto", marginRight: "auto" }
+      })
     ),
+
+    React.createElement("div", { style: { overflowX: "auto", background: T.bg, padding: 10, borderRadius: 12, marginBottom: 14 } },
+      React.createElement("table", { style: { width: "100%", fontSize: 11, borderCollapse: "collapse" } },
+        React.createElement("thead", null,
+          React.createElement("tr", { style: { borderBottom: `1.5px solid ${T.border}` } },
+            (range === "day"
+              ? ["الحالة", "حضور", "انصراف", "ساعات", "إضافي"]
+              : ["أيام العمل", "حاضر", "تأخير", "غياب", "إجازات", "ساعات", "إضافي"]
+            ).map((h, i) => React.createElement("th", { key: i, style: { padding: "6px 4px", textAlign: "center", color: T.mid, fontWeight: 700 } }, h))
+          )
+        ),
+        React.createElement("tbody", null,
+          range === "day" ? 
+            React.createElement("tr", null,
+              React.createElement("td", { style: { padding: "8px 4px", textAlign: "center" } }, React.createElement(Badge, { label: dayStatusLabel, color: statusColor, bg: statusBg })),
+              React.createElement("td", { style: { padding: "8px 4px", textAlign: "center", fontWeight: 700 } }, dayLeave ? "—" : checkInTime),
+              React.createElement("td", { style: { padding: "8px 4px", textAlign: "center", fontWeight: 700 } }, dayLeave ? "—" : checkOutTime),
+              React.createElement("td", { style: { padding: "8px 4px", textAlign: "center", fontWeight: 700, color: T.accent } }, dayLeave ? "—" : totalHours),
+              React.createElement("td", { style: { padding: "8px 4px", textAlign: "center", fontWeight: 700, color: T.gold } }, dayLeave ? "—" : totalOvertime)
+            ) :
+            React.createElement("tr", null,
+              React.createElement("td", { style: { padding: "8px 4px", textAlign: "center", fontWeight: 700 } }, Object.keys(byDate).length),
+              React.createElement("td", { style: { padding: "8px 4px", textAlign: "center", fontWeight: 700, color: T.ok } }, present),
+              React.createElement("td", { style: { padding: "8px 4px", textAlign: "center", fontWeight: 700, color: T.warn } }, late),
+              React.createElement("td", { style: { padding: "8px 4px", textAlign: "center", fontWeight: 700, color: T.danger } }, absent),
+              React.createElement("td", { style: { padding: "8px 4px", textAlign: "center", fontWeight: 700, color: T.gold } }, leaveDays),
+              React.createElement("td", { style: { padding: "8px 4px", textAlign: "center", fontWeight: 700, color: T.accent } }, totalHours),
+              React.createElement("td", { style: { padding: "8px 4px", textAlign: "center", fontWeight: 700, color: T.gold } }, totalOvertime)
+            )
+        )
+      )
+    ),
+
     React.createElement("div", { style: { fontSize: 12, fontWeight: 700, marginBottom: 6 } }, "📋 موقف طلبات إجازاتك السحابية:"),
-    myLeaves.length === 0 ? React.createElement("div", { style: { fontSize: 11, color: "#94A3B8", padding: "4px 0" } }, "لا توجد طلبات إجازة مسجلة لحسابك") :
-    React.createElement("div", { style: { maxHeight: 110, overflowY: "auto", display: "flex", flexDirection: "column", gap: 5 } },
-      myLeaves.map(l => {
-        const lbl = l.status === "approved" ? "مقبول واعتمِد" : l.status === "rejected" ? "مرفوض إدارياً" : "معلق قيد الانتظار";
+    leaves.filter(l => l.empId === emp.id).length === 0 ? React.createElement("div", { style: { fontSize: 11, color: "#94A3B8", padding: "4px 0" } }, "لا توجد طلبات إجازة مسجلة لحسابك") :
+    React.createElement("div", { style: { maxHeight: 90, overflowY: "auto", display: "flex", flexDirection: "column", gap: 5 } },
+      leaves.filter(l => l.empId === emp.id).map(l => {
+        const lbl = l.status === "approved" ? "مقبول" : l.status === "rejected" ? "مرفوض" : "معلق";
         const clr = l.status === "approved" ? "#10B981" : l.status === "rejected" ? "#EF4444" : "#F59E0B";
         const bgc = l.status === "approved" ? "#ECFDF5" : l.status === "rejected" ? "#FEF2F2" : "#FFFBEB";
         return React.createElement("div", { key: l.id, style: { display: "flex", justifyContent: "space-between", alignItems: "center", background: "#F8F9FC", padding: "6px 10px", borderRadius: 8, fontSize: 11 } },
-          React.createElement("span", null, l.date, " - ", l.type),
+          React.createElement("span", null, l.date, " - ", l.type, l.reason && ` (${l.reason})`),
           React.createElement("span", { style: { color: clr, background: bgc, padding: "2px 8px", borderRadius: 10, fontWeight: 700 } }, lbl)
         );
       })
@@ -1081,7 +1178,7 @@ function MgrLogin({ managers, onLogin, onBack }) {
   );
 }
 
-/* LEAVES MANAGEMENT VIEW */
+/* LEAVES MANAGEMENT VIEW (WITH MANAGER SELF REQUEST CAPABILITIES) */
 function Leaves({ emps, leaves, setLeaves, managers = [], depts, mgr }) {
   const [form, setForm] = useState({ empId: "", date: todayStr(), type: "سنوية", reason: "" });
 
@@ -1119,19 +1216,27 @@ function Leaves({ emps, leaves, setLeaves, managers = [], depts, mgr }) {
   const allowedLeaves = leaves.filter(l => {
     if (isSuper) return true;
     const isEmpInMyDept = emps.some(e => e.id === l.empId);
-    const isTargetAManager = managers.some(m => m.id === l.empId);
-    return isEmpInMyDept && !isTargetAManager;
+    return isEmpInMyDept || l.empId === mgr.id;
   });
 
   const activeLeaves = allowedLeaves.filter(l => l.status === "pending");
   const processedLeaves = allowedLeaves.filter(l => l.status === "approved" || l.status === "rejected");
+
+  const dropdownPeople = [...emps];
+  if (!dropdownPeople.some(x => x.id === mgr.id)) {
+    dropdownPeople.unshift({
+      id: mgr.id,
+      name: mgr.name + " (أنت)",
+      dept: mgr.role === "super" ? "الإدارة العليا" : (mgr.depts?.[0] || "الإدارة")
+    });
+  }
 
   return React.createElement("div", { style: { padding: "20px 0", display: "flex", flexDirection: "column", gap: 18 } },
     React.createElement(Card, { title: "تقديم طلب إجازة إدارية جديد" },
       React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(170px,1fr))", gap: 12, marginBottom: 14 } },
         React.createElement("select", { value: form.empId, onChange: (e) => setForm({ ...form, empId: e.target.value }) },
           React.createElement("option", { value: "" }, "اختر الموظف مقدم الطلب..."),
-          emps.map(e => React.createElement("option", { key: e.id, value: e.id }, e.name, " (", e.dept, ")"))
+          dropdownPeople.map(e => React.createElement("option", { key: e.id, value: e.id }, e.name, " (", e.dept, ")"))
         ),
         React.createElement("input", { type: "date", value: form.date, onChange: (e) => setForm({ ...form, date: e.target.value }) }),
         React.createElement("select", { value: form.type, onChange: (e) => setForm({ ...form, type: e.target.value }) },
@@ -1150,8 +1255,12 @@ function Leaves({ emps, leaves, setLeaves, managers = [], depts, mgr }) {
         React.createElement("div", { style: { fontSize: 12, color: T.muted } }, l.date, " - نوع الإجازة: ", l.type, l.reason && ` - السبب: ${l.reason}`)
       ),
       React.createElement("div", { style: { display: "flex", gap: 8 } },
-        React.createElement("button", { onClick: () => upd(l.id, "approved"), style: { padding: "6px 14px", background: T.oLight, color: T.ok, borderRadius: 10, fontWeight: 600 } }, "اعتماد وموافقة"),
-        React.createElement("button", { onClick: () => upd(l.id, "rejected"), style: { padding: "6px 14px", background: T.dLight, color: T.danger, borderRadius: 10, fontWeight: 600 } }, "رفض الطلب")
+        (l.empId === mgr.id && !isSuper) ?
+          React.createElement("span", { style: { fontSize: 12, color: T.warn, fontWeight: 700, background: T.wLight, padding: "4px 10px", borderRadius: 8 } }, "قيد انتظار موافقة الإدارة العليا") :
+          React.createElement(React.Fragment, null,
+            React.createElement("button", { onClick: () => upd(l.id, "approved"), style: { padding: "6px 14px", background: T.oLight, color: T.ok, borderRadius: 10, fontWeight: 600 } }, "اعتماد وموافقة"),
+            React.createElement("button", { onClick: () => upd(l.id, "rejected"), style: { padding: "6px 14px", background: T.dLight, color: T.danger, borderRadius: 10, fontWeight: 600 } }, "رفض الطلب")
+          )
       )
     )),
 
@@ -1395,7 +1504,7 @@ function MgrsMgmt({ managers, setManagers, allEmps, depts }) {
             ))
           )
         ),
-        React.createElement("button", { onClick: () => saveEdit(m.id), style: { padding: "9px 20px", background: T.ok, color: "#fff", fontWeight: 700, borderRadius: 10, marginTop: 10 } }, "حفظ")
+        React.createElement("button", { onClick: () => saveEdit(editForm.id || m.id), style: { padding: "9px 20px", background: T.ok, color: "#fff", fontWeight: 700, borderRadius: 10, marginTop: 10 } }, "حفظ")
       )
     ))
   );
@@ -1808,7 +1917,7 @@ function Reports({ emps, recs, depts, leaves }) {
           React.createElement("thead", null,
             React.createElement("tr", { style: { borderBottom: `2px solid ${T.border}` } },
               (range === "day" 
-                ? ["الموظف", "الحالة", "ميعاد الحضور", "ميعاد الانصراف", "ساعات العمل", "العمل الإفاضي"]
+                ? ["الموظف", "الحالة", "ميعاد الحضور", "ميعاد الانصراف", "ساعات العمل", "العمل الإضافي"]
                 : ["الموظف", "أيام الحضور", "حاضر", "تأخير", "غياب", "إجازات", "انصراف مبكر", "ساعات العمل", "العمل الإضافي"]
               ).map((h, i) =>
                 React.createElement("th", { key: i, style: { padding: "10px 8px", textAlign: i === 0 ? "right" : "center", color: T.mid, fontWeight: 700, whiteSpace: "nowrap" } }, h)
