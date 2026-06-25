@@ -391,7 +391,7 @@ function GpsWidget({ onResult }) {
       const d = geoDistance(pos.coords.latitude, pos.coords.longitude, FACTORY_LAT, FACTORY_LNG);
       const inZone = d <= GEO_RADIUS;
       setDist(Math.round(d));
-      setSt(inZone ? "ok" : "out");
+      setSt("ok");
       onResult({ ok: true, lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: Math.round(pos.coords.accuracy), inZone: inZone, distance: Math.round(d) });
     };
     const onFail = (err) => {
@@ -463,19 +463,16 @@ function SelfieWidget({ onCapture, empName }) {
       } else { return false; }
     }
     
-    // حل مشكلة الصورة السوداء: في حال استمرار السواد عند انتهاء الوقت، نقوم بفتح الكاميرا الأساسية تلقائياً
+    // حل مشكلة الصورة السوداء نهائياً: إذا انتهى الوقت والصورة لا تزال سوداء أو الكاميرا مغلقة، تفتح الكاميرا الأساسية مباشرة وبصمت
     if (force && brightnessOf(ctx, w, h) < 15) {
       stopAll();
-      if (fileRef.current) {
-        alert("تنبيه: الكاميرا التلقائية مغلقة أو سوداء؛ يرجى التقاط صورة حية فورية عبر كاميرا الهاتف الرسمية.");
-        fileRef.current.click();
-      }
+      if (fileRef.current) fileRef.current.click();
       return false;
     }
     
     if (!force && brightnessOf(ctx, w, h) < 15) return false;
     
-    // بصمة الهوية والختم الرقمي لإثبات تواجد الموظف لمنع التزوير
+    // الختم المائي الرقمي المدمج كلياً لمنع التزوير وإثبات الهوية والوقت الفعلي بالثانية
     ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
     ctx.fillRect(0, h - 45, w, 45);
     ctx.fillStyle = "#FFFFFF";
@@ -514,8 +511,17 @@ function SelfieWidget({ onCapture, empName }) {
         v.onplaying = () => setSt("live");
         v.play().catch(() => setSt("live"));
       })
-      .catch(() => { if (fileRef.current) fileRef.current.click(); });
+      .catch(() => { 
+        setSt("idle");
+        if (fileRef.current) fileRef.current.click(); 
+      });
   }
+
+  // تشغيل الكاميرا تلقائياً ومباشرة فور فتح شاشة الالتقاط لتعمل اوتوماتيك
+  useEffect(() => {
+    start();
+    return () => stopAll();
+  }, []);
 
   useEffect(() => {
     if (st !== "live") return;
@@ -542,8 +548,6 @@ function SelfieWidget({ onCapture, empName }) {
     return () => { clearTimeout(startTimer); if (tickRef.current) clearInterval(tickRef.current); if (rafRef.current) cancelAnimationFrame(rafRef.current); };
   }, [st]);
 
-  useEffect(() => () => stopAll(), []);
-
   function handleFile(e) {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
@@ -557,14 +561,14 @@ function SelfieWidget({ onCapture, empName }) {
         const ctx = c.getContext("2d");
         ctx.drawImage(img, 0, 0);
         
-        // ختم الصورة المرفوعة يدوياً لحمايتها من التلاعب
+        // دمج الختم المائي للصورة الملتقطة بكاميرا الهاتف الخارجية أيضاً
         ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
         ctx.fillRect(0, c.height - 45, c.width, 45);
         ctx.fillStyle = "#FFFFFF";
         ctx.font = "bold 15px Cairo, Arial, sans-serif";
         ctx.textAlign = "right";
         const dateStr = new Date().toLocaleString("ar-EG");
-        ctx.fillText(`بصمة هاتف معتمدة: ${empName || ""} | ${dateStr}`, c.width - 15, c.height - 16);
+        ctx.fillText(`بصمة خارجية موثقة: ${empName || ""} | ${dateStr}`, c.width - 15, c.height - 16);
         
         const stampedUrl = c.toDataURL("image/jpeg", 0.85);
         setPrev(stampedUrl);
@@ -578,11 +582,12 @@ function SelfieWidget({ onCapture, empName }) {
 
   return React.createElement("div", { style: { display: "flex", flexDirection: "column", alignItems: "center", gap: 12 } },
     React.createElement("input", { ref: fileRef, type: "file", accept: "image/*", capture: "user", style: { display: "none" }, onChange: handleFile }),
-    (st === "idle" || st === "loading") && React.createElement("button", { onClick: start, style: { padding: "11px 28px", background: "#EEF0FF", color: "#6366F1", border: "1.5px solid #6366F1", fontSize: 14, fontWeight: 600, borderRadius: 12, cursor: "pointer", fontFamily: "inherit" } }, st === "loading" ? "جاري تشغيل الكاميرا..." : "بدء التقاط صورة التحقق"),
+    st === "loading" && React.createElement("div", { style: { fontSize: 14, color: T.muted, padding: 10 } }, "جاري محاولة تشغيل الكاميرا التلقائية..."),
     st === "live" && React.createElement("div", { style: { position: "relative", borderRadius: 16, overflow: "hidden", border: "2px solid #6366F1" } },
       React.createElement("video", { ref: vR, autoPlay: true, playsInline: true, muted: true, style: { width: 340, height: 340, display: "block", objectFit: "cover", transform: "scaleX(-1)", background: "#000" } }),
       React.createElement("div", { style: { position: "absolute", bottom: 8, left: "50%", transform: "translateX(-50%)", background: "rgba(99,102,241,0.92)", color: "#fff", fontSize: 12, padding: "4px 14px", borderRadius: 20, fontWeight: 600 } }, count > 0 ? `التقاط ذاتي خلال ${count}...` : "جاري الالتقاط...")
     ),
+    (st === "live" || st === "loading") && React.createElement("button", { onClick: () => { stopAll(); if (fileRef.current) fileRef.current.click(); }, style: { padding: "8px 16px", background: T.hi, color: T.mid, fontSize: 12, fontWeight: 600, borderRadius: 10, border: `1px solid ${T.border}` } }, "الكاميرا سوداء؟ اضغط لفتح كاميرا الهاتف الرسمية"),
     st === "done" && prev && React.createElement("div", { style: { position: "relative", display: "inline-block" } },
       React.createElement("img", { src: prev, style: { width: 90, height: 90, borderRadius: "50%", objectFit: "cover", border: "3px solid #10B981", display: "block" } }),
       React.createElement("div", { style: { position: "absolute", bottom: 2, right: 2, width: 22, height: 22, borderRadius: "50%", background: "#10B981", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12 } }, "\u2713"),
@@ -1175,7 +1180,7 @@ function RegisterDevice({ emps, managers, devices, setDevices, onBack, onMgrLogi
       React.createElement("div", { style: { fontWeight: 700, fontSize: 16 } }, emp.name),
       React.createElement("div", { style: { background: T.surface, border: `1px solid ${T.border}`, borderRadius: 16, padding: 18, width: "100%", maxWidth: 340, boxShadow: T.sh } },
         React.createElement(Row, { l: "الرمز التوثيقي المكتشف", v: React.createElement("span", { className: "mono", style: { fontSize: 11, color: T.accent } }, fp?.slice(0, 18), "...") }),
-        React.createElement("div", { style: { marginTop: 14, background: T.wLight, border: "1px solid #FCD34D", borderRadius: 10, padding: "10px 14px", fontSize: 12, color: T.warn } }, "تنبيه حماية: بمجرد إتمام الارتباط التلقائي، لن يتم قبول تسجيل الحضور الخاص بك إلا من خلال هذا الهاتف حصراً")
+        React.createElement("div", { style: { marginTop: 14, background: T.wLight, border: "1px solid #FCD34D", borderRadius: 10, padding: "10px 14px", fontSize: 12, color: T.warn } }, "تنبيه حماية: بمجرد إتمام الارتباط التلقائي، لن يتم قبول تسجيل الحضور الخاص بك إلا من خلال this الهاتف حصراً")
       ),
       React.createElement("button", { onClick: confirm, style: { padding: "12px 28px", background: T.accent, color: "#fff", fontWeight: 700, fontSize: 14, borderRadius: 12 } }, "ربط واعتماد هذا الهاتف ذكياً"),
       React.createElement("button", { onClick: () => setStep("pin"), style: { background: "none", color: T.muted, fontSize: 13, padding: 8 } }, "إلغاء وتراجع")
@@ -1340,7 +1345,7 @@ function DevsMgmt({ allEmps, devices, setDevices, depts }) {
       React.createElement(Av, { e: e, sz: 40, color: getDeptColor(e.dept || "الإدارة", depts) }),
       React.createElement("div", { style: { flex: 1 } },
         React.createElement("div", { style: { fontWeight: 600 } }, e.name),
-        React.createElement("div", { style: { fontSize: 11, color: T.muted } }, "الالكتروني: ", e.dept || "إدارة النظام")
+        React.createElement("div", { style: { fontSize: 11, color: T.muted } }, "القسم الإداري: ", e.dept || "إدارة النظام")
       ),
       React.createElement("button", { onClick: () => reset(e.id), style: { padding: "7px 14px", background: T.dLight, color: T.danger, borderRadius: 10, fontWeight: 600 } }, "إلغاء ارتباط الهاتف الحالي")
     ))
@@ -1479,16 +1484,11 @@ function MgrsMgmt({ managers, setManagers, allEmps, depts }) {
     ),
     React.createElement("div", { style: { fontSize: 12, color: T.muted, marginBottom: 4 } }, "💡 يمكنك سحب الحسابات لأعلى وأسفل لإعادة ترتيب صفوف المديرين حركياً:"),
     managers.map((m, idx) => {
-      // إعداد منطق الأعداد الهيكلية المخصصة بناءً على طلبك لـ (عبدالله، محمد، شادي)
+      // إعداد منطق الأعداد الهيكلية المحدث والمطلوب بدقة
       let customBadgeText = "";
-      if (m.name.includes("عبدالله")) {
-        const subMgrsCount = managers.filter(x => x.name.includes("محمد") || x.name.includes("شادي")).length;
-        customBadgeText = `${allEmps.length} موظفين`;
-      } else if (m.name.includes("محمد")) {
-        const subMgrsCount = managers.filter(x => x.name.includes("شادي")).length;
-        customBadgeText = `${subMgrsCount} مدير + ${allEmps.length} موظفين`;
-      } else if (m.name.includes("شادي")) {
-        customBadgeText = `${allEmps.length} موظفين`;
+      if (m.name.includes("عبدالله") || m.name.includes("محمد") || m.name.includes("شادي")) {
+        const totalAll = managers.length + allEmps.length;
+        customBadgeText = `${totalAll} (كل المديرين والموظفين)`;
       } else {
         customBadgeText = `${countEmps(m)} موظف`;
       }
@@ -1573,7 +1573,7 @@ function MgrsMgmt({ managers, setManagers, allEmps, depts }) {
                 dname,
                 React.createElement("span", {
                   onClick: () => setEditForm({ ...editForm, depts: editForm.depts.filter(x => x !== dname) }),
-                  style: { cursor: "pointer", color: T.danger, fontWeight: "bold" }
+                  style: { cursor: pointer, color: T.danger, fontWeight: "bold" }
                 }, "×")
               ))
             )
