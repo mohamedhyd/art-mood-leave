@@ -419,7 +419,7 @@ function GpsWidget({ onResult }) {
   );
 }
 
-function SelfieWidget({ onCapture }) {
+function SelfieWidget({ onCapture, empName }) {
   const fileRef = useRef(null);
   const vR = useRef(null), cR = useRef(null), sR = useRef(null);
   const [st, setSt] = useState("loading");
@@ -462,7 +462,28 @@ function SelfieWidget({ onCapture }) {
         ctx.fillRect(0, 0, w, h);
       } else { return false; }
     }
+    
+    // حل مشكلة الصورة السوداء: في حال استمرار السواد عند انتهاء الوقت، نقوم بفتح الكاميرا الأساسية تلقائياً
+    if (force && brightnessOf(ctx, w, h) < 15) {
+      stopAll();
+      if (fileRef.current) {
+        alert("تنبيه: الكاميرا التلقائية مغلقة أو سوداء؛ يرجى التقاط صورة حية فورية عبر كاميرا الهاتف الرسمية.");
+        fileRef.current.click();
+      }
+      return false;
+    }
+    
     if (!force && brightnessOf(ctx, w, h) < 15) return false;
+    
+    // بصمة الهوية والختم الرقمي لإثبات تواجد الموظف لمنع التزوير
+    ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+    ctx.fillRect(0, h - 45, w, 45);
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = "bold 15px Cairo, Arial, sans-serif";
+    ctx.textAlign = "right";
+    const dateStr = new Date().toLocaleString("ar-EG");
+    ctx.fillText(`بصمة حية: ${empName || ""} | التوقيت: ${dateStr}`, w - 15, h - 16);
+
     hasSnapped.current = true;
     const url = c.toDataURL("image/jpeg", 0.85);
     stopAll();
@@ -527,7 +548,31 @@ function SelfieWidget({ onCapture }) {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
     const r = new FileReader();
-    r.onload = ev => { setPrev(ev.target.result); setSt("done"); onCapture(ev.target.result); };
+    r.onload = ev => {
+      const img = new Image();
+      img.onload = () => {
+        const c = cR.current;
+        if (!c) { setPrev(ev.target.result); setSt("done"); onCapture(ev.target.result); return; }
+        c.width = img.width; c.height = img.height;
+        const ctx = c.getContext("2d");
+        ctx.drawImage(img, 0, 0);
+        
+        // ختم الصورة المرفوعة يدوياً لحمايتها من التلاعب
+        ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+        ctx.fillRect(0, c.height - 45, c.width, 45);
+        ctx.fillStyle = "#FFFFFF";
+        ctx.font = "bold 15px Cairo, Arial, sans-serif";
+        ctx.textAlign = "right";
+        const dateStr = new Date().toLocaleString("ar-EG");
+        ctx.fillText(`بصمة هاتف معتمدة: ${empName || ""} | ${dateStr}`, c.width - 15, c.height - 16);
+        
+        const stampedUrl = c.toDataURL("image/jpeg", 0.85);
+        setPrev(stampedUrl);
+        setSt("done");
+        onCapture(stampedUrl);
+      };
+      img.src = ev.target.result;
+    };
     r.readAsDataURL(file);
   }
 
@@ -818,7 +863,7 @@ function Kiosk({ emps, managers, recs, onRec, devices, onNavigateToLogin, onMgrL
           React.createElement("button", { onClick: () => { if (gps && gps.inZone) setStep("selfie"); }, disabled: !gps || !gps.inZone, style: { padding: 14, background: (gps && gps.inZone) ? T.accent : T.hi, color: (gps && gps.inZone) ? "#fff" : T.muted, fontWeight: 700, fontSize: 15, borderRadius: 12, cursor: (gps && gps.inZone) ? "pointer" : "not-allowed" } }, "العرض والالتقاط التالي")
         ),
         step === "selfie" && React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 14, alignItems: "center" } },
-          React.createElement(SelfieWidget, { onCapture: (url) => { setSelfie(url); setStep("confirm"); } }),
+          React.createElement(SelfieWidget, { empName: emp?.name, onCapture: (url) => { setSelfie(url); setStep("confirm"); } }),
           React.createElement("button", { onClick: () => setStep("confirm"), style: { padding: 14, background: T.accent, color: "#fff", fontWeight: 700, fontSize: 15, width: "100%", borderRadius: 12 } }, "التالي")
         ),
         step === "confirm" && React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 14 } },
@@ -937,7 +982,7 @@ function KioskTablet({ emps, managers, recs, onRec, devices, onNavigateToLogin, 
       ),
       React.createElement(StepBar, { cur: selfie ? 1 : 0, steps: ["صورة إجبارية", "تأكيد البيانات"] }),
       !selfie && React.createElement("div", { className: "fade", style: { width: "100%", maxWidth: 420 } },
-        React.createElement(SelfieWidget, { onCapture: (url) => setSelfie(url) })
+        React.createElement(SelfieWidget, { empName: emp?.name, onCapture: (url) => setSelfie(url) })
       ),
       selfie && React.createElement("div", { className: "fade", style: { width: "100%", maxWidth: 420, display: "flex", flexDirection: "column", gap: 14 } },
         React.createElement("div", { style: { background: T.surface, border: `1px solid ${T.border}`, borderRadius: 16, padding: 18, boxShadow: T.sh } },
@@ -1183,7 +1228,6 @@ function Leaves({ emps, leaves, setLeaves, managers = [], depts, mgr }) {
   function submit() {
     if (!form.empId || !form.date) return;
     
-    // فحص تكرار الـ PIN غير مطلوب هنا لأنه مجرد ربط بالمعرف، ولكن نأتي لكل الحسابات
     const allPeople = [...emps, ...managers];
     const target = allPeople.find(x => x.id === form.empId);
     const newLeave = {
@@ -1296,7 +1340,7 @@ function DevsMgmt({ allEmps, devices, setDevices, depts }) {
       React.createElement(Av, { e: e, sz: 40, color: getDeptColor(e.dept || "الإدارة", depts) }),
       React.createElement("div", { style: { flex: 1 } },
         React.createElement("div", { style: { fontWeight: 600 } }, e.name),
-        React.createElement("div", { style: { fontSize: 11, color: T.muted } }, "القسم الإداري: ", e.dept || "إدارة النظام")
+        React.createElement("div", { style: { fontSize: 11, color: T.muted } }, "الالكتروني: ", e.dept || "إدارة النظام")
       ),
       React.createElement("button", { onClick: () => reset(e.id), style: { padding: "7px 14px", background: T.dLight, color: T.danger, borderRadius: 10, fontWeight: 600 } }, "إلغاء ارتباط الهاتف الحالي")
     ))
@@ -1327,7 +1371,6 @@ function MgrsMgmt({ managers, setManagers, allEmps, depts }) {
       return;
     }
     
-    // فحص تكرار الـ PIN
     const pinExists = managers.some(x => x.pin === form.pin.trim()) || allEmps.some(x => x.pin === form.pin.trim());
     if (pinExists) {
       setErr("رمز الـ PIN هذا مسجل مسبقاً لمستخدم آخر، يرجى اختيار رمز فريد.");
@@ -1369,7 +1412,6 @@ function MgrsMgmt({ managers, setManagers, allEmps, depts }) {
     if (editForm.pin.length < 4) { alert("الـ PIN لا يقل عن 4 أرقام"); return; }
     if (editForm.role === "dept" && (!editForm.depts || editForm.depts.length === 0)) { alert("يرجى تحديد قسم واحد على الأقل"); return; }
     
-    // فحص تكرار الـ PIN عند التعديل
     const pinExists = managers.some(x => x.id !== id && x.pin === editForm.pin.trim()) || allEmps.some(x => x.pin === editForm.pin.trim());
     if (pinExists) {
       alert("رمز الـ PIN هذا مسجل مسبقاً لمستخدم آخر، يرجى اختيار رمز فريد.");
@@ -1436,94 +1478,110 @@ function MgrsMgmt({ managers, setManagers, allEmps, depts }) {
       React.createElement("button", { onClick: add, style: { padding: "11px 28px", background: T.accent, color: "#fff", fontWeight: 700 } }, "حفظ المدير")
     ),
     React.createElement("div", { style: { fontSize: 12, color: T.muted, marginBottom: 4 } }, "💡 يمكنك سحب الحسابات لأعلى وأسفل لإعادة ترتيب صفوف المديرين حركياً:"),
-    managers.map((m, idx) => React.createElement("div", { 
-      key: m.id,
-      draggable: true,
-      onDragStart: () => setDraggedIdx(idx),
-      onDragOver: (evt) => evt.preventDefault(),
-      onDrop: () => {
-        if (draggedIdx === null || draggedIdx === idx) return;
-        const updated = [...managers];
-        const [draggedItem] = updated.splice(draggedIdx, 1);
-        updated.splice(idx, 0, draggedItem);
-        const ordered = updated.map((item, i) => ({ ...item, order: i }));
-        setManagers(ordered);
-        if (window._fbDB) {
-          const { setDoc, doc } = window._fbFirestore;
-          ordered.forEach(item => {
-            setDoc(doc(window._fbDB, "managers", item.id), { order: item.order }, { merge: true });
-          });
-        }
-        setDraggedIdx(null);
+    managers.map((m, idx) => {
+      // إعداد منطق الأعداد الهيكلية المخصصة بناءً على طلبك لـ (عبدالله، محمد، شادي)
+      let customBadgeText = "";
+      if (m.name.includes("عبدالله")) {
+        const subMgrsCount = managers.filter(x => x.name.includes("محمد") || x.name.includes("شادي")).length;
+        customBadgeText = `${subMgrsCount} مدراء + ${allEmps.length} موظفين`;
+      } else if (m.name.includes("محمد")) {
+        const subMgrsCount = managers.filter(x => x.name.includes("شادي")).length;
+        customBadgeText = `${subMgrsCount} مدير + ${allEmps.length} موظفين`;
+      } else if (m.name.includes("شادي")) {
+        customBadgeText = `${allEmps.length} موظفين`;
+      } else {
+        customBadgeText = `${countEmps(m)} موظف`;
+      }
+
+      return React.createElement("div", { 
+        key: m.id,
+        draggable: true,
+        onDragStart: () => setDraggedIdx(idx),
+        onDragOver: (evt) => evt.preventDefault(),
+        onDrop: () => {
+          if (draggedIdx === null || draggedIdx === idx) return;
+          const updated = [...managers];
+          const [draggedItem] = updated.splice(draggedIdx, 1);
+          updated.splice(idx, 0, draggedItem);
+          const ordered = updated.map((item, i) => ({ ...item, order: i }));
+          setManagers(ordered);
+          if (window._fbDB) {
+            const { setDoc, doc } = window._fbFirestore;
+            ordered.forEach(item => {
+              setDoc(doc(window._fbDB, "managers", item.id), { order: item.order }, { merge: true });
+            });
+          }
+          setDraggedIdx(null);
+        },
+        style: { background: T.surface, border: `1px solid ${T.border}`, borderRadius: 16, padding: "16px 20px", cursor: "move", marginBottom: 12, transition: "transform 0.15s" } 
       },
-      style: { background: T.surface, border: `1px solid ${T.border}`, borderRadius: 16, padding: "16px 20px", cursor: "move", marginBottom: 12, transition: "transform 0.15s" } 
-    },
-      React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 } },
-        React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 14 } },
-          React.createElement(MgrAv, { m: m, sz: 46, depts: depts }),
-          React.createElement("div", null,
-            React.createElement("div", { style: { fontWeight: 700, fontSize: 15 } }, m.name, m.role === "super" ? " (كل الأقسام)" : ` (${m.depts?.join("، ") || "لا توجد أقسام"})`, "  ", React.createElement("span", { style: { fontSize: 12, fontWeight: 700, color: T.accent, background: T.aLight, padding: "2px 10px", borderRadius: 20 } }, countEmps(m), " موظف")),
-            React.createElement("div", { style: { fontSize: 12, color: T.muted, marginTop: 3 } }, (m.role === "super" ? "صلاحيات كاملة" : ("مدير قسم | الأقسام: " + ((m.depts && m.depts.join("، ")) || "—"))), " | الشيفت: ", (SHIFTS[m.shift || DEFAULT_SHIFT]?.label), " | PIN: ", m.pin)
-          )
-        ),
-        React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } },
-          React.createElement("button", { onClick: () => editId === m.id ? setEditId(null) : startEdit(m), style: { padding: "6px 14px", background: T.aLight, color: T.accent, borderRadius: 10, fontSize: 12, fontWeight: 600 } }, editId === m.id ? "إغلاق" : "تعديل"),
-          React.createElement("button", { onClick: () => del(m.id), style: { padding: "6px 14px", background: T.dLight, color: T.danger, borderRadius: 10, fontSize: 12, fontWeight: 600 } }, "حذف")
-        )
-      ),
-      editId === m.id && React.createElement("div", { className: "fade", style: { marginTop: 12, paddingTop: 12, borderTop: `1px solid ${T.border}`, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" } },
-        React.createElement("div", { style: { flex: 1, minWidth: 130 } },
-          React.createElement("label", { style: { fontSize: 11, color: T.muted, display: "block", marginBottom: 4 } }, "المسمى الوظيفي"),
-          React.createElement("input", { placeholder: "المسمى", value: editForm.title, onChange: ev => setEditForm({ ...editForm, title: ev.target.value }), style: { width: "100%" } })
-        ),
-        React.createElement("div", { style: { flex: 1, minWidth: 130 } },
-          React.createElement("label", { style: { fontSize: 11, color: T.muted, display: "block", marginBottom: 4 } }, "الصلاحية"),
-          React.createElement("select", { value: editForm.role, onChange: ev => setEditForm({ ...editForm, role: ev.target.value }), style: { width: "100%" } },
-            React.createElement("option", { value: "dept" }, "مدير قسم"),
-            React.createElement("option", { value: "super" }, "صلاحيات كاملة")
-          )
-        ),
-        React.createElement("div", { style: { flex: 1, minWidth: 130 } },
-          React.createElement("label", { style: { fontSize: 11, color: T.muted, display: "block", marginBottom: 4 } }, "الشيفت المعتمد"),
-          React.createElement("select", { value: editForm.shift, onChange: ev => setEditForm({ ...editForm, shift: ev.target.value }), style: { width: "100%" } },
-            Object.entries(SHIFTS).map(([k, s]) => React.createElement("option", { key: k, value: k }, s.label))
-          )
-        ),
-        React.createElement("div", { style: { flex: 1, minWidth: 130 } },
-          React.createElement("label", { style: { fontSize: 11, color: T.muted, display: "block", marginBottom: 4 } }, "تغيير PIN"),
-          React.createElement("input", { placeholder: "PIN جديد", maxLength: 6, value: editForm.pin, onChange: ev => setEditForm({ ...editForm, pin: ev.target.value.replace(/\D/g, "") }), style: { width: "100%" } })
-        ),
-        editForm.role === "dept" && React.createElement("div", { style: { width: "100%", background: T.bg, padding: 12, borderRadius: 12, marginTop: 10, gridColumn: "1 / -1" } },
-          React.createElement("div", { style: { fontSize: 11, fontWeight: 700, marginBottom: 5, color: T.mid } }, "تعديل الأقسام من المنيو المنسدلة للمدير:"),
-          React.createElement("select", {
-            value: "",
-            onChange: (evt) => {
-              const val = evt.target.value;
-              if (val && !editForm.depts?.includes(val)) {
-                setEditForm({ ...editForm, depts: [...(editForm.depts || []), val] });
-              }
-            },
-            style: { marginBottom: 8 }
-          },
-            React.createElement("option", { value: "" }, "انقر لاختيار قسم لإضافته..."),
-            depts.map(d => React.createElement("option", { key: d.name, value: d.name }, d.name))
+        React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 } },
+          React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 14 } },
+            React.createElement(MgrAv, { m: m, sz: 46, depts: depts }),
+            React.createElement("div", null,
+              React.createElement("div", { style: { fontWeight: 700, fontSize: 15 } }, m.name, m.role === "super" ? " (كل الأقسام)" : ` (${m.depts?.join("، ") || "لا توجد أقسام"})`, "  ", React.createElement("span", { style: { fontSize: 12, fontWeight: 700, color: T.accent, background: T.aLight, padding: "2px 10px", borderRadius: 20 } }, customBadgeText)),
+              React.createElement("div", { style: { fontSize: 12, color: T.muted, marginTop: 3 } }, (m.role === "super" ? "صلاحيات كاملة" : ("مدير قسم | الأقسام: " + ((m.depts && m.depts.join("، ")) || "—"))), " | الشيفت: ", (SHIFTS[m.shift || DEFAULT_SHIFT]?.label), " | PIN: ", m.pin)
+            )
           ),
           React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } },
-            editForm.depts?.map(dname => React.createElement("span", {
-              key: dname,
-              style: { display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 10px", background: T.aLight, color: T.accent, borderRadius: 14, fontSize: 12, fontWeight: 700 }
-            },
-              dname,
-              React.createElement("span", {
-                onClick: () => setEditForm({ ...editForm, depts: editForm.depts.filter(x => x !== dname) }),
-                style: { cursor: "pointer", color: T.danger, fontWeight: "bold" }
-              }, "×")
-            ))
+            React.createElement("button", { onClick: () => editId === m.id ? setEditId(null) : startEdit(m), style: { padding: "6px 14px", background: T.aLight, color: T.accent, borderRadius: 10, fontSize: 12, fontWeight: 600 } }, editId === m.id ? "إغلاق" : "تعديل"),
+            React.createElement("button", { onClick: () => del(m.id), style: { padding: "6px 14px", background: T.dLight, color: T.danger, borderRadius: 10, fontSize: 12, fontWeight: 600 } }, "حذف")
           )
         ),
-        React.createElement("button", { onClick: () => saveEdit(m.id), style: { padding: "9px 20px", background: T.ok, color: "#fff", fontWeight: 700, borderRadius: 10, marginTop: 10 } }, "حفظ")
-      )
-    ))
+        editId === m.id && React.createElement("div", { className: "fade", style: { marginTop: 12, paddingTop: 12, borderTop: `1px solid ${T.border}`, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" } },
+          React.createElement("div", { style: { flex: 1, minWidth: 130 } },
+            React.createElement("label", { style: { fontSize: 11, color: T.muted, display: "block", marginBottom: 4 } }, "المسمى الوظيفي"),
+            React.createElement("input", { placeholder: "المسمى", value: editForm.title, onChange: ev => setEditForm({ ...editForm, title: ev.target.value }), style: { width: "100%" } })
+          ),
+          React.createElement("div", { style: { flex: 1, minWidth: 130 } },
+            React.createElement("label", { style: { fontSize: 11, color: T.muted, display: "block", marginBottom: 4 } }, "الصلاحية"),
+            React.createElement("select", { value: editForm.role, onChange: ev => setEditForm({ ...editForm, role: ev.target.value }), style: { width: "100%" } },
+              React.createElement("option", { value: "dept" }, "مدير قسم"),
+              React.createElement("option", { value: "super" }, "صلاحيات كاملة")
+            )
+          ),
+          React.createElement("div", { style: { flex: 1, minWidth: 130 } },
+            React.createElement("label", { style: { fontSize: 11, color: T.muted, display: "block", marginBottom: 4 } }, "الشيفت المعتمد"),
+            React.createElement("select", { value: editForm.shift, onChange: ev => setEditForm({ ...editForm, shift: ev.target.value }), style: { width: "100%" } },
+              Object.entries(SHIFTS).map(([k, s]) => React.createElement("option", { key: k, value: k }, s.label))
+            )
+          ),
+          React.createElement("div", { style: { flex: 1, minWidth: 130 } },
+            React.createElement("label", { style: { fontSize: 11, color: T.muted, display: "block", marginBottom: 4 } }, "تغيير PIN"),
+            React.createElement("input", { placeholder: "PIN جديد", maxLength: 6, value: editForm.pin, onChange: ev => setEditForm({ ...editForm, pin: ev.target.value.replace(/\D/g, "") }), style: { width: "100%" } })
+          ),
+          editForm.role === "dept" && React.createElement("div", { style: { width: "100%", background: T.bg, padding: 12, borderRadius: 12, marginTop: 10, gridColumn: "1 / -1" } },
+            React.createElement("div", { style: { fontSize: 11, fontWeight: 700, marginBottom: 5, color: T.mid } }, "تعديل الأقسام من المنيو المنسدلة للمدير:"),
+            React.createElement("select", {
+              value: "",
+              onChange: (evt) => {
+                const val = evt.target.value;
+                if (val && !editForm.depts?.includes(val)) {
+                  setEditForm({ ...editForm, depts: [...(editForm.depts || []), val] });
+                }
+              },
+              style: { marginBottom: 8 }
+            },
+              React.createElement("option", { value: "" }, "انقر لاختيار قسم لإضافته..."),
+              depts.map(d => React.createElement("option", { key: d.name, value: d.name }, d.name))
+            ),
+            React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } },
+              editForm.depts?.map(dname => React.createElement("span", {
+                key: dname,
+                style: { display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 10px", background: T.aLight, color: T.accent, borderRadius: 14, fontSize: 12, fontWeight: 700 }
+              },
+                dname,
+                React.createElement("span", {
+                  onClick: () => setEditForm({ ...editForm, depts: editForm.depts.filter(x => x !== dname) }),
+                  style: { cursor: "pointer", color: T.danger, fontWeight: "bold" }
+                }, "×")
+              ))
+            )
+          ),
+          React.createElement("button", { onClick: () => saveEdit(m.id), style: { padding: "9px 20px", background: T.ok, color: "#fff", fontWeight: 700, borderRadius: 10, marginTop: 10 } }, "حفظ")
+        )
+      );
+    })
   );
 }
 
@@ -1532,7 +1590,7 @@ function EmpsMgmt({ emps, setEmps, managers, depts }) {
   const [form, setForm] = useState({ name: "", dept: "", pin: "", color: "#6366F1", shift: DEFAULT_SHIFT });
   const [err, setErr] = useState("");
   const [editId, setEditId] = useState(null);
-  const [editForm, setEditForm] = useState({ dept: "", pin: "" });
+  const [editForm, setEditForm] = useState({ dept: "", pin: "", shift: DEFAULT_SHIFT });
   const [draggedIdx, setDraggedIdx] = useState(null);
 
   function add() {
@@ -1541,7 +1599,6 @@ function EmpsMgmt({ emps, setEmps, managers, depts }) {
       return;
     }
 
-    // فحص تكرار الـ PIN عند الإضافة للموظف
     const pinExists = emps.some(x => x.pin === form.pin.trim()) || managers.some(x => x.pin === form.pin.trim());
     if (pinExists) {
       setErr("رمز الـ PIN هذا مسجل مسبقاً لمستخدم آخر، يرجى اختيار رمز فريد.");
@@ -1571,7 +1628,7 @@ function EmpsMgmt({ emps, setEmps, managers, depts }) {
 
   function startEdit(e) {
     setEditId(e.id);
-    setEditForm({ dept: e.dept, pin: e.pin });
+    setEditForm({ dept: e.dept, pin: e.pin, shift: e.shift || DEFAULT_SHIFT });
   }
 
   function saveEdit(id) {
@@ -1580,17 +1637,16 @@ function EmpsMgmt({ emps, setEmps, managers, depts }) {
       return;
     }
 
-    // فحص تكرار الـ PIN عند تعديل الموظف
     const pinExists = emps.some(x => x.id !== id && x.pin === editForm.pin.trim()) || managers.some(x => x.pin === editForm.pin.trim());
     if (pinExists) {
       alert("رمز الـ PIN هذا مسجل مسبقاً لمستخدم آخر، يرجى اختيار رمز فريد.");
       return;
     }
 
-    setEmps(p => p.map(e => e.id === id ? { ...e, dept: editForm.dept.trim(), pin: editForm.pin.trim() } : e));
+    setEmps(p => p.map(e => e.id === id ? { ...e, dept: editForm.dept.trim(), pin: editForm.pin.trim(), shift: editForm.shift } : e));
     if (window._fbDB) {
       const { updateDoc, doc } = window._fbFirestore;
-      updateDoc(doc(window._fbDB, "employees", id), { dept: editForm.dept.trim(), pin: editForm.pin.trim() });
+      updateDoc(doc(window._fbDB, "employees", id), { dept: editForm.dept.trim(), pin: editForm.pin.trim(), shift: editForm.shift });
     }
     setEditId(null);
   }
@@ -1646,7 +1702,7 @@ function EmpsMgmt({ emps, setEmps, managers, depts }) {
             React.createElement("div", { style: { fontSize: 11, color: T.muted, display: "flex", alignItems: "center", gap: 5, marginTop: 2 } }, 
               "القسم: ", 
               React.createElement("span", { style: { color: getDeptColor(e.dept, depts), fontWeight: 700 } }, e.dept), 
-              ` | PIN: ${e.pin}`
+              ` | الشيفت: ${SHIFTS[e.shift || DEFAULT_SHIFT]?.label} | PIN: ${e.pin}`
             )
           )
         ),
@@ -1661,6 +1717,12 @@ function EmpsMgmt({ emps, setEmps, managers, depts }) {
           React.createElement("select", { value: editForm.dept, onChange: ev => setEditForm({ ...editForm, dept: ev.target.value }), style: { width: "100%" } },
             React.createElement("option", { value: "" }, "اختر القسم الجديد"),
             depts.map(d => React.createElement("option", { key: d.name, value: d.name }, d.name))
+          )
+        ),
+        React.createElement("div", { style: { flex: 1, minWidth: 140 } },
+          React.createElement("label", { style: { fontSize: 11, color: T.muted, display: "block", marginBottom: 4 } }, "تغيير الشيفت المعتمد"),
+          React.createElement("select", { value: editForm.shift, onChange: ev => setEditForm({ ...editForm, shift: ev.target.value }), style: { width: "100%" } },
+            Object.entries(SHIFTS).map(([k, s]) => React.createElement("option", { key: k, value: k }, s.label))
           )
         ),
         React.createElement("div", { style: { flex: 1, minWidth: 140 } },
@@ -2061,7 +2123,6 @@ function MgrPanel({ mgr, allEmps, setAllEmps, recs, setRecs, leaves, setLeaves, 
     { id: "leave", l: "الإجازات" }
   ];
 
-  // دمج الموظفين والمديرين لإظهار كافة الهواتف المسجلة لأي حساب بالنظام
   const combinedPeopleForDevices = [...allEmps, ...managers.map(m => ({ id: m.id, name: m.name, dept: m.role === "super" ? "الإدارة العليا" : (m.depts?.[0] || "الإدارة") }))];
 
   return React.createElement("div", { style: { minHeight: "100vh", background: T.bg, display: "flex", flexDirection: "column" } },
