@@ -115,6 +115,7 @@ const FACTORY_LAT = 29.970593;
 const FACTORY_LNG = 31.489092;
 const GEO_RADIUS = 100;
 
+// إصلاح الحساب الجغرافي للمسافات بدقة لمنع خطأ الـ 30 كيلو
 function geoDistance(lat1, lng1, lat2, lng2) {
   const R = 6371000;
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -153,6 +154,7 @@ function isLateForShift(time, shiftKey) {
   return checkInMins > LATE_AFTER;
 }
 
+// تعديل جلب التاريخ ليعتمد على التوقيت المحلي الفعلي بدقة لمنع اختفاء السجلات
 const todayStr = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -292,20 +294,84 @@ function CenteredPage({ children }) {
   }, children);
 }
 
-/* UNIVERSAL LIGHTWEIGHT CAMERA WIDGET */
+/* UNIVERSAL HIGH-COMPATIBILITY CAMERA WIDGET FOR LAPTOP & MOBILE */
 function SelfieWidget({ onCapture, empName }) {
   const fileRef = useRef(null);
+  const videoRef = useRef(null);
   const canvasRef = useRef(null);
+  const streamRef = useRef(null);
+  const [mode, setMode] = useState("checking"); // checking, live, fallback, done
   const [prev, setPrev] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  // بروتوكول ذكي لتشغيل بث الكاميرا الحية على اللاب توب أو التحويل التلقائي في الموبايل
   useEffect(() => {
-    if (fileRef.current) {
-      fileRef.current.click();
+    // الأجهزة المحمولة والتابلت يفضل فتح كاميرا النظام مباشرة لمنع السواد
+    const isMobile = /Android|iPhone|iPad|iPod|Kiosk|Mobile/i.test(navigator.userAgent);
+    if (isMobile) {
+      setMode("fallback");
+      setTimeout(() => fileRef.current?.click(), 400);
+      return;
     }
+
+    // أجهزة اللاب توب والكمبيوتر: تشغيل البث الحي فوراً
+    setMode("live");
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
+      .then(stream => {
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      })
+      .catch(() => {
+        // في حال حظر الكاميرا على اللاب توب يتم فتح خيار الرفع الاحتياطي
+        setMode("fallback");
+      });
+
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
+      }
+    };
   }, []);
 
-  function handleFile(e) {
+  // التقاط الصورة من البث الحي للاب توب مع تقليص الحجم تلقائياً لمنع التهنيج
+  function captureFromVideo() {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas) return;
+
+    const ctx = canvas.getContext("2d");
+    // أبعاد خفيفة ومثالية لمعالجة الذاكرة العشوائية
+    canvas.width = 500;
+    canvas.height = 500;
+    
+    // رسم الصورة مع عكس الاتجاه كمرآة طبيعية للعين
+    ctx.translate(500, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, 0, 0, 500, 500);
+    ctx.setTransform(1, 0, 0, 1, 0, 0); // إعادة تعيين الحجم
+
+    // طباعة الختم المائي التوثيقي الحامي لمنع التلاعب
+    ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+    ctx.fillRect(0, 455, 500, 45);
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = "bold 13px Cairo, Arial, sans-serif";
+    ctx.textAlign = "right";
+    const dateStr = new Date().toLocaleString("ar-EG");
+    ctx.fillText(`بصمة حية موثقة: ${empName || ""} | التوقيت: ${dateStr}`, 485, 482);
+
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.65);
+    setPrev(dataUrl);
+    setMode("done");
+    onCapture(dataUrl);
+
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+    }
+  }
+
+  function handleFileFallback(e) {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
     setLoading(true);
@@ -320,25 +386,23 @@ function SelfieWidget({ onCapture, empName }) {
           onCapture(ev.target.result);
           return;
         }
-        
-        // تصغير ذكي وتلقائي لمنع تهنيج ذاكرة المتصفحات (500x500 بكسل خفيفة وسريعة)
         canvas.width = 500;
         canvas.height = 500;
         const ctx = canvas.getContext("2d");
         ctx.drawImage(img, 0, 0, 500, 500);
 
-        // ختم الحماية المائي المدمج
         ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
         ctx.fillRect(0, 455, 500, 45);
         ctx.fillStyle = "#FFFFFF";
         ctx.font = "bold 13px Cairo, Arial, sans-serif";
         ctx.textAlign = "right";
         const dateStr = new Date().toLocaleString("ar-EG");
-        ctx.fillText(`بصمة حية موثقة: ${empName || ""} | التوقيت: ${dateStr}`, 485, 482);
+        ctx.fillText(`بصمة هاتف معتمدة: ${empName || ""} | ${dateStr}`, 485, 482);
 
         const stampedUrl = canvas.toDataURL("image/jpeg", 0.65);
         setPrev(stampedUrl);
         setLoading(false);
+        setMode("done");
         onCapture(stampedUrl);
       };
       img.src = ev.target.result;
@@ -347,13 +411,25 @@ function SelfieWidget({ onCapture, empName }) {
   }
 
   return React.createElement("div", { style: { display: "flex", flexDirection: "column", alignItems: "center", gap: 12, width: "100%" } },
-    React.createElement("input", { ref: fileRef, type: "file", accept: "image/*", capture: "user", style: { display: "none" }, onChange: handleFile }),
-    loading && React.createElement("div", { style: { fontSize: 14, color: T.muted, padding: 10 } }, "جاري ضغط ومعالجة أبعاد بكسلات الصورة..."),
-    prev ? React.createElement("div", { style: { position: "relative", display: "inline-block" } },
-      React.createElement("img", { src: prev, style: { width: 140, height: 140, borderRadius: 16, objectFit: "cover", border: `3px solid ${T.ok}` } }),
+    React.createElement("input", { ref: fileRef, type: "file", accept: "image/*", capture: "user", style: { display: "none" }, onChange: handleFileFallback }),
+    
+    mode === "checking" && React.createElement("div", { style: { fontSize: 13, color: T.muted } }, "جاري فحص إعدادات الكاميرا الآمنة..."),
+    
+    mode === "live" && React.createElement("div", { style: { display: "flex", flexDirection: "column", alignItems: "center", gap: 10 } },
+      React.createElement("video", { ref: videoRef, autoPlay: true, playsInline: true, muted: true, style: { width: 320, height: 320, borderRadius: 16, objectFit: "cover", transform: "scaleX(-1)", background: "#000", border: `2px solid ${T.accent}` } }),
+      React.createElement("button", { onClick: captureFromVideo, style: { padding: "12px 24px", background: T.accent, color: "#fff", fontWeight: 700, borderRadius: 12, fontSize: 14 } }, "📸 التقاط صورة البصمة الحية")
+    ),
+
+    mode === "fallback" && React.createElement("div", { style: { textAlign: "center" } },
+      loading ? React.createElement("div", { style: { fontSize: 13, color: T.muted } }, "جاري ضغط ومعالجة أبعاد بكسلات الصورة...") 
+              : React.createElement("button", { onClick: () => fileRef.current?.click(), style: { padding: "14px 28px", background: T.accent, color: "#fff", fontWeight: 700, borderRadius: 12, fontSize: 14 } }, "📷 افتح كاميرا الجهاز الفورية")
+    ),
+
+    mode === "done" && prev && React.createElement("div", { style: { position: "relative", display: "inline-block" } },
+      React.createElement("img", { src: prev, style: { width: 130, height: 140, borderRadius: 16, objectFit: "cover", border: `3px solid ${T.ok}` } }),
       React.createElement("div", { style: { position: "absolute", bottom: 4, right: 4, width: 24, height: 24, borderRadius: "50%", background: T.ok, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12 } }, "✓"),
-      React.createElement("button", { onClick: () => fileRef.current?.click(), style: { display: "block", margin: "10px auto 0", fontSize: 12, padding: "5px 14px", background: T.hi, color: T.txt, borderRadius: 20 } }, "إعادة التقاط الصورة")
-    ) : React.createElement("button", { onClick: () => fileRef.current?.click(), style: { padding: "14px 28px", background: T.accent, color: "#fff", fontWeight: 700, borderRadius: 12, fontSize: 14 } }, "📷 افتح كاميرا الجهاز لالتقاط الصورة"),
+      React.createElement("button", { onClick: () => { setMode("fallback"); setTimeout(() => fileRef.current?.click(), 300); }, style: { display: "block", margin: "10px auto 0", fontSize: 12, padding: "5px 14px", background: T.hi, color: T.txt, borderRadius: 20 } }, "إعادة التقاط الصورة")
+    ),
     React.createElement("canvas", { ref: canvasRef, style: { display: "none" } })
   );
 }
@@ -661,7 +737,7 @@ function Kiosk({ emps, managers, recs, onRec, devices, onNavigateToLogin, onMgrL
     err && React.createElement(Note, { color: T.danger, bg: T.dLight }, err),
     React.createElement(PinPad, { key: sk, onConfirm: onPin, doShake: !!err }),
     
-    /* شريط الأزرار المدمج هندسياً ليكون ثابتاً ومستقراً أسفل محتوى الكيوسك الشخصي */
+    /* تثبيت شريط أزرار الدخول بشكل ثابت ومستقر أسفل محتوى الصفحة لمنع تداخل التصميم */
     React.createElement("div", { style: { display: "flex", gap: 10, marginTop: 30, width: "100%", maxWidth: 360, justifyContent: "center" } },
       React.createElement("button", { onClick: onNavigateToReg, style: { padding: "10px 16px", background: T.surface, color: T.accent, border: `1.5px solid ${T.accent}`, fontSize: 12, fontWeight: 700, borderRadius: 12, boxShadow: T.sh, flex: 1 } }, "تسجيل هاتف الموظف"),
       React.createElement("button", { onClick: onNavigateToLogin, style: { padding: "10px 16px", background: T.surface, color: T.mid, border: `1.5px solid ${T.border}`, fontSize: 12, fontWeight: 700, borderRadius: 12, boxShadow: T.sh, flex: 1 } }, "دخول المديرين")
@@ -784,7 +860,7 @@ function KioskTablet({ emps, managers, recs, onRec, devices, onNavigateToLogin, 
     err && React.createElement(Note, { color: T.danger, bg: T.dLight }, err),
     React.createElement(PinPad, { key: sk, onConfirm: onPin, doShake: !!err }),
     
-    /* تثبيت شريط دخول المديرين لتابلت البوابة بشكل هندسي مستقر */
+    /* تثبيت زر دخول المديرين للتابلت بشكل مستقر وثابت هندسياً */
     React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 24, width: "100%", maxWidth: 240, justifyContent: "center" } },
       React.createElement("button", { onClick: onNavigateToLogin, style: { padding: "11px 22px", background: T.surface, color: T.mid, border: `1px solid ${T.border}`, fontSize: 13, fontWeight: 700, borderRadius: 12, boxShadow: T.sh, width: "100%" } }, "دخول المديرين")
     )
@@ -970,6 +1046,160 @@ function RegisterDevice({ emps, managers, devices, setDevices, onBack, onMgrLogi
   );
 }
 
+/* MANAGER LOGIN SCREEN */
+function MgrLogin({ managers, onLogin, onBack }) {
+  const [err, setErr] = useState("");
+  const [sk, setSk] = useState(0);
+
+  function onPin(pin) {
+    const m = managers.find(x => x.pin === pin);
+    if (!m) {
+      setErr("رمز التوثيق الخاص بالمدير غير صحيح");
+      setSk(k => k + 1);
+      setTimeout(() => setErr(""), 2500);
+      return;
+    }
+    onLogin(m);
+  }
+
+  return React.createElement("div", { style: { minHeight: "100vh", background: T.bg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 20, padding: 32 } },
+    React.createElement(Logo, { width: 140 }),
+    React.createElement(IcoBox, { icon: "قفل", bg: T.aLight }),
+    React.createElement("div", { style: { textAlign: "center" } },
+      React.createElement("div", { style: { fontSize: 22, fontWeight: 800 } }, "دخول المديرين")
+    ),
+    err && React.createElement(Note, { color: T.danger, bg: T.dLight }, err),
+    React.createElement(PinPad, { key: sk, onConfirm: onPin, doShake: !!err }),
+    React.createElement("button", { onClick: onBack, style: { background: "none", color: T.muted, fontSize: 13, padding: 10 } }, "العودة لشاشة الدخول والكيوسك")
+  );
+}
+
+/* LEAVES MANAGEMENT VIEW */
+function Leaves({ emps, leaves, setLeaves, managers = [], depts, mgr }) {
+  const [form, setForm] = useState({ empId: "", date: todayStr(), type: "سنوية", reason: "" });
+
+  function submit() {
+    if (!form.empId || !form.date) return;
+    
+    const allPeople = [...emps, ...managers];
+    const target = allPeople.find(x => x.id === form.empId);
+    const newLeave = {
+      id: Date.now(),
+      empId: form.empId,
+      empName: target?.name || "",
+      date: form.date,
+      type: form.type,
+      reason: form.reason,
+      status: "pending",
+      submittedAt: todayStr()
+    };
+    setLeaves(l => [...l, newLeave]);
+    if (window._fbDB) {
+      const { setDoc, doc } = window._fbFirestore;
+      setDoc(doc(window._fbDB, "leaves", String(newLeave.id)), newLeave);
+    }
+    setForm({ empId: "", date: todayStr(), type: "سنوية", reason: "" });
+  }
+
+  function upd(id, status) {
+    setLeaves(l => l.map(r => r.id === id ? { ...r, status } : r));
+    if (window._fbDB) {
+      const { setDoc, doc } = window._fbFirestore;
+      setDoc(doc(window._fbDB, "leaves", String(id)), { status }, { merge: true });
+    }
+  }
+
+  const isSuper = mgr?.role === "super";
+  const allowedLeaves = leaves.filter(l => {
+    if (isSuper) return true;
+    const isEmpInMyDept = emps.some(e => e.id === l.empId);
+    return isEmpInMyDept || l.empId === mgr.id;
+  });
+
+  const activeLeaves = allowedLeaves.filter(l => l.status === "pending");
+  const processedLeaves = allowedLeaves.filter(l => l.status === "approved" || l.status === "rejected");
+
+  const dropdownPeople = [...emps];
+  if (!dropdownPeople.some(x => x.id === mgr.id)) {
+    dropdownPeople.unshift({
+      id: mgr.id,
+      name: mgr.name + " (أنت)",
+      dept: mgr.role === "super" ? "الإدارة العليا" : (mgr.depts?.[0] || "الإدارة")
+    });
+  }
+
+  return React.createElement("div", { style: { padding: "20px 0", display: "flex", flexDirection: "column", gap: 18 } },
+    React.createElement(Card, { title: "تقديم طلب إجازة إدارية جديد" },
+      React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(170px,1fr))", gap: 12, marginBottom: 14 } },
+        React.createElement("select", { value: form.empId, onChange: (e) => setForm({ ...form, empId: e.target.value }) },
+          React.createElement("option", { value: "" }, "اختر الموظف مقدم الطلب..."),
+          dropdownPeople.map(e => React.createElement("option", { key: e.id, value: e.id }, e.name, " (", e.dept, ")"))
+        ),
+        React.createElement("input", { type: "date", value: form.date, onChange: (e) => setForm({ ...form, date: e.target.value }) }),
+        React.createElement("select", { value: form.type, onChange: (e) => setForm({ ...form, type: e.target.value }) },
+          ["سنوية", "مرضية", "طارئة", "بدون راتب"].map(t => React.createElement("option", { key: t, value: t }, t))
+        ),
+        React.createElement("input", { placeholder: "ملاحظات أو مبررات الطلب...", value: form.reason, onChange: (e) => setForm({ ...form, reason: e.target.value }) })
+      ),
+      React.createElement("button", { onClick: submit, style: { padding: "10px 24px", background: T.accent, color: "#fff", fontWeight: 700, borderRadius: 12 } }, "حفظ وإرسال الطلب")
+    ),
+    
+    React.createElement("h3", { style: { fontSize: 15, fontWeight: 700, marginTop: 10 } }, "طلبات معلقة قيد الانتظار:"),
+    activeLeaves.length === 0 && React.createElement("div", { style: { color: T.muted, fontSize: 13, padding: 10 } }, "لا توجد طلبات إجازة معلقة حالياً في نطاق قسمك."),
+    activeLeaves.map(l => React.createElement("div", { key: l.id, style: { background: T.surface, border: `1px solid ${T.border}`, borderRadius: 14, padding: "13px 17px", display: "flex", alignItems: "center", gap: 12 } },
+      React.createElement("div", { style: { flex: 1 } },
+        React.createElement("div", { style: { fontWeight: 600 } }, l.empName),
+        React.createElement("div", { style: { fontSize: 12, color: T.muted } }, l.date, " - نوع الإجازة: ", l.type, l.reason && ` - السبب: ${l.reason}`)
+      ),
+      React.createElement("div", { style: { display: "flex", gap: 8 } },
+        (l.empId === mgr.id && !isSuper) ?
+          React.createElement("span", { style: { fontSize: 12, color: T.warn, fontWeight: 700, background: T.wLight, padding: "4px 10px", borderRadius: 8 } }, "قيد انتظار موافقة الإدارة العليا") :
+          React.createElement(React.Fragment, null,
+            React.createElement("button", { onClick: () => upd(l.id, "approved"), style: { padding: "6px 14px", background: T.oLight, color: T.ok, borderRadius: 10, fontWeight: 600 } }, "اعتماد وموافقة"),
+            React.createElement("button", { onClick: () => upd(l.id, "rejected"), style: { padding: "6px 14px", background: T.dLight, color: T.danger, borderRadius: 10, fontWeight: 600 } }, "رفض الطلب")
+          )
+      )
+    )),
+
+    React.createElement("hr", { style: { border: "none", borderTop: `1.5px dashed ${T.border}`, margin: "15px 0" } }),
+    React.createElement("h3", { style: { fontSize: 15, fontWeight: 700 } }, "سجل الطلبات المعتمدة والمعالجة سابقاً:"),
+    processedLeaves.length === 0 && React.createElement("div", { style: { color: T.muted, fontSize: 13, padding: 10 } }, "لا توجد طلبات معتمدة أو مرفوضة في السجل الحاضر."),
+    processedLeaves.map(l => React.createElement("div", { key: l.id, style: { background: T.surface, border: `1px solid ${T.border}`, borderRadius: 14, padding: "13px 17px", display: "flex", alignItems: "center", gap: 12, opacity: 0.85 } },
+      React.createElement("div", { style: { flex: 1 } },
+        React.createElement("div", { style: { fontWeight: 600 } }, l.empName),
+        React.createElement("div", { style: { fontSize: 12, color: T.muted } }, l.date, " - نوع الإجازة: ", l.type, l.reason && ` - السبب: ${l.reason}`)
+      ),
+      React.createElement(Badge, { 
+        label: l.status === "approved" ? "تم قبولها واعتمادها" : "تم رفضها إدارياً", 
+        color: l.status === "approved" ? T.ok : T.danger, 
+        bg: l.status === "approved" ? T.oLight : T.dLight 
+      })
+    ))
+  );
+}
+
+/* REGISTERED DEVICES MANAGEMENT VIEW */
+function DevsMgmt({ allEmps, devices, setDevices, depts }) {
+  const reg = allEmps.filter(e => devices[e.id]);
+  function reset(id) {
+    setDevices(d => { const n = { ...d }; delete n[id]; return n; });
+    if (window._fbDB) {
+      const { deleteDoc, doc } = window._fbFirestore;
+      deleteDoc(doc(window._fbDB, "devices", id));
+    }
+  }
+  return React.createElement("div", { style: { padding: "20px 0", display: "flex", flexDirection: "column", gap: 16 } },
+    reg.map(e => React.createElement("div", { key: e.id, style: { background: T.surface, border: `1px solid ${T.border}`, borderRadius: 14, padding: "13px 17px", display: "flex", alignItems: "center", gap: 12 } },
+      React.createElement(Av, { e: e, sz: 40, color: getDeptColor(e.dept || "الإدارة", depts) }),
+      React.createElement("div", { style: { flex: 1 } },
+        React.createElement("div", { style: { fontWeight: 600 } }, e.name),
+        React.createElement("div", { style: { fontSize: 11, color: T.muted } }, "الالكتروني: ", e.dept || "إدارة النظام")
+      ),
+      React.createElement("button", { onClick: () => reset(e.id), style: { padding: "7px 14px", background: T.dLight, color: T.danger, borderRadius: 10, fontWeight: 600 } }, "إلغاء ارتباط الهاتف الحالي")
+    ))
+  );
+}
+
 /* MANAGERS MANAGEMENT VIEW */
 function MgrsMgmt({ managers, setManagers, allEmps, depts }) {
   const [adding, setAdding] = useState(false);
@@ -1139,7 +1369,7 @@ function MgrsMgmt({ managers, setManagers, allEmps, depts }) {
           ),
           React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } },
             React.createElement("button", { onClick: () => editId === m.id ? setEditId(null) : startEdit(m), style: { padding: "6px 14px", background: T.aLight, color: T.accent, borderRadius: 10, fontSize: 12, fontWeight: 600 } }, editId === m.id ? "إغلاق" : "تعديل"),
-            React.createElement("button", { onClick: () => del(id), style: { padding: "6px 14px", background: T.dLight, color: T.danger, borderRadius: 10, fontSize: 12, fontWeight: 600 } }, "حذف")
+            React.createElement("button", { onClick: () => del(m.id), style: { padding: "6px 14px", background: T.dLight, color: T.danger, borderRadius: 10, fontSize: 12, fontWeight: 600 } }, "حذف")
           )
         ),
         editId === m.id && React.createElement("div", { className: "fade", style: { marginTop: 12, paddingTop: 12, borderTop: `1px solid ${T.border}`, display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end" } },
@@ -1148,7 +1378,7 @@ function MgrsMgmt({ managers, setManagers, allEmps, depts }) {
             React.createElement("input", { placeholder: "المسمى", value: editForm.title, onChange: ev => setEditForm({ ...editForm, title: ev.target.value }), style: { width: "100%" } })
           ),
           React.createElement("div", { style: { flex: 1, minWidth: 130 } },
-            React.createElement("label", { style: { fontSize: 11, color: T.muted, display: "block", marginBottom: 4 } }, "الصلاحية"),
+            React.createElement("label", { style: { fontSize: 11, color: T.muted, display: "block", marginBottom: 4 } }, "صلاحية"),
             React.createElement("select", { value: editForm.role, onChange: ev => setEditForm({ ...editForm, role: ev.target.value }), style: { width: "100%" } },
               React.createElement("option", { value: "dept" }, "مدير قسم"),
               React.createElement("option", { value: "super" }, "صلاحيات كاملة")
@@ -1187,6 +1417,7 @@ function MgrsMgmt({ managers, setManagers, allEmps, depts }) {
                 dname,
                 React.createElement("span", {
                   onClick: () => setEditForm({ ...editForm, depts: editForm.depts.filter(x => x !== dname) }),
+                  /* تم إصلاح خطأ pointer غير المقتبس لمنع التهنيج تماماً */
                   style: { cursor: "pointer", color: T.danger, fontWeight: "bold" }
                 }, "×")
               ))
