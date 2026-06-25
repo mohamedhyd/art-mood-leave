@@ -195,7 +195,7 @@ const getShiftForEmp = (emp) => emp?.shift || DEFAULT_SHIFT;
 
 function getDeptColor(deptName, deptsList) {
   const d = deptsList?.find(x => x.name === deptName);
-  return d ? d.color : T.accent;
+  return d ? d.color : "#6366F1";
 }
 
 function diffH(s, e) {
@@ -254,9 +254,9 @@ function useLS(k, d) {
 }
 
 /* MICRO UI COMPONENTS */
-function Av({ e, sz = 38 }) {
+function Av({ e, sz = 38, color }) {
   return React.createElement("div", {
-    style: { width: sz, height: sz, borderRadius: "50%", background: "#6366F1", flexShrink: 0 }
+    style: { width: sz, height: sz, borderRadius: "50%", background: color || "#6366F1", flexShrink: 0 }
   });
 }
 
@@ -395,10 +395,7 @@ function GpsWidget({ onResult }) {
     };
     const onFail = (err) => {
       if (err && err.code === 1) { setSt("denied"); onResult({ ok: false, inZone: false }); return; }
-      navigator.geolocation.getCurrentPosition(onOk, () => {
-        setSt("timeout");
-        onResult({ ok: false, inZone: false });
-      }, { enableHighAccuracy: false, timeout: 20000, maximumAge: 60000 });
+      navigator.geolocation.getCurrentPosition(onOk, onFail, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
     };
     navigator.geolocation.getCurrentPosition(onOk, onFail, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
   }, [onResult]);
@@ -551,7 +548,7 @@ function SelfieWidget({ onCapture }) {
 }
 
 /* MAIN KIOSK VIEW */
-function Kiosk({ emps, managers, recs, onRec, devices, onNavigateToLogin, onMgrLogin }) {
+function Kiosk({ emps, managers, recs, onRec, devices, onNavigateToLogin, onMgrLogin, depts }) {
   const filteredEmps = emps.filter(e => !e.name.includes("عبدالله") && !e.name.includes("محمد"));
   const [step, setStep] = useState("pin");
   const [emp, setEmp] = useState(null);
@@ -631,7 +628,7 @@ function Kiosk({ emps, managers, recs, onRec, devices, onNavigateToLogin, onMgrL
     return React.createElement(CenteredPage, null,
       React.createElement(IcoBox, { icon: "قفل", bg: T.wLight }),
       React.createElement("div", { style: { fontSize: 18, fontWeight: 700 } }, "هذا الجهاز غير مسجل للموظف"),
-      emp && React.createElement(React.Fragment, null, React.createElement(Av, { e: emp, sz: 52 }), React.createElement("div", { style: { fontWeight: 600 } }, emp.name)),
+      emp && React.createElement(React.Fragment, null, React.createElement(Av, { e: emp, sz: 52, color: getDeptColor(emp.dept, depts) }), React.createElement("div", { style: { fontWeight: 600 } }, emp.name)),
       React.createElement(Note, { color: T.warn, bg: T.wLight }, "يرجى الضغط على تسجيل الجهاز الشخصي بالأسفل أولا لإقران الهاتف بالحساب الإلكتروني المعتمد"),
       React.createElement("button", { onClick: () => setStep("pin"), style: { background: "none", color: T.muted, fontSize: 13, padding: 8 } }, "رجوع للشاشة الرئيسية")
     );
@@ -641,7 +638,7 @@ function Kiosk({ emps, managers, recs, onRec, devices, onNavigateToLogin, onMgrL
     return React.createElement(CenteredPage, null,
       React.createElement(IcoBox, { icon: "حظر", bg: T.dLight, glow: "rgba(239,68,68,.08)", sz: 72 }),
       React.createElement("div", { style: { fontSize: 20, fontWeight: 800, color: T.danger } }, "تسجيل محظور - جهاز غير مصرح به"),
-      emp && React.createElement(React.Fragment, null, React.createElement(Av, { e: emp, sz: 52 }), React.createElement("div", { style: { fontWeight: 600 } }, emp.name)),
+      emp && React.createElement(React.Fragment, null, React.createElement(Av, { e: emp, sz: 52, color: getDeptColor(emp.dept, depts) }), React.createElement("div", { style: { fontWeight: 600 } }, emp.name)),
       React.createElement(Note, { color: T.danger, bg: T.dLight }, "تم رصد محاولة تسجيل من جهاز مختلف عن جهازك المسجل مسبقا، يرجى مراجعة الإدارة المختصة لإعادة التعيين"),
       React.createElement("button", { onClick: () => setStep("pin"), style: { background: "none", color: T.muted, fontSize: 13, padding: 8 } }, "رجوع")
     );
@@ -660,7 +657,7 @@ function Kiosk({ emps, managers, recs, onRec, devices, onNavigateToLogin, onMgrL
   if (["gps", "selfie", "confirm"].includes(step)) {
     return React.createElement("div", { style: { minHeight: "100vh", background: T.bg, display: "flex", flexDirection: "column", alignItems: "center", padding: "28px 20px", gap: 18 } },
       React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, background: T.surface, border: `1px solid ${T.border}`, borderRadius: 16, padding: "12px 18px", width: "100%", maxWidth: 400, boxShadow: T.sh } },
-        emp && React.createElement(Av, { e: emp, sz: 42 }),
+        emp && React.createElement(Av, { e: emp, sz: 42, color: getDeptColor(emp.dept, depts) }),
         React.createElement("div", { style: { flex: 1 } },
           React.createElement("div", { style: { fontWeight: 700, fontSize: 15 } }, emp?.name),
           React.createElement("div", { style: { fontSize: 12, color: T.muted } }, act === "in" ? "تسجيل حضور طاقم العمل" : "تسجيل انصراف طاقم العمل")
@@ -703,7 +700,7 @@ function Kiosk({ emps, managers, recs, onRec, devices, onNavigateToLogin, onMgrL
 }
 
 /* TABLET KIOSK MODE */
-function KioskTablet({ emps, managers, recs, onRec, devices, onNavigateToLogin, onMgrLogin }) {
+function KioskTablet({ emps, managers, recs, onRec, devices, onNavigateToLogin, onMgrLogin, depts }) {
   const filteredEmps = emps.filter(e => !e.name.includes("عبدالله") && !e.name.includes("محمد"));
   const [step, setStep] = useState("pin");
   const [emp, setEmp] = useState(null);
@@ -780,7 +777,7 @@ function KioskTablet({ emps, managers, recs, onRec, devices, onNavigateToLogin, 
   if (step === "selfie") {
     return React.createElement("div", { style: { minHeight: "100vh", background: T.bg, display: "flex", flexDirection: "column", alignItems: "center", padding: "30px 20px", gap: 20 } },
       React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12, background: T.surface, border: `1px solid ${T.border}`, borderRadius: 16, padding: "12px 18px", width: "100%", maxWidth: 420, boxShadow: T.sh } },
-        emp && React.createElement(Av, { e: emp, sz: 44 }),
+        emp && React.createElement(Av, { e: emp, sz: 44, color: getDeptColor(emp.dept, depts) }),
         React.createElement("div", { style: { flex: 1 } },
           React.createElement("div", { style: { fontWeight: 700, fontSize: 16 } }, emp?.name),
           React.createElement("div", { style: { fontSize: 12, color: T.muted } }, act === "in" ? "تسجيل حضور - وضع التابلت المشترك" : "تسجيل انصراف - وضع التابلت المشترك")
@@ -840,7 +837,6 @@ function EmpLeaveRequest({ emps, leaves, setLeaves, onBack }) {
   function submit() {
     if (!form.date) return;
     
-    // Constraint check: Same day leave requested after 08:00 AM
     if (form.date === todayStr() && nowStr() >= "08:00") {
       setErr("عذراً، لا يمكن تقديم طلب إجازة لنفس اليوم بعد الساعة 08:00 صباحاً");
       setTimeout(() => setErr(""), 5000);
@@ -910,7 +906,7 @@ function EmpLeaveRequest({ emps, leaves, setLeaves, onBack }) {
 }
 
 /* DEVICE REGISTRATION SCREEN */
-function RegisterDevice({ emps, managers, devices, setDevices, onBack, onMgrLogin }) {
+function RegisterDevice({ emps, managers, devices, setDevices, onBack, onMgrLogin, depts }) {
   const [step, setStep] = useState("pin");
   const [emp, setEmp] = useState(null);
   const [fp, setFp] = useState(null);
@@ -956,7 +952,7 @@ function RegisterDevice({ emps, managers, devices, setDevices, onBack, onMgrLogi
     return React.createElement(CenteredPage, null,
       React.createElement(IcoBox, { icon: "تنبيه", bg: T.wLight }),
       React.createElement("div", { style: { fontSize: 18, fontWeight: 700 } }, "هذا الحساب مرتبط بجهاز مسجل مسبقاً"),
-      emp && React.createElement(React.Fragment, null, React.createElement(Av, { e: emp, sz: 52 }), React.createElement("div", { style: { fontWeight: 600 } }, emp.name)),
+      emp && React.createElement(React.Fragment, null, React.createElement(Av, { e: emp, sz: 52, color: getDeptColor(emp.dept, depts) }), React.createElement("div", { style: { fontWeight: 600 } }, emp.name)),
       React.createElement(Note, { color: T.warn, bg: T.wLight }, "لإعادة توثيق حسابك على هاتف ذكي جديد، يرجى تقديم طلب تعيين لمدير النظام"),
       React.createElement("button", { onClick: onBack, style: { padding: "12px 32px", background: T.accent, color: "#fff", fontWeight: 700, borderRadius: 12 } }, "العودة للشاشة الرئيسية")
     );
@@ -966,7 +962,7 @@ function RegisterDevice({ emps, managers, devices, setDevices, onBack, onMgrLogi
     return React.createElement(CenteredPage, null,
       React.createElement(IcoBox, { icon: "توثيق", bg: T.oLight, sz: 80 }),
       React.createElement("div", { style: { fontSize: 20, fontWeight: 700 } }, "تم تفعيل وتوثيق الهاتف الحالي بنجاح"),
-      emp && React.createElement(React.Fragment, null, React.createElement(Av, { e: emp, sz: 52 }), React.createElement("div", { style: { fontWeight: 600 } }, emp.name)),
+      emp && React.createElement(React.Fragment, null, React.createElement(Av, { e: emp, sz: 52, color: getDeptColor(emp.dept, depts) }), React.createElement("div", { style: { fontWeight: 600 } }, emp.name)),
       React.createElement("button", { onClick: onBack, style: { padding: "12px 32px", background: T.accent, color: "#fff", fontWeight: 700, fontSize: 15, borderRadius: 12 } }, "بدء تسجيل الحضور والإنصراف الآمن")
     );
   }
@@ -974,7 +970,7 @@ function RegisterDevice({ emps, managers, devices, setDevices, onBack, onMgrLogi
   if (step === "confirm" && emp) {
     return React.createElement(CenteredPage, null,
       React.createElement("div", { style: { fontSize: 18, fontWeight: 700 } }, "تأكيد تسجيل وإقران الهاتف"),
-      React.createElement(Av, { e: emp, sz: 56 }),
+      React.createElement(Av, { e: emp, sz: 56, color: getDeptColor(emp.dept, depts) }),
       React.createElement("div", { style: { fontWeight: 700, fontSize: 16 } }, emp.name),
       React.createElement("div", { style: { background: T.surface, border: `1px solid ${T.border}`, borderRadius: 16, padding: 18, width: "100%", maxWidth: 340, boxShadow: T.sh } },
         React.createElement(Row, { l: "الرمز التوثيقي المكتشف", v: React.createElement("span", { className: "mono", style: { fontSize: 11, color: T.accent } }, fp?.slice(0, 18), "...") }),
@@ -1108,7 +1104,7 @@ function Leaves({ emps, leaves, setLeaves, managers = [], depts }) {
 }
 
 /* REGISTERED DEVICES MANAGEMENT VIEW */
-function DevsMgmt({ allEmps, devices, setDevices }) {
+function DevsMgmt({ allEmps, devices, setDevices, depts }) {
   const reg = allEmps.filter(e => devices[e.id]);
   function reset(id) {
     setDevices(d => { const n = { ...d }; delete n[id]; return n; });
@@ -1119,7 +1115,7 @@ function DevsMgmt({ allEmps, devices, setDevices }) {
   }
   return React.createElement("div", { style: { padding: "20px 0", display: "flex", flexDirection: "column", gap: 16 } },
     reg.map(e => React.createElement("div", { key: e.id, style: { background: T.surface, border: `1px solid ${T.border}`, borderRadius: 14, padding: "13px 17px", display: "flex", alignItems: "center", gap: 12 } },
-      React.createElement(Av, { e, sz: 40 }),
+      React.createElement(Av, { e: e, sz: 40, color: getDeptColor(e.dept, depts) }),
       React.createElement("div", { style: { flex: 1 } },
         React.createElement("div", { style: { fontWeight: 600 } }, e.name),
         React.createElement("div", { style: { fontSize: 11, color: T.muted } }, "القسم الإداري: ", e.dept)
@@ -1212,19 +1208,30 @@ function MgrsMgmt({ managers, setManagers, allEmps, depts }) {
           Object.entries(SHIFTS).map(([k, s]) => React.createElement("option", { key: k, value: k }, s.label))
         ),
         form.role === "dept" && React.createElement("div", { style: { gridColumn: "1 / -1", background: T.bg, padding: 14, borderRadius: 12, marginTop: 5 } },
-          React.createElement("div", { style: { fontSize: 12, fontWeight: 700, marginBottom: 6, color: T.mid } }, "اختر الأقسام المسؤول عنها (يمكن اختيار أكثر من قسم):"),
-          React.createElement("div", { style: { display: "flex", gap: 14, flexWrap: "wrap" } },
-            depts.map(d => React.createElement("label", { key: d.name, style: { display: "flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer" } },
-              React.createElement("input", {
-                type: "checkbox",
-                checked: form.depts?.includes(d.name),
-                onChange: (evt) => {
-                  const current = form.depts || [];
-                  const next = evt.target.checked ? [...current, d.name] : current.filter(x => x !== d.name);
-                  setForm({ ...form, depts: next });
-                }
-              }),
-              d.name
+          React.createElement("div", { style: { fontSize: 12, fontWeight: 700, marginBottom: 6, color: T.mid } }, "اختر قسم من المنيو المنسدلة لإضافته للمدير:"),
+          React.createElement("select", {
+            value: "",
+            onChange: (evt) => {
+              const val = evt.target.value;
+              if (val && !form.depts?.includes(val)) {
+                setForm({ ...form, depts: [...(form.depts || []), val] });
+              }
+            },
+            style: { marginBottom: 10 }
+          },
+            React.createElement("option", { value: "" }, "انقر هنا لاختيار قسم..."),
+            depts.map(d => React.createElement("option", { key: d.name, value: d.name }, d.name))
+          ),
+          React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } },
+            form.depts?.map(dname => React.createElement("span", {
+              key: dname,
+              style: { display: "inline-flex", alignItems: "center", gap: 6, padding: "5px 12px", background: T.aLight, color: T.accent, borderRadius: 14, fontSize: 12, fontWeight: 700 }
+            },
+              dname,
+              React.createElement("span", {
+                onClick: () => setForm({ ...form, depts: form.depts.filter(x => x !== dname) }),
+                style: { cursor: "pointer", color: T.danger, fontWeight: "bold" }
+              }, "×")
             ))
           )
         )
@@ -1269,19 +1276,30 @@ function MgrsMgmt({ managers, setManagers, allEmps, depts }) {
           React.createElement("input", { placeholder: "PIN جديد", maxLength: 6, value: editForm.pin, onChange: ev => setEditForm({ ...editForm, pin: ev.target.value.replace(/\D/g, "") }), style: { width: "100%" } })
         ),
         editForm.role === "dept" && React.createElement("div", { style: { width: "100%", background: T.bg, padding: 12, borderRadius: 12, marginTop: 10, gridColumn: "1 / -1" } },
-          React.createElement("div", { style: { fontSize: 11, fontWeight: 700, marginBottom: 5, color: T.mid } }, "تعديل الأقسام المسؤول عنها المدير:"),
-          React.createElement("div", { style: { display: "flex", gap: 14, flexWrap: "wrap" } },
-            depts.map(d => React.createElement("label", { key: d.name, style: { display: "flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer" } },
-              React.createElement("input", {
-                type: "checkbox",
-                checked: editForm.depts?.includes(d.name),
-                onChange: (evt) => {
-                  const current = editForm.depts || [];
-                  const next = evt.target.checked ? [...current, d.name] : current.filter(x => x !== d.name);
-                  setEditForm({ ...editForm, depts: next });
-                }
-              }),
-              d.name
+          React.createElement("div", { style: { fontSize: 11, fontWeight: 700, marginBottom: 5, color: T.mid } }, "تعديل الأقسام من المنيو المنسدلة للمدير:"),
+          React.createElement("select", {
+            value: "",
+            onChange: (evt) => {
+              const val = evt.target.value;
+              if (val && !editForm.depts?.includes(val)) {
+                setEditForm({ ...editForm, depts: [...(editForm.depts || []), val] });
+              }
+            },
+            style: { marginBottom: 8 }
+          },
+            React.createElement("option", { value: "" }, "انقر لاختيار قسم لإضافته..."),
+            depts.map(d => React.createElement("option", { key: d.name, value: d.name }, d.name))
+          ),
+          React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } },
+            editForm.depts?.map(dname => React.createElement("span", {
+              key: dname,
+              style: { display: "inline-flex", alignItems: "center", gap: 6, padding: "4px 10px", background: T.aLight, color: T.accent, borderRadius: 14, fontSize: 12, fontWeight: 700 }
+            },
+              dname,
+              React.createElement("span", {
+                onClick: () => setEditForm({ ...editForm, depts: editForm.depts.filter(x => x !== dname) }),
+                style: { cursor: "pointer", color: T.danger, fontWeight: "bold" }
+              }, "×")
             ))
           )
         ),
@@ -1365,7 +1383,7 @@ function EmpsMgmt({ emps, setEmps, managers, depts }) {
     emps.map(e => React.createElement("div", { key: e.id, style: { background: T.surface, border: `1px solid ${T.border}`, borderRadius: 16, padding: "12px 18px" } },
       React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: 10 } },
         React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12 } },
-          React.createElement(Av, { e: e, sz: 38 }),
+          React.createElement(Av, { e: e, sz: 38, color: getDeptColor(e.dept, depts) }),
           React.createElement("div", null,
             React.createElement("div", { style: { fontWeight: 600 } }, e.name),
             React.createElement("div", { style: { fontSize: 11, color: T.muted, display: "flex", alignItems: "center", gap: 5, marginTop: 2 } }, 
@@ -1420,12 +1438,26 @@ function Settings({ kioskMode, setKioskMode, setRecs, depts, setDepts }) {
   }
   return React.createElement("div", { style: { padding: "20px 0", display: "flex", flexDirection: "column", gap: 14, maxWidth: 520 } },
     React.createElement(Card, { title: "إدارة الأقسام والألوان المخصصة" },
-      React.createElement("div", { style: { display: "flex", gap: 10, marginBottom: 15 } },
+      React.createElement("div", { style: { display: "flex", gap: 10, marginBottom: 10 } },
         React.createElement("input", { placeholder: "اسم القسم الجديد...", value: newDept, onChange: e => setNewDept(e.target.value), style: { flex: 2 } }),
-        React.createElement("select", { value: deptCol, onChange: e => setDeptCol(e.target.value), style: { flex: 1, color: deptCol, fontWeight: 'bold' } },
-          COLORS.map(c => React.createElement("option", { key: c, value: c, style: { color: c } }, c))
-        ),
-        React.createElement("button", { onClick: handleAddDept, style: { padding: "10px 20px", background: T.ok, color: "#fff", fontWeight: 700, borderRadius: 12 } }, "إضافة")
+        React.createElement("button", { onClick: handleAddDept, style: { padding: "10px 20px", background: T.ok, color: "#fff", fontWeight: 700, borderRadius: 12, flex: 1 } }, "إضافة")
+      ),
+      React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: T.mid, marginBottom: 4 } }, "اختر لون القسم من الدوائر التالية البصرية:"),
+      React.createElement("div", { style: { display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 20, background: T.hi, padding: 10, borderRadius: 12 } },
+        COLORS.map(c => React.createElement("div", {
+          key: c,
+          onClick: () => setDeptCol(c),
+          style: {
+            width: 32,
+            height: 32,
+            borderRadius: "50%",
+            background: c,
+            cursor: "pointer",
+            border: deptCol === c ? "3px solid #0F172A" : "1px solid #E4E8F0",
+            boxShadow: deptCol === c ? "0 0 0 2px #6366F1" : "none",
+            transition: "all 0.15s"
+          }
+        }))
       ),
       React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } },
         depts.map(d => React.createElement("span", { key: d.name, style: { display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 14px", background: d.color + "15", border: `1.5px solid ${d.color}`, color: d.color, borderRadius: 20, fontSize: 12, fontWeight: 700 } },
@@ -1437,7 +1469,7 @@ function Settings({ kioskMode, setKioskMode, setRecs, depts, setDepts }) {
     React.createElement(Card, { title: "إعدادات وضع تشغيل النظام" },
       React.createElement("div", { style: { fontSize: 12, color: T.muted, marginBottom: 12 } }, "تحديد أسلوب وآلية عمل وإثبات الحضور المعتمدة لهذا الجهاز الرقمي"),
       React.createElement("div", { style: { display: "flex", gap: 12, flexWrap: "wrap" } },
-        [{ v: "personal", l: "نظام الهاتف الشخصي للموظف (بصسة رقمية)" }, { v: "tablet", l: "نظام تابلت البوابة المشترك (صورة تحقق حية)" }].map(o => React.createElement("button", {
+        [{ v: "personal", l: "نظام الهاتف الشخصي للموظف (بصمة رقمية)" }, { v: "tablet", l: "نظام تابلت البوابة المشترك (صورة تحقق حية)" }].map(o => React.createElement("button", {
           key: o.v,
           onClick: () => setKioskMode(o.v),
           style: { flex: 1, minWidth: 150, padding: "14px 16px", background: kioskMode === o.v ? T.aLight : T.hi, border: `2px solid ${kioskMode === o.v ? T.accent : T.border}`, borderRadius: 14, fontWeight: 700, color: kioskMode === o.v ? T.accent : T.txt }
@@ -1455,24 +1487,32 @@ function AttendDash({ emps, recs, leaves, isSuper, depts }) {
   const filteredEmps = emps.filter(e => !e.name.includes("عبدالله") && !e.name.includes("محمد"));
   const today = todayStr();
   const todayR = recs.filter(r => r.date === today);
+  
   function st(id) {
+    const hasLeave = leaves?.some(l => l.empId === id && l.date === today && l.status === "approved");
+    if (hasLeave) return "leave";
+
     const rs = todayR.filter(x => x.empId === id);
     return rs.length ? (rs[rs.length - 1].type === "in" ? "in" : "done") : "absent";
   }
+  
   function lastTime(id, type) {
     const rs = todayR.filter(x => x.empId === id && x.type === type);
     return rs.length ? rs[rs.length - 1].time : null;
   }
+  
   const present = filteredEmps.filter(e => st(e.id) === "in");
   const done = filteredEmps.filter(e => st(e.id) === "done");
   const absent = filteredEmps.filter(e => st(e.id) === "absent");
+  const onLeave = filteredEmps.filter(e => st(e.id) === "leave");
   const lateToday = todayR.filter(r => r.type === "in" && r.late);
 
   const stats = [
     { l: "في العمل الآن", v: present.length, c: T.ok, bg: T.oLight },
     { l: "أنهوا اليوم", v: done.length, c: T.accent, bg: T.aLight },
     { l: "لم يحضروا", v: absent.length, c: T.muted, bg: T.hi },
-    { l: "حضور متأخر", v: lateToday.length, c: T.warn, bg: T.wLight }
+    { l: "حضور متأخر", v: lateToday.length, c: T.warn, bg: T.wLight },
+    { l: "في إجازة معتمدة", v: onLeave.length, c: T.gold, bg: T.gLight }
   ];
 
   return React.createElement("div", { style: { padding: "20px 0", display: "flex", flexDirection: "column", gap: 18 } },
@@ -1492,21 +1532,22 @@ function AttendDash({ emps, recs, leaves, isSuper, depts }) {
           const stMap = {
             in: { l: "في العمل", c: T.ok, bg: T.oLight },
             done: { l: "انصرف", c: T.accent, bg: T.aLight },
-            absent: { l: "غائب", c: T.muted, bg: T.hi }
+            absent: { l: "غائب", c: T.muted, bg: T.hi },
+            leave: { l: "إجازة معتمدة", c: T.gold, bg: T.gLight }
           };
           const sd = stMap[status];
           const dynamicColor = getDeptColor(e.dept, depts);
           return React.createElement("div", { key: e.id, style: { display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", background: T.surface, border: `1px solid ${T.border}`, borderRadius: 12 } },
-            React.createElement(Av, { e: e, sz: 40 }),
+            React.createElement(Av, { e: e, sz: 40, color: dynamicColor }),
             React.createElement("div", { style: { flex: 1 } },
               React.createElement("div", { style: { fontWeight: 600, color: T.txt, fontSize: 14 } }, e.name),
               React.createElement("span", { style: { fontSize: 11, color: dynamicColor, fontWeight: 700, background: dynamicColor + "10", padding: "2px 8px", borderRadius: 10 } }, e.dept)
             ),
-            inT && React.createElement("div", { style: { fontSize: 12, color: T.mid, textAlign: "center" } },
+            inT && status !== "leave" && React.createElement("div", { style: { fontSize: 12, color: T.mid, textAlign: "center" } },
               React.createElement("div", { style: { color: T.muted, fontSize: 10 } }, "حضور"),
               React.createElement("div", { style: { fontWeight: 700 } }, inT)
             ),
-            outT && React.createElement("div", { style: { fontSize: 12, color: T.mid, textAlign: "center" } },
+            outT && status !== "leave" && React.createElement("div", { style: { fontSize: 12, color: T.mid, textAlign: "center" } },
               React.createElement("div", { style: { color: T.muted, fontSize: 10 } }, "انصراف"),
               React.createElement("div", { style: { fontWeight: 700 } }, outT)
             ),
@@ -1518,7 +1559,7 @@ function AttendDash({ emps, recs, leaves, isSuper, depts }) {
   );
 }
 
-function Reports({ emps, recs, depts }) {
+function Reports({ emps, recs, depts, leaves }) {
   const filteredEmps = emps.filter(e => !e.name.includes("عبدالله") && !e.name.includes("محمد"));
   const [range, setRange] = useState("month");
   const [empFilter, setEmpFilter] = useState("all");
@@ -1567,9 +1608,13 @@ function Reports({ emps, recs, depts }) {
         }
       }
     });
+
+    const approvedLeaves = leaves?.filter(l => l.empId === id && l.date >= cutoffStr && l.date <= reportDate && l.status === "approved") || [];
+    const leaveDays = approvedLeaves.length;
+
     const totalHours = Math.round(totalMins / 60 * 10) / 10;
     const totalOvertime = Math.round(totalOvertimeMins / 60 * 10) / 10;
-    return { totalHours, totalOvertime, days: Object.keys(byDate).length, present, late, absent, early };
+    return { totalHours, totalOvertime, days: Object.keys(byDate).length, present, late, absent, early, leaveDays };
   }
 
   const shownEmps = empFilter === "all" ? filteredEmps : filteredEmps.filter(e => e.id === empFilter);
@@ -1578,7 +1623,7 @@ function Reports({ emps, recs, depts }) {
     const isDay = range === "day";
     const headers = isDay 
       ? ["الموظف", "القسم", "الحالة", "ميعاد الحضور", "ميعاد الانصراف", "إجمالي الساعات", "العمل الإضافي"]
-      : ["الموظف", "القسم", "أيام الحضور", "حاضر", "تأخير", "غياب", "انصراف مبكر", "إجمالي الساعات", "العمل الإضافي"];
+      : ["الموظف", "القسم", "أيام الحضور", "حاضر", "تأخير", "غياب", "إجازات", "انصراف مبكر", "إجمالي الساعات", "العمل الإضافي"];
     
     const rows = shownEmps.map(e => {
       const s = empStats(e.id);
@@ -1590,13 +1635,15 @@ function Reports({ emps, recs, depts }) {
         const empShift = e.shift || DEFAULT_SHIFT;
         const currentStatus = dayStatus(dayData.find(x => x.date === reportDate && x.type === "in")?.time, dayData.find(x => x.date === reportDate && x.type === "out")?.time, empShift);
         
+        const dayLeave = leaves?.find(l => l.empId === e.id && l.date === reportDate && l.status === "approved");
         let dayStatusLabel = "غائب";
-        if (currentStatus === "present") dayStatusLabel = "حاضر";
+        if (dayLeave) dayStatusLabel = `إجازة (${dayLeave.type})`;
+        else if (currentStatus === "present") dayStatusLabel = "حاضر";
         else if (currentStatus === "late") dayStatusLabel = "متأخر";
 
         return [e.name, e.dept, dayStatusLabel, specificIn, specificOut, s.totalHours, s.totalOvertime];
       } else {
-        return [e.name, e.dept, s.days, s.present, s.late, s.absent, s.early, s.totalHours, s.totalOvertime];
+        return [e.name, e.dept, s.days, s.present, s.late, s.absent, s.leaveDays, s.early, s.totalHours, s.totalOvertime];
       }
     });
     const csv = "\uFEFF" + [headers, ...rows].map(r => r.map(c => `"${String(c).replace(/"/g, '""')}"`).join(",")).join("\n");
@@ -1647,7 +1694,7 @@ function Reports({ emps, recs, depts }) {
             React.createElement("tr", { style: { borderBottom: `2px solid ${T.border}` } },
               (range === "day" 
                 ? ["الموظف", "الحالة", "ميعاد الحضور", "ميعاد الانصراف", "ساعات العمل", "العمل الإضافي"]
-                : ["الموظف", "أيام الحضور", "حاضر", "تأخير", "غياب", "انصراف مبكر", "ساعات العمل", "العمل الإضافي"]
+                : ["الموظف", "أيام الحضور", "حاضر", "تأخير", "غياب", "إجازات", "انصراف مبكر", "ساعات العمل", "العمل الإضافي"]
               ).map((h, i) =>
                 React.createElement("th", { key: i, style: { padding: "10px 8px", textAlign: i === 0 ? "right" : "center", color: T.mid, fontWeight: 700, whiteSpace: "nowrap" } }, h)
               )
@@ -1655,7 +1702,7 @@ function Reports({ emps, recs, depts }) {
           ),
           React.createElement("tbody", null,
             shownEmps.length === 0 && React.createElement("tr", null,
-              React.createElement("td", { colSpan: range === "day" ? 6 : 8, style: { padding: 20, textAlign: "center", color: T.muted } }, "لا توجد بيانات")
+              React.createElement("td", { colSpan: range === "day" ? 6 : 9, style: { padding: 20, textAlign: "center", color: T.muted } }, "لا توجد بيانات")
             ),
             shownEmps.map(e => {
               const s = empStats(e.id);
@@ -1673,9 +1720,17 @@ function Reports({ emps, recs, depts }) {
               if (specificOut) checkOutTime = specificOut;
 
               const currentStatus = dayStatus(specificIn, specificOut, empShift);
-              if (currentStatus === "present") { dayStatusLabel = "حاضر"; statusColor = T.ok; statusBg = T.oLight; }
-              else if (currentStatus === "late") { dayStatusLabel = "متأخر"; statusColor = T.warn; statusBg = T.wLight; }
-              else { dayStatusLabel = "غائب"; statusColor = T.danger; statusBg = T.dLight; }
+              const dayLeave = leaves?.find(l => l.empId === e.id && l.date === reportDate && l.status === "approved");
+              
+              if (dayLeave) {
+                dayStatusLabel = `إجازة (${dayLeave.type})`; statusColor = T.gold; statusBg = T.gLight;
+              } else if (currentStatus === "present") { 
+                dayStatusLabel = "حاضر"; statusColor = T.ok; statusBg = T.oLight; 
+              } else if (currentStatus === "late") { 
+                dayStatusLabel = "متأخر"; statusColor = T.warn; statusBg = T.wLight; 
+              } else { 
+                dayStatusLabel = "غائب"; statusColor = T.danger; statusBg = T.dLight; 
+              }
 
               const dynamicColor = getDeptColor(e.dept, depts);
 
@@ -1683,7 +1738,7 @@ function Reports({ emps, recs, depts }) {
                 return React.createElement("tr", { key: e.id, style: { borderBottom: `1px solid ${T.border}` } },
                   React.createElement("td", { style: { padding: "10px 8px" } },
                     React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } },
-                      React.createElement(Av, { e: e, sz: 32 }),
+                      React.createElement(Av, { e: e, sz: 32, color: dynamicColor }),
                       React.createElement("div", null,
                         React.createElement("div", { style: { fontWeight: 600, color: T.txt } }, e.name),
                         React.createElement("span", { style: { fontSize: 10, color: dynamicColor, fontWeight: 700 } }, e.dept)
@@ -1693,17 +1748,17 @@ function Reports({ emps, recs, depts }) {
                   React.createElement("td", { style: { padding: "10px 8px", textAlign: "center" } }, 
                     React.createElement(Badge, { label: dayStatusLabel, color: statusColor, bg: statusBg })
                   ),
-                  React.createElement("td", { style: { padding: "10px 8px", textAlign: "center", fontWeight: 700, color: T.txt } }, checkInTime),
-                  React.createElement("td", { style: { padding: "10px 8px", textAlign: "center", fontWeight: 700, color: T.txt } }, checkOutTime),
-                  React.createElement("td", { style: { padding: "10px 8px", textAlign: "center", fontWeight: 700, color: T.accent } }, s.totalHours),
-                  React.createElement("td", { style: { padding: "10px 8px", textAlign: "center", fontWeight: 700, color: T.gold } }, s.totalOvertime)
+                  React.createElement("td", { style: { padding: "10px 8px", textAlign: "center", fontWeight: 700, color: T.txt } }, dayLeave ? "—" : checkInTime),
+                  React.createElement("td", { style: { padding: "10px 8px", textAlign: "center", fontWeight: 700, color: T.txt } }, dayLeave ? "—" : checkOutTime),
+                  React.createElement("td", { style: { padding: "10px 8px", textAlign: "center", fontWeight: 700, color: T.accent } }, dayLeave ? "—" : s.totalHours),
+                  React.createElement("td", { style: { padding: "10px 8px", textAlign: "center", fontWeight: 700, color: T.gold } }, dayLeave ? "—" : s.totalOvertime)
                 );
               }
 
               return React.createElement("tr", { key: e.id, style: { borderBottom: `1px solid ${T.border}` } },
                 React.createElement("td", { style: { padding: "10px 8px" } },
                   React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } },
-                    React.createElement(Av, { e: e, sz: 32 }),
+                    React.createElement(Av, { e: e, sz: 32, color: dynamicColor }),
                     React.createElement("div", null,
                       React.createElement("div", { style: { fontWeight: 600, color: T.txt } }, e.name),
                       React.createElement("span", { style: { fontSize: 10, color: dynamicColor, fontWeight: 700 } }, e.dept)
@@ -1714,6 +1769,7 @@ function Reports({ emps, recs, depts }) {
                 React.createElement("td", { style: { padding: "10px 8px", textAlign: "center", fontWeight: 700, color: T.ok } }, s.present),
                 React.createElement("td", { style: { padding: "10px 8px", textAlign: "center", fontWeight: 700, color: s.late > 0 ? T.warn : T.muted } }, s.late),
                 React.createElement("td", { style: { padding: "10px 8px", textAlign: "center", fontWeight: 700, color: s.absent > 0 ? T.danger : T.muted } }, s.absent),
+                React.createElement("td", { style: { padding: "10px 8px", textAlign: "center", fontWeight: 700, color: s.leaveDays > 0 ? T.gold : T.muted } }, s.leaveDays),
                 React.createElement("td", { style: { padding: "10px 8px", textAlign: "center", color: s.early > 0 ? T.warn : T.muted } }, s.early),
                 React.createElement("td", { style: { padding: "10px 8px", textAlign: "center", fontWeight: 700, color: T.accent } }, s.totalHours),
                 React.createElement("td", { style: { padding: "10px 8px", textAlign: "center", fontWeight: 700, color: T.gold } }, s.totalOvertime)
@@ -1776,9 +1832,9 @@ function MgrPanel({ mgr, allEmps, setAllEmps, recs, setRecs, leaves, setLeaves, 
     ),
     React.createElement("div", { style: { flex: 1, padding: "0 20px", maxWidth: 1200, width: "100%", margin: "0 auto" } },
       tab === "dash" && React.createElement(AttendDash, { emps: visAll, recs: recs, leaves: leaves, isSuper: isSuper, depts: depts }),
-      tab === "rep" && React.createElement(Reports, { emps: visAll, recs: recs, depts: depts }),
+      tab === "rep" && React.createElement(Reports, { emps: visAll, recs: recs, depts: depts, leaves: leaves }),
       tab === "leave" && React.createElement(Leaves, { emps: visEmps, leaves: leaves, setLeaves: setLeaves, managers: managers, depts: depts }),
-      tab === "devs" && isSuper && React.createElement(DevsMgmt, { allEmps: allEmps, devices: devices, setDevices: setDevices }),
+      tab === "devs" && isSuper && React.createElement(DevsMgmt, { allEmps: allEmps, devices: devices, setDevices: setDevices, depts: depts }),
       tab === "mgrs" && isSuper && React.createElement(MgrsMgmt, { managers: managers, setManagers: setManagers, allEmps: allEmps, depts: depts }),
       tab === "emps" && isSuper && React.createElement(EmpsMgmt, { emps: allEmps, setEmps: setAllEmps, managers: managers, depts: depts }),
       tab === "sett" && isSuper && React.createElement(Settings, { kioskMode: kioskMode, setKioskMode: setKioskMode, setRecs: setRecs, depts: depts, setDepts: setDepts })
@@ -1850,7 +1906,7 @@ function App() {
   return React.createElement(React.Fragment, null,
     React.createElement("style", null, CSS),
     view === "kiosk" && kioskMode === "personal" && React.createElement(React.Fragment, null,
-      React.createElement(Kiosk, { emps, managers, recs, onRec: (r) => { setRecs(rs => [...rs, r]); if (window._fbDB) { const { addDoc, collection } = window._fbFirestore; addDoc(collection(window._fbDB, "records"), { ...r, timestamp: new Date().toISOString() }); } }, devices, onNavigateToLogin: () => setView("login"), onMgrLogin: (m) => { setCurMgr(m); setView("panel"); } }),
+      React.createElement(Kiosk, { emps, managers, recs, onRec: (r) => { setRecs(rs => [...rs, r]); if (window._fbDB) { const { addDoc, collection } = window._fbFirestore; addDoc(collection(window._fbDB, "records"), { ...r, timestamp: new Date().toISOString() }); } }, devices, onNavigateToLogin: () => setView("login"), onMgrLogin: (m) => { setCurMgr(m); setView("panel"); }, depts }),
       React.createElement("div", { style: { position: "fixed", bottom: 15, left: "50%", transform: "translateX(-50%)", zIndex: 200, display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "center", width: "100%", maxWidth: 450 } },
         React.createElement("button", { onClick: () => setView("emp_leave"), style: { padding: "8px 14px", background: T.surface, color: T.warn, border: `1.5px solid ${T.warn}`, fontSize: 12, fontWeight: 700, borderRadius: 12, boxShadow: T.shM } }, "تقديم طلب إجازة للموظف"),
         React.createElement("button", { onClick: () => setView("reg"), style: { padding: "8px 14px", background: T.surface, color: T.accent, border: `1.5px solid ${T.accent}`, fontSize: 12, fontWeight: 700, borderRadius: 12, boxShadow: T.shM } }, "تسجيل هاتف الموظف"),
@@ -1858,14 +1914,14 @@ function App() {
       )
     ),
     view === "kiosk" && kioskMode === "tablet" && React.createElement(React.Fragment, null,
-      React.createElement(KioskTablet, { emps, managers, recs, onRec: (r) => { setRecs(rs => [...rs, r]); if (window._fbDB) { const { addDoc, collection } = window._fbFirestore; addDoc(collection(window._fbDB, "records"), { ...r, timestamp: new Date().toISOString() }); } }, devices, onNavigateToLogin: () => setView("login"), onMgrLogin: (m) => { setCurMgr(m); setView("panel"); } }),
+      React.createElement(KioskTablet, { emps, managers, recs, onRec: (r) => { setRecs(rs => [...rs, r]); if (window._fbDB) { const { addDoc, collection } = window._fbFirestore; addDoc(collection(window._fbDB, "records"), { ...r, timestamp: new Date().toISOString() }); } }, devices, onNavigateToLogin: () => setView("login"), onMgrLogin: (m) => { setCurMgr(m); setView("panel"); }, depts }),
       React.createElement("div", { style: { position: "fixed", bottom: 15, left: "50%", transform: "translateX(-50%)", zIndex: 200, display: "flex", gap: 8 } },
         React.createElement("button", { onClick: () => setView("emp_leave"), style: { padding: "9px 18px", background: T.surface, color: T.warn, border: `1.5px solid ${T.warn}`, fontSize: 13, fontWeight: 700, borderRadius: 12, boxShadow: T.shM } }, "تقديم طلب إجازة للموظف"),
         React.createElement("button", { onClick: () => setView("login"), style: { padding: "9px 18px", background: T.surface, color: T.mid, border: `1.5px solid ${T.border}`, fontSize: 13, fontWeight: 700, borderRadius: 12, boxShadow: T.shM } }, "دخول المديرين")
       )
     ),
     view === "emp_leave" && React.createElement(EmpLeaveRequest, { emps, leaves, setLeaves, onBack: () => setView("kiosk") }),
-    view === "reg" && React.createElement(RegisterDevice, { emps, managers, devices, setDevices, onBack: () => setView("kiosk"), onMgrLogin: (m) => { setCurMgr(m); setView("panel"); } }),
+    view === "reg" && React.createElement(RegisterDevice, { emps, managers, devices, setDevices, onBack: () => setView("kiosk"), onMgrLogin: (m) => { setCurMgr(m); setView("panel"); }, depts }),
     view === "login" && React.createElement(MgrLogin, { managers, onLogin: (m) => { setCurMgr(m); setView("panel"); }, onBack: () => setView("kiosk") }),
     view === "panel" && curMgr && React.createElement(MgrPanel, { mgr: curMgr, allEmps: emps, setAllEmps: setEmps, recs, setRecs, leaves, setLeaves, devices, setDevices, managers, setManagers, kioskMode, setKioskMode, depts, setDepts, onExit: () => { setCurMgr(null); setView("kiosk"); } })
   );
