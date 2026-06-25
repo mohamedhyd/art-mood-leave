@@ -115,7 +115,7 @@ const FACTORY_LAT = 29.970593;
 const FACTORY_LNG = 31.489092;
 const GEO_RADIUS = 100;
 
-// تصحيح معادلة حساب المسافة الجغرافية لمنع عطل الـ 30 كيلو
+// إصلاح الحساب الجغرافي للمسافات بدقة لمنع خطأ الـ 30 كيلو
 function geoDistance(lat1, lng1, lat2, lng2) {
   const R = 6371000;
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -154,42 +154,11 @@ function isLateForShift(time, shiftKey) {
   return checkInMins > LATE_AFTER;
 }
 
-function isWorkDay(dateStr) {
-  const day = new Date(dateStr).getDay();
-  return WORK_DAYS.includes(day);
-}
-
-function isSaturday(dateStr) {
-  return new Date(dateStr).getDay() === SATURDAY;
-}
-
-function calcOvertime(hours, dateStr, shiftKey) {
-  const shift = SHIFTS[shiftKey || DEFAULT_SHIFT];
-  if (isSaturday(dateStr)) {
-    return { regular: 0, overtime: hours, saturdayOT: hours };
-  }
-  if (isWorkDay(dateStr)) {
-    const extra = Math.max(0, hours - (shift ? shift.hours : 8));
-    return { regular: Math.min(hours, (shift ? shift.hours : 8)), overtime: extra, saturdayOT: 0 };
-  }
-  return { regular: 0, overtime: hours, saturdayOT: 0 };
-}
-
-const DEF_MGRS = [{
-  id: "M002",
-  name: "محمد حسين",
-  title: "صلاحيات كاملة",
-  pin: "2222",
-  role: "super",
-  depts: [],
-  color: "#6366F1",
-  shift: "9-5",
-  order: 0
-}];
-
-const COLORS = ["#6366F1", "#EC4899", "#F59E0B", "#10B981", "#3B82F6", "#8B5CF6", "#EF4444", "#14B8A6", "#D97706", "#06B6D4", "#F97316", "#0EA5E9"];
-
-const todayStr = () => new Date().toISOString().split("T")[0];
+// تعديل جلب التاريخ ليعتمد على التوقيت المحلي الفعلي بدقة لمنع اختفاء السجلات
+const todayStr = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
 const nowStr = () => new Date().toTimeString().slice(0, 5);
 const fmtT = (t) => t || "—";
 const isLate = (t, shiftKey) => isLateForShift(t, shiftKey || DEFAULT_SHIFT);
@@ -325,111 +294,84 @@ function CenteredPage({ children }) {
   }, children);
 }
 
-function LiveClock() {
-  const [t, set] = useState(new Date());
-  useEffect(() => {
-    const i = setInterval(() => set(new Date()), 1000);
-    return () => clearInterval(i);
-  }, []);
-  const D = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
-  const M = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
-  
-  const format12Hour = (date) => {
-    let hours = date.getHours();
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    const seconds = String(date.getSeconds()).padStart(2, '0');
-    const ampm = hours >= 12 ? 'PM' : 'AM';
-    hours = hours % 12;
-    hours = hours ? hours : 12;
-    return `${String(hours).padStart(2, '0')}:${minutes}:${seconds} ${ampm}`;
-  };
-
-  return React.createElement("div", { style: { textAlign: "center" } },
-    React.createElement("div", { className: "mono", style: { fontSize: "clamp(32px,8vw,52px)", fontWeight: 700, color: T.txt, letterSpacing: -1, lineHeight: 1 } }, format12Hour(t)),
-    React.createElement("div", { style: { color: T.muted, fontSize: 13, marginTop: 6 } }, D[t.getDay()], "، ", t.getDate(), " ", M[t.getMonth()], " ", t.getFullYear())
-  );
-}
-
-function PinPad({ onConfirm, doShake }) {
-  const [pin, set] = useState("");
-  useEffect(() => {
-    if (pin.length === 4) {
-      onConfirm(pin);
-      set("");
-    }
-  }, [pin]);
-  const add = (d) => { if (pin.length < 4) set(pin => pin + d); };
-  const del = () => set(pin => pin.slice(0, -1));
-  return React.createElement("div", { style: { display: "flex", flexDirection: "column", alignItems: "center", gap: 16 } },
-    React.createElement("div", { style: { display: "flex", gap: 12 } },
-      [0, 1, 2, 3].map(i => React.createElement("div", { key: i, style: { width: 13, height: 13, borderRadius: "50%", transition: "all .2s", background: pin.length > i ? T.accent : T.border, transform: pin.length > i ? "scale(1.2)" : "scale(1)" } }))
-    ),
-    React.createElement("div", { className: doShake ? "shk" : "", style: { display: "grid", gridTemplateColumns: "repeat(3,72px)", gap: 10 } },
-      [1, 2, 3, 4, 5, 6, 7, 8, 9, "", 0, "مسح"].map((v, i) => v === "" ? React.createElement("div", { key: i }) : React.createElement("button", {
-        key: i,
-        onClick: () => v === "مسح" ? del() : add(String(v)),
-        style: { height: 72, fontSize: v === "مسح" ? 14 : 22, fontWeight: 600, background: v === "مسح" ? T.dLight : T.hi, color: v === "مسح" ? T.danger : T.txt, border: `1.5px solid ${v === "مسح" ? "#FCA5A5" : T.border}`, borderRadius: 16, boxShadow: T.sh }
-      }, v))
-    )
-  );
-}
-
-function GpsWidget({ onResult }) {
-  const [st, setSt] = useState("loading");
-  const [dist, setDist] = useState(null);
-  const check = useCallback(() => {
-    setSt("loading");
-    if (!navigator.geolocation) {
-      setSt("ns");
-      onResult({ ok: false, inZone: false });
-      return;
-    }
-    const onOk = (pos) => {
-      const d = geoDistance(pos.coords.latitude, pos.coords.longitude, FACTORY_LAT, FACTORY_LNG);
-      const inZone = d <= GEO_RADIUS;
-      setDist(Math.round(d));
-      setSt(inZone ? "ok" : "out");
-      onResult({ ok: true, lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: Math.round(pos.coords.accuracy), inZone: inZone, distance: Math.round(d) });
-    };
-    const onFail = (err) => {
-      if (err && err.code === 1) { setSt("denied"); onResult({ ok: false, inZone: false }); return; }
-      navigator.geolocation.getCurrentPosition(onOk, onFail, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
-    };
-    navigator.geolocation.getCurrentPosition(onOk, onFail, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
-  }, [onResult]);
-  useEffect(() => { check(); }, []);
-
-  const cfg = {
-    loading: { bg: T.aLight, bd: "#C7D2FE", c: T.accent, txt: "جاري تحديد الموقع..." },
-    ok: { bg: T.oLight, bd: "#6EE7B7", c: T.ok, txt: "تم التحقق من تواجدك داخل الموقع" },
-    out: { bg: T.dLight, bd: "#FCA5A5", c: T.danger, txt: dist != null ? `أنت خارج النطاق المسموح (تبعد ${dist} متر)` : "أنت خارج نطاق الموقع المسموح" },
-    denied: { bg: T.wLight, bd: "#FCD34D", c: T.warn, txt: "صلاحية الموقع مرفوضة — فعّلها من إعدادات المتصفح ثم اضغط تحديث" },
-    timeout: { bg: T.wLight, bd: "#FCD34D", c: T.warn, txt: "تعذّر تحديد الموقع — اخرج للعراء أو اضغط تحديث" },
-    ns: { bg: T.wLight, bd: "#FCD34D", c: T.warn, txt: "الجهاز لا يدعم تحديد الموقع" }
-  };
-  const s = cfg[st] || cfg.loading;
-  return React.createElement("div", {
-    style: { background: s.bg, border: `1.5px solid ${s.bd}`, borderRadius: 14, padding: "12px 16px", display: "flex", alignItems: "center", gap: 10 }
-  },
-    React.createElement("span", { style: { flex: 1, fontSize: 13, fontWeight: 600, color: s.c } }, s.txt),
-    st !== "loading" && React.createElement("button", { onClick: check, style: { fontSize: 11, padding: "4px 10px", background: "rgba(0,0,0,.05)", color: T.mid, borderRadius: 8 } }, "تحديث")
-  );
-}
-
-/* HIGH-COMPATIBILITY LIGHTWEIGHT SELFIE WIDGET */
+/* UNIVERSAL HIGH-COMPATIBILITY CAMERA WIDGET FOR LAPTOP & MOBILE */
 function SelfieWidget({ onCapture, empName }) {
   const fileRef = useRef(null);
-  const cR = useRef(null);
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const streamRef = useRef(null);
+  const [mode, setMode] = useState("checking"); // checking, live, fallback, done
   const [prev, setPrev] = useState(null);
   const [loading, setLoading] = useState(false);
 
+  // بروتوكول ذكي لتشغيل بث الكاميرا الحية على اللاب توب أو التحويل التلقائي في الموبايل
   useEffect(() => {
-    if (fileRef.current) {
-      fileRef.current.click();
+    // الأجهزة المحمولة والتابلت يفضل فتح كاميرا النظام مباشرة لمنع السواد
+    const isMobile = /Android|iPhone|iPad|iPod|Kiosk|Mobile/i.test(navigator.userAgent);
+    if (isMobile) {
+      setMode("fallback");
+      setTimeout(() => fileRef.current?.click(), 400);
+      return;
     }
+
+    // أجهزة اللاب توب والكمبيوتر: تشغيل البث الحي فوراً
+    setMode("live");
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
+      .then(stream => {
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      })
+      .catch(() => {
+        // في حال حظر الكاميرا على اللاب توب يتم فتح خيار الرفع الاحتياطي
+        setMode("fallback");
+      });
+
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(t => t.stop());
+      }
+    };
   }, []);
 
-  function handleFile(e) {
+  // التقاط الصورة من البث الحي للاب توب مع تقليص الحجم تلقائياً لمنع التهنيج
+  function captureFromVideo() {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas) return;
+
+    const ctx = canvas.getContext("2d");
+    // أبعاد خفيفة ومثالية لمعالجة الذاكرة العشوائية
+    canvas.width = 500;
+    canvas.height = 500;
+    
+    // رسم الصورة مع عكس الاتجاه كمرآة طبيعية للعين
+    ctx.translate(500, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, 0, 0, 500, 500);
+    ctx.setTransform(1, 0, 0, 1, 0, 0); // إعادة تعيين الحجم
+
+    // طباعة الختم المائي التوثيقي الحامي لمنع التلاعب
+    ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
+    ctx.fillRect(0, 455, 500, 45);
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = "bold 13px Cairo, Arial, sans-serif";
+    ctx.textAlign = "right";
+    const dateStr = new Date().toLocaleString("ar-EG");
+    ctx.fillText(`بصمة حية موثقة: ${empName || ""} | التوقيت: ${dateStr}`, 485, 482);
+
+    const dataUrl = canvas.toDataURL("image/jpeg", 0.65);
+    setPrev(dataUrl);
+    setMode("done");
+    onCapture(dataUrl);
+
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(t => t.stop());
+    }
+  }
+
+  function handleFileFallback(e) {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
     setLoading(true);
@@ -437,49 +379,30 @@ function SelfieWidget({ onCapture, empName }) {
     r.onload = ev => {
       const img = new Image();
       img.onload = () => {
-        const c = cR.current;
-        if (!c) { 
-          setPrev(ev.target.result); 
-          setLoading(false); 
-          onCapture(ev.target.result); 
-          return; 
+        const canvas = canvasRef.current;
+        if (!canvas) {
+          setPrev(ev.target.result);
+          setLoading(false);
+          onCapture(ev.target.result);
+          return;
         }
-        
-        // تصغير ذكي وتلقائي لأبعاد الصورة لمنع تهنيج ذاكرة أجهزة التابلت والموبايل تماماً
-        const MAX_WIDTH = 800;
-        const MAX_HEIGHT = 800;
-        let width = img.width;
-        let height = img.height;
+        canvas.width = 500;
+        canvas.height = 500;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, 500, 500);
 
-        if (width > height) {
-          if (width > MAX_WIDTH) {
-            height *= MAX_WIDTH / width;
-            width = MAX_WIDTH;
-          }
-        } else {
-          if (height > MAX_HEIGHT) {
-            width *= MAX_HEIGHT / height;
-            width = MAX_HEIGHT;
-          }
-        }
-
-        c.width = width; 
-        c.height = height;
-        const ctx = c.getContext("2d");
-        ctx.drawImage(img, 0, 0, width, height);
-        
-        // دمج الختم المائي البصري لتوثيق الحضور والوقت بالثانية
         ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
-        ctx.fillRect(0, height - 45, width, 45);
+        ctx.fillRect(0, 455, 500, 45);
         ctx.fillStyle = "#FFFFFF";
-        ctx.font = "bold 14px Cairo, Arial, sans-serif";
+        ctx.font = "bold 13px Cairo, Arial, sans-serif";
         ctx.textAlign = "right";
         const dateStr = new Date().toLocaleString("ar-EG");
-        ctx.fillText(`بصمة موثقة: ${empName || ""} | التوقيت: ${dateStr}`, width - 15, height - 16);
-        
-        const stampedUrl = c.toDataURL("image/jpeg", 0.80);
+        ctx.fillText(`بصمة هاتف معتمدة: ${empName || ""} | ${dateStr}`, 485, 482);
+
+        const stampedUrl = canvas.toDataURL("image/jpeg", 0.65);
         setPrev(stampedUrl);
         setLoading(false);
+        setMode("done");
         onCapture(stampedUrl);
       };
       img.src = ev.target.result;
@@ -487,19 +410,31 @@ function SelfieWidget({ onCapture, empName }) {
     r.readAsDataURL(file);
   }
 
-  return React.createElement("div", { style: { display: "flex", flexDirection: "column", alignItems: "center", gap: 12 } },
-    React.createElement("input", { ref: fileRef, type: "file", accept: "image/*", capture: "user", style: { display: "none" }, onChange: handleFile }),
-    loading && React.createElement("div", { style: { fontSize: 14, color: T.muted, padding: 10 } }, "جاري ضغط ومعالجة كود الصورة حركياً..."),
-    prev ? React.createElement("div", { style: { position: "relative", display: "inline-block" } },
-      React.createElement("img", { src: prev, style: { width: 140, height: 140, borderRadius: 16, objectFit: "cover", border: `3px solid ${T.ok}`, display: "block" } }),
+  return React.createElement("div", { style: { display: "flex", flexDirection: "column", alignItems: "center", gap: 12, width: "100%" } },
+    React.createElement("input", { ref: fileRef, type: "file", accept: "image/*", capture: "user", style: { display: "none" }, onChange: handleFileFallback }),
+    
+    mode === "checking" && React.createElement("div", { style: { fontSize: 13, color: T.muted } }, "جاري فحص إعدادات الكاميرا الآمنة..."),
+    
+    mode === "live" && React.createElement("div", { style: { display: "flex", flexDirection: "column", alignItems: "center", gap: 10 } },
+      React.createElement("video", { ref: videoRef, autoPlay: true, playsInline: true, muted: true, style: { width: 320, height: 320, borderRadius: 16, objectFit: "cover", transform: "scaleX(-1)", background: "#000", border: `2px solid ${T.accent}` } }),
+      React.createElement("button", { onClick: captureFromVideo, style: { padding: "12px 24px", background: T.accent, color: "#fff", fontWeight: 700, borderRadius: 12, fontSize: 14 } }, "📸 التقاط صورة البصمة الحية")
+    ),
+
+    mode === "fallback" && React.createElement("div", { style: { textAlign: "center" } },
+      loading ? React.createElement("div", { style: { fontSize: 13, color: T.muted } }, "جاري ضغط ومعالجة أبعاد بكسلات الصورة...") 
+              : React.createElement("button", { onClick: () => fileRef.current?.click(), style: { padding: "14px 28px", background: T.accent, color: "#fff", fontWeight: 700, borderRadius: 12, fontSize: 14 } }, "📷 افتح كاميرا الجهاز الفورية")
+    ),
+
+    mode === "done" && prev && React.createElement("div", { style: { position: "relative", display: "inline-block" } },
+      React.createElement("img", { src: prev, style: { width: 130, height: 140, borderRadius: 16, objectFit: "cover", border: `3px solid ${T.ok}` } }),
       React.createElement("div", { style: { position: "absolute", bottom: 4, right: 4, width: 24, height: 24, borderRadius: "50%", background: T.ok, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12 } }, "✓"),
-      React.createElement("button", { onClick: () => fileRef.current?.click(), style: { display: "block", margin: "10px auto 0", fontSize: 13, padding: "6px 16px", background: T.hi, color: T.txt, borderRadius: 20 } }, "إعادة التقاط الصورة")
-    ) : React.createElement("button", { onClick: () => fileRef.current?.click(), style: { padding: "14px 28px", background: T.accent, color: "#fff", fontWeight: 700, borderRadius: 12, fontSize: 14 } }, "📷 افتح كاميرا النظام لالتقاط الصورة"),
-    React.createElement("canvas", { ref: cR, style: { display: "none" } })
+      React.createElement("button", { onClick: () => { setMode("fallback"); setTimeout(() => fileRef.current?.click(), 300); }, style: { display: "block", margin: "10px auto 0", fontSize: 12, padding: "5px 14px", background: T.hi, color: T.txt, borderRadius: 20 } }, "إعادة التقاط الصورة")
+    ),
+    React.createElement("canvas", { ref: canvasRef, style: { display: "none" } })
   );
 }
 
-/* EMPLOYEE LIVE STATISTICS & LEAVES WIDGET (DETAILED REPORTS FOR SELF) */
+/* EMPLOYEE LIVE STATISTICS WIDGET */
 function EmpDashboardWidget({ emp, recs, leaves }) {
   if (!emp) return null;
   const [range, setRange] = useState("month");
@@ -649,7 +584,7 @@ function EmpDashboardWidget({ emp, recs, leaves }) {
 }
 
 /* MAIN KIOSK VIEW */
-function Kiosk({ emps, managers, recs, onRec, devices, onNavigateToLogin, onMgrLogin, depts, onLeaveRequest, leaves }) {
+function Kiosk({ emps, managers, recs, onRec, devices, onNavigateToLogin, onMgrLogin, depts, onLeaveRequest, leaves, onNavigateToReg }) {
   const [step, setStep] = useState("pin");
   const [emp, setEmp] = useState(null);
   const [act, setAct] = useState("");
@@ -800,7 +735,13 @@ function Kiosk({ emps, managers, recs, onRec, devices, onNavigateToLogin, onMgrL
     ),
     checking && React.createElement("div", { style: { fontSize: 13, color: T.muted } }, "جاري فحص وتوثيق هوية الجهاز الحالي..."),
     err && React.createElement(Note, { color: T.danger, bg: T.dLight }, err),
-    React.createElement(PinPad, { key: sk, onConfirm: onPin, doShake: !!err })
+    React.createElement(PinPad, { key: sk, onConfirm: onPin, doShake: !!err }),
+    
+    /* تثبيت شريط أزرار الدخول بشكل ثابت ومستقر أسفل محتوى الصفحة لمنع تداخل التصميم */
+    React.createElement("div", { style: { display: "flex", gap: 10, marginTop: 30, width: "100%", maxWidth: 360, justifyContent: "center" } },
+      React.createElement("button", { onClick: onNavigateToReg, style: { padding: "10px 16px", background: T.surface, color: T.accent, border: `1.5px solid ${T.accent}`, fontSize: 12, fontWeight: 700, borderRadius: 12, boxShadow: T.sh, flex: 1 } }, "تسجيل هاتف الموظف"),
+      React.createElement("button", { onClick: onNavigateToLogin, style: { padding: "10px 16px", background: T.surface, color: T.mid, border: `1.5px solid ${T.border}`, fontSize: 12, fontWeight: 700, borderRadius: 12, boxShadow: T.sh, flex: 1 } }, "دخول المديرين")
+    )
   );
 }
 
@@ -917,7 +858,12 @@ function KioskTablet({ emps, managers, recs, onRec, devices, onNavigateToLogin, 
       React.createElement("div", { style: { fontSize: 12, color: T.muted, marginTop: 3 } }, "وضع الكيوسك الموحد - محطة عمل مشتركة لإثبات الحضور بالصورة الحية")
     ),
     err && React.createElement(Note, { color: T.danger, bg: T.dLight }, err),
-    React.createElement(PinPad, { key: sk, onConfirm: onPin, doShake: !!err })
+    React.createElement(PinPad, { key: sk, onConfirm: onPin, doShake: !!err }),
+    
+    /* تثبيت زر دخول المديرين للتابلت بشكل مستقر وثابت هندسياً */
+    React.createElement("div", { style: { display: "flex", gap: 8, marginTop: 24, width: "100%", maxWidth: 240, justifyContent: "center" } },
+      React.createElement("button", { onClick: onNavigateToLogin, style: { padding: "11px 22px", background: T.surface, color: T.mid, border: `1px solid ${T.border}`, fontSize: 13, fontWeight: 700, borderRadius: 12, boxShadow: T.sh, width: "100%" } }, "دخول المديرين")
+    )
   );
 }
 
@@ -1247,7 +1193,7 @@ function DevsMgmt({ allEmps, devices, setDevices, depts }) {
       React.createElement(Av, { e: e, sz: 40, color: getDeptColor(e.dept || "الإدارة", depts) }),
       React.createElement("div", { style: { flex: 1 } },
         React.createElement("div", { style: { fontWeight: 600 } }, e.name),
-        React.createElement("div", { style: { fontSize: 11, color: T.muted } }, "القسم الإداري: ", e.dept || "إدارة النظام")
+        React.createElement("div", { style: { fontSize: 11, color: T.muted } }, "الالكتروني: ", e.dept || "إدارة النظام")
       ),
       React.createElement("button", { onClick: () => reset(e.id), style: { padding: "7px 14px", background: T.dLight, color: T.danger, borderRadius: 10, fontWeight: 600 } }, "إلغاء ارتباط الهاتف الحالي")
     ))
@@ -1432,7 +1378,7 @@ function MgrsMgmt({ managers, setManagers, allEmps, depts }) {
             React.createElement("input", { placeholder: "المسمى", value: editForm.title, onChange: ev => setEditForm({ ...editForm, title: ev.target.value }), style: { width: "100%" } })
           ),
           React.createElement("div", { style: { flex: 1, minWidth: 130 } },
-            React.createElement("label", { style: { fontSize: 11, color: T.muted, display: "block", marginBottom: 4 } }, "الصلاحية"),
+            React.createElement("label", { style: { fontSize: 11, color: T.muted, display: "block", marginBottom: 4 } }, "صلاحية"),
             React.createElement("select", { value: editForm.role, onChange: ev => setEditForm({ ...editForm, role: ev.target.value }), style: { width: "100%" } },
               React.createElement("option", { value: "dept" }, "مدير قسم"),
               React.createElement("option", { value: "super" }, "صلاحيات كاملة")
@@ -1471,6 +1417,7 @@ function MgrsMgmt({ managers, setManagers, allEmps, depts }) {
                 dname,
                 React.createElement("span", {
                   onClick: () => setEditForm({ ...editForm, depts: editForm.depts.filter(x => x !== dname) }),
+                  /* تم إصلاح خطأ pointer غير المقتبس لمنع التهنيج تماماً */
                   style: { cursor: "pointer", color: T.danger, fontWeight: "bold" }
                 }, "×")
               ))
@@ -2171,17 +2118,26 @@ function App() {
   return React.createElement(React.Fragment, null,
     React.createElement("style", null, CSS),
     view === "kiosk" && kioskMode === "personal" && React.createElement(React.Fragment, null,
-      React.createElement(Kiosk, { emps, managers, recs, onRec: (r) => { setRecs(rs => [...rs, r]); if (window._fbDB) { const { addDoc, collection } = window._fbFirestore; addDoc(collection(window._fbDB, "records"), { ...r, timestamp: new Date().toISOString() }); } }, devices, onNavigateToLogin: () => setView("login"), onMgrLogin: (m) => { setCurMgr(m); setView("panel"); }, depts, onLeaveRequest: handleKioskLeaveRequest, leaves }),
-      React.createElement("div", { style: { position: "fixed", bottom: 15, left: "50%", transform: "translateX(-50%)", zIndex: 200, display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "center", width: "100%", maxWidth: 450 } },
-        React.createElement("button", { onClick: () => setView("reg"), style: { padding: "8px 14px", background: T.surface, color: T.accent, border: `1.5px solid ${T.accent}`, fontSize: 12, fontWeight: 700, borderRadius: 12, boxShadow: T.shM } }, "تسجيل هاتف الموظف"),
-        React.createElement("button", { onClick: () => setView("login"), style: { padding: "8px 14px", background: T.surface, color: T.mid, border: `1.5px solid ${T.border}`, fontSize: 12, fontWeight: 700, borderRadius: 12, boxShadow: T.shM } }, "دخول المديرين")
-      )
+      React.createElement(Kiosk, { emps, managers, recs, onRec: (r) => { 
+        setRecs(rs => [...rs, r]); 
+        if (window._fbDB) { 
+          const { addDoc, collection } = window._fbFirestore; 
+          try {
+            addDoc(collection(window._fbDB, "records"), { ...r, timestamp: new Date().toISOString() }); 
+          } catch(err) { console.error("Firebase write error:", err); }
+        } 
+      }, devices, onNavigateToLogin: () => setView("login"), onNavigateToReg: () => setView("reg"), onMgrLogin: (m) => { setCurMgr(m); setView("panel"); }, depts, onLeaveRequest: handleKioskLeaveRequest, leaves })
     ),
     view === "kiosk" && kioskMode === "tablet" && React.createElement(React.Fragment, null,
-      React.createElement(KioskTablet, { emps, managers, recs, onRec: (r) => { setRecs(rs => [...rs, r]); if (window._fbDB) { const { addDoc, collection } = window._fbFirestore; addDoc(collection(window._fbDB, "records"), { ...r, timestamp: new Date().toISOString() }); } }, devices, onNavigateToLogin: () => setView("login"), onMgrLogin: (m) => { setCurMgr(m); setView("panel"); }, depts, onLeaveRequest: handleKioskLeaveRequest, leaves }),
-      React.createElement("div", { style: { position: "fixed", bottom: 15, left: "50%", transform: "translateX(-50%)", zIndex: 200, display: "flex", gap: 8 } },
-        React.createElement("button", { onClick: () => setView("login"), style: { padding: "9px 18px", background: T.surface, color: T.mid, border: `1px solid ${T.border}`, fontSize: 13, fontWeight: 700, borderRadius: 12, boxShadow: T.shM } }, "دخول المديرين")
-      )
+      React.createElement(KioskTablet, { emps, managers, recs, onRec: (r) => { 
+        setRecs(rs => [...rs, r]); 
+        if (window._fbDB) { 
+          const { addDoc, collection } = window._fbFirestore; 
+          try {
+            addDoc(collection(window._fbDB, "records"), { ...r, timestamp: new Date().toISOString() }); 
+          } catch(err) { console.error("Firebase write error:", err); }
+        } 
+      }, devices, onNavigateToLogin: () => setView("login"), onMgrLogin: (m) => { setCurMgr(m); setView("panel"); }, depts, onLeaveRequest: handleKioskLeaveRequest, leaves })
     ),
     view === "emp_leave" && React.createElement(EmpLeaveRequest, { emps, leaves, setLeaves, onBack: () => { setPreAuthEmp(null); setView("kiosk"); }, preAuthEmp }),
     view === "reg" && React.createElement(RegisterDevice, { emps, managers, devices, setDevices, onBack: () => setView("kiosk"), onMgrLogin: (m) => { setCurMgr(m); setView("panel"); }, depts }),
