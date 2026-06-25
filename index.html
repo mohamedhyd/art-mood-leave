@@ -1483,7 +1483,7 @@ function MgrsMgmt({ managers, setManagers, allEmps, depts }) {
       let customBadgeText = "";
       if (m.name.includes("عبدالله")) {
         const subMgrsCount = managers.filter(x => x.name.includes("محمد") || x.name.includes("شادي")).length;
-        customBadgeText = `${subMgrsCount} مدراء + ${allEmps.length} موظفين`;
+        customBadgeText = `${allEmps.length} موظفين`;
       } else if (m.name.includes("محمد")) {
         const subMgrsCount = managers.filter(x => x.name.includes("شادي")).length;
         customBadgeText = `${subMgrsCount} مدير + ${allEmps.length} موظفين`;
