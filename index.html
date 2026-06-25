@@ -152,6 +152,7 @@ function isLateForShift(time, shiftKey) {
   return checkInMins > LATE_AFTER;
 }
 
+// تعديل ليعمل التقرير بشكل صحيح في عام 2026 الحالي
 function isWorkDay(dateStr) {
   const day = new Date(dateStr).getDay();
   return WORK_DAYS.includes(day);
@@ -463,7 +464,7 @@ function SelfieWidget({ onCapture, empName }) {
       } else { return false; }
     }
     
-    // حل مشكلة الصورة السوداء نهائياً: إذا انتهى الوقت والصورة لا تزال سوداء أو الكاميرا مغلقة، تفتح الكاميرا الأساسية مباشرة وبصمت
+    // إذا علقت الكاميرا سوداء عند انتهاء العد التنازلي يتم فتح كاميرا الهاتف الأساسية فوراً وبدون تعليق
     if (force && brightnessOf(ctx, w, h) < 15) {
       stopAll();
       if (fileRef.current) fileRef.current.click();
@@ -472,7 +473,6 @@ function SelfieWidget({ onCapture, empName }) {
     
     if (!force && brightnessOf(ctx, w, h) < 15) return false;
     
-    // الختم المائي الرقمي المدمج كلياً لمنع التزوير وإثبات الهوية والوقت الفعلي بالثانية
     ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
     ctx.fillRect(0, h - 45, w, 45);
     ctx.fillStyle = "#FFFFFF";
@@ -517,7 +517,6 @@ function SelfieWidget({ onCapture, empName }) {
       });
   }
 
-  // تشغيل الكاميرا تلقائياً ومباشرة فور فتح شاشة الالتقاط لتعمل اوتوماتيك
   useEffect(() => {
     start();
     return () => stopAll();
@@ -561,7 +560,6 @@ function SelfieWidget({ onCapture, empName }) {
         const ctx = c.getContext("2d");
         ctx.drawImage(img, 0, 0);
         
-        // دمج الختم المائي للصورة الملتقطة بكاميرا الهاتف الخارجية أيضاً
         ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
         ctx.fillRect(0, c.height - 45, c.width, 45);
         ctx.fillStyle = "#FFFFFF";
@@ -582,12 +580,11 @@ function SelfieWidget({ onCapture, empName }) {
 
   return React.createElement("div", { style: { display: "flex", flexDirection: "column", alignItems: "center", gap: 12 } },
     React.createElement("input", { ref: fileRef, type: "file", accept: "image/*", capture: "user", style: { display: "none" }, onChange: handleFile }),
-    st === "loading" && React.createElement("div", { style: { fontSize: 14, color: T.muted, padding: 10 } }, "جاري محاولة تشغيل الكاميرا التلقائية..."),
+    st === "loading" && React.createElement("div", { style: { fontSize: 14, color: T.muted, padding: 10 } }, "جاري تفعيل حساس الكاميرا الآمن..."),
     st === "live" && React.createElement("div", { style: { position: "relative", borderRadius: 16, overflow: "hidden", border: "2px solid #6366F1" } },
       React.createElement("video", { ref: vR, autoPlay: true, playsInline: true, muted: true, style: { width: 340, height: 340, display: "block", objectFit: "cover", transform: "scaleX(-1)", background: "#000" } }),
       React.createElement("div", { style: { position: "absolute", bottom: 8, left: "50%", transform: "translateX(-50%)", background: "rgba(99,102,241,0.92)", color: "#fff", fontSize: 12, padding: "4px 14px", borderRadius: 20, fontWeight: 600 } }, count > 0 ? `التقاط ذاتي خلال ${count}...` : "جاري الالتقاط...")
     ),
-    (st === "live" || st === "loading") && React.createElement("button", { onClick: () => { stopAll(); if (fileRef.current) fileRef.current.click(); }, style: { padding: "8px 16px", background: T.hi, color: T.mid, fontSize: 12, fontWeight: 600, borderRadius: 10, border: `1px solid ${T.border}` } }, "الكاميرا سوداء؟ اضغط لفتح كاميرا الهاتف الرسمية"),
     st === "done" && prev && React.createElement("div", { style: { position: "relative", display: "inline-block" } },
       React.createElement("img", { src: prev, style: { width: 90, height: 90, borderRadius: "50%", objectFit: "cover", border: "3px solid #10B981", display: "block" } }),
       React.createElement("div", { style: { position: "absolute", bottom: 2, right: 2, width: 22, height: 22, borderRadius: "50%", background: "#10B981", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12 } }, "\u2713"),
@@ -1180,7 +1177,7 @@ function RegisterDevice({ emps, managers, devices, setDevices, onBack, onMgrLogi
       React.createElement("div", { style: { fontWeight: 700, fontSize: 16 } }, emp.name),
       React.createElement("div", { style: { background: T.surface, border: `1px solid ${T.border}`, borderRadius: 16, padding: 18, width: "100%", maxWidth: 340, boxShadow: T.sh } },
         React.createElement(Row, { l: "الرمز التوثيقي المكتشف", v: React.createElement("span", { className: "mono", style: { fontSize: 11, color: T.accent } }, fp?.slice(0, 18), "...") }),
-        React.createElement("div", { style: { marginTop: 14, background: T.wLight, border: "1px solid #FCD34D", borderRadius: 10, padding: "10px 14px", fontSize: 12, color: T.warn } }, "تنبيه حماية: بمجرد إتمام الارتباط التلقائي، لن يتم قبول تسجيل الحضور الخاص بك إلا من خلال this الهاتف حصراً")
+        React.createElement("div", { style: { marginTop: 14, background: T.wLight, border: "1px solid #FCD34D", borderRadius: 10, padding: "10px 14px", fontSize: 12, color: T.warn } }, "تنبيه حماية: بمجرد إتمام الارتباط التلقائي، لن يتم قبول تسجيل الحضور الخاص بك إلا من خلال هذا الهاتف حصراً")
       ),
       React.createElement("button", { onClick: confirm, style: { padding: "12px 28px", background: T.accent, color: "#fff", fontWeight: 700, fontSize: 14, borderRadius: 12 } }, "ربط واعتماد هذا الهاتف ذكياً"),
       React.createElement("button", { onClick: () => setStep("pin"), style: { background: "none", color: T.muted, fontSize: 13, padding: 8 } }, "إلغاء وتراجع")
@@ -1226,7 +1223,7 @@ function MgrLogin({ managers, onLogin, onBack }) {
   );
 }
 
-/* LEAVES MANAGEMENT VIEW (WITH MANAGER SELF REQUEST CAPABILITIES) */
+/* LEAVES MANAGEMENT VIEW */
 function Leaves({ emps, leaves, setLeaves, managers = [], depts, mgr }) {
   const [form, setForm] = useState({ empId: "", date: todayStr(), type: "سنوية", reason: "" });
 
@@ -1434,8 +1431,11 @@ function MgrsMgmt({ managers, setManagers, allEmps, depts }) {
   }
 
   return React.createElement("div", { style: { padding: "20px 0", display: "flex", flexDirection: "column", gap: 16 } },
+    React.createElement("div", { style: { background: T.accent, color: "#fff", padding: "10px 18px", borderRadius: 12, fontSize: 13, fontWeight: 700, textAlign: "center" } }, 
+      `👥 إجمالي عدد المديرين المسجلين في النظام: ${managers.length} مدير`
+    ),
     React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
-      React.createElement("h3", null, "المديرين"),
+      React.createElement("h3", null, "قائمة السادة المديرين"),
       React.createElement("button", { onClick: () => setAdding(!adding), style: { padding: "10px 20px", background: T.accent, color: "#fff", fontWeight: 700 } }, adding ? "إلغاء" : "إضافة مدير")
     ),
     adding && React.createElement("div", { className: "fade", style: { background: T.surface, border: `1.5px solid ${T.accent}`, borderRadius: 18, padding: 22 } },
@@ -1484,14 +1484,8 @@ function MgrsMgmt({ managers, setManagers, allEmps, depts }) {
     ),
     React.createElement("div", { style: { fontSize: 12, color: T.muted, marginBottom: 4 } }, "💡 يمكنك سحب الحسابات لأعلى وأسفل لإعادة ترتيب صفوف المديرين حركياً:"),
     managers.map((m, idx) => {
-      // إعداد منطق الأعداد الهيكلية المحدث والمطلوب بدقة
-      let customBadgeText = "";
-      if (m.name.includes("عبدالله") || m.name.includes("محمد") || m.name.includes("شادي")) {
-        const totalAll = managers.length + allEmps.length;
-        customBadgeText = `${totalAll} (كل المديرين والموظفين)`;
-      } else {
-        customBadgeText = `${countEmps(m)} موظف`;
-      }
+      // إظهار عدد الموظفين التابعين للقسم التابع له المدير فقط
+      const totalDeptEmps = countEmps(m);
 
       return React.createElement("div", { 
         key: m.id,
@@ -1519,7 +1513,7 @@ function MgrsMgmt({ managers, setManagers, allEmps, depts }) {
           React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 14 } },
             React.createElement(MgrAv, { m: m, sz: 46, depts: depts }),
             React.createElement("div", null,
-              React.createElement("div", { style: { fontWeight: 700, fontSize: 15 } }, m.name, m.role === "super" ? " (كل الأقسام)" : ` (${m.depts?.join("، ") || "لا توجد أقسام"})`, "  ", React.createElement("span", { style: { fontSize: 12, fontWeight: 700, color: T.accent, background: T.aLight, padding: "2px 10px", borderRadius: 20 } }, customBadgeText)),
+              React.createElement("div", { style: { fontWeight: 700, fontSize: 15 } }, `${idx + 1}. ${m.name}`, m.role === "super" ? " (كل الأقسام)" : ` (${m.depts?.join("، ") || "لا توجد أقسام"})`, "  ", React.createElement("span", { style: { fontSize: 12, fontWeight: 700, color: T.accent, background: T.aLight, padding: "2px 10px", borderRadius: 20 } }, `${totalDeptEmps} موظف تابع`)),
               React.createElement("div", { style: { fontSize: 12, color: T.muted, marginTop: 3 } }, (m.role === "super" ? "صلاحيات كاملة" : ("مدير قسم | الأقسام: " + ((m.depts && m.depts.join("، ")) || "—"))), " | الشيفت: ", (SHIFTS[m.shift || DEFAULT_SHIFT]?.label), " | PIN: ", m.pin)
             )
           ),
@@ -1573,7 +1567,7 @@ function MgrsMgmt({ managers, setManagers, allEmps, depts }) {
                 dname,
                 React.createElement("span", {
                   onClick: () => setEditForm({ ...editForm, depts: editForm.depts.filter(x => x !== dname) }),
-                  style: { cursor: pointer, color: T.danger, fontWeight: "bold" }
+                  style: { cursor: "pointer", color: T.danger, fontWeight: "bold" }
                 }, "×")
               ))
             )
@@ -1652,8 +1646,11 @@ function EmpsMgmt({ emps, setEmps, managers, depts }) {
   }
 
   return React.createElement("div", { style: { padding: "20px 0", display: "flex", flexDirection: "column", gap: 16 } },
+    React.createElement("div", { style: { background: T.ok, color: "#fff", padding: "10px 18px", borderRadius: 12, fontSize: 13, fontWeight: 700, textAlign: "center" } }, 
+      `💼 إجمالي عدد الموظفين المسجلين في النظام: ${emps.length} موظف`
+    ),
     React.createElement("div", { style: { display: "flex", justifyContent: "space-between", alignItems: "center" } },
-      React.createElement("h3", null, "الموظفين"),
+      React.createElement("h3", null, "قائمة الموظفين"),
       React.createElement("button", { onClick: () => setAdding(!adding), style: { padding: "10px 20px", background: T.accent, color: "#fff", fontWeight: 700 } }, adding ? "إلغاء" : "إضافة موظف")
     ),
     adding && React.createElement("div", { className: "fade", style: { background: T.surface, border: `1.5px solid ${T.accent}`, borderRadius: 18, padding: 22 } },
@@ -1698,7 +1695,7 @@ function EmpsMgmt({ emps, setEmps, managers, depts }) {
         React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 12 } },
           React.createElement(Av, { e: e, sz: 38, color: getDeptColor(e.dept, depts) }),
           React.createElement("div", null,
-            React.createElement("div", { style: { fontWeight: 600 } }, e.name),
+            React.createElement("div", { style: { fontWeight: 600 } }, `${idx + 1}. ${e.name}`),
             React.createElement("div", { style: { fontSize: 11, color: T.muted, display: "flex", alignItems: "center", gap: 5, marginTop: 2 } }, 
               "القسم: ", 
               React.createElement("span", { style: { color: getDeptColor(e.dept, depts), fontWeight: 700 } }, e.dept), 
@@ -1855,8 +1852,15 @@ function AttendDash({ emps, recs, leaves, isSuper, depts }) {
           };
           const sd = stMap[status];
           const dynamicColor = e._isMgr ? (e.role === 'super' ? T.gold : getDeptColor(e.depts?.[0], depts)) : getDeptColor(e.dept, depts);
+          
+          // البحث عن صورة البصمة المسجلة اليوم للموظف
+          const todaysInRec = todayR.find(x => x.empId === e.id && x.type === "in");
+          const todaysOutRec = todayR.find(x => x.empId === e.id && x.type === "out");
+          const photoUrl = todaysInRec?.selfieUrl || todaysOutRec?.selfieUrl;
+
           return React.createElement("div", { key: e.id, style: { display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", background: T.surface, border: `1px solid ${T.border}`, borderRadius: 12 } },
-            React.createElement(Av, { e: e, sz: 40, color: dynamicColor }),
+            photoUrl ? React.createElement("img", { src: photoUrl, style: { width: 40, height: 40, borderRadius: "50%", objectFit: "cover", border: `2px solid ${T.accent}`, flexShrink: 0 } })
+                     : React.createElement(Av, { e: e, sz: 40, color: dynamicColor }),
             React.createElement("div", { style: { flex: 1 } },
               React.createElement("div", { style: { fontWeight: 600, color: T.txt, fontSize: 14 } }, e.name),
               React.createElement("span", { style: { fontSize: 11, color: dynamicColor, fontWeight: 700, background: dynamicColor + "10", padding: "2px 8px", borderRadius: 10 } }, e.dept)
@@ -2050,12 +2054,18 @@ function Reports({ emps, recs, depts, leaves }) {
               }
 
               const dynamicColor = e._isMgr ? (e.role === 'super' ? T.gold : getDeptColor(e.depts?.[0], depts)) : getDeptColor(e.dept, depts);
+              
+              // سحب الصورة في خانة التقرير اليومي الفردي لعرض بيكسلات الحضور بجانب الحساب
+              const reportInRec = dayData.find(x => x.date === reportDate && x.type === "in");
+              const reportOutRec = dayData.find(x => x.date === reportDate && x.type === "out");
+              const reportPhotoUrl = reportInRec?.selfieUrl || reportOutRec?.selfieUrl;
 
               if (range === "day") {
                 return React.createElement("tr", { key: e.id, style: { borderBottom: `1px solid ${T.border}` } },
                   React.createElement("td", { style: { padding: "10px 8px" } },
                     React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 8 } },
-                      React.createElement(Av, { e: e, sz: 32, color: dynamicColor }),
+                      reportPhotoUrl ? React.createElement("img", { src: reportPhotoUrl, style: { width: 32, height: 32, borderRadius: "50%", objectFit: "cover", border: `1.5px solid ${T.accent}`, flexShrink: 0 } })
+                                     : React.createElement(Av, { e: e, sz: 32, color: dynamicColor }),
                       React.createElement("div", null,
                         React.createElement("div", { style: { fontWeight: 600, color: T.txt } }, e.name),
                         React.createElement("span", { style: { fontSize: 10, color: dynamicColor, fontWeight: 700 } }, e.dept)
@@ -2120,7 +2130,7 @@ function MgrPanel({ mgr, allEmps, setAllEmps, recs, setRecs, leaves, setLeaves, 
   ] : [
     { id: "dash", l: "طاقم فريقي الحالي" },
     { id: "rep", l: "تقارير الحضور" },
-    { id: "leave", l: "الإجازات" }
+    { id: "leave", l: "إجازات فريقي" }
   ];
 
   const combinedPeopleForDevices = [...allEmps, ...managers.map(m => ({ id: m.id, name: m.name, dept: m.role === "super" ? "الإدارة العليا" : (m.depts?.[0] || "الإدارة") }))];
