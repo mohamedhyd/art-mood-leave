@@ -654,7 +654,7 @@ function MgrsMgmt({ managers, setManagers, allEmps, depts }) {
   function del(id) {
     if (confirm("هل تود حذف حساب المدير نهائياً؟")) {
       setManagers(p => p.filter(x => x.id !== id));
-      if (window._fbDB) window._fbFirestore.deleteDoc(doc(window._fbDB, "managers", id));
+      if (window._fbDB) window._fbFirestore.deleteDoc(window._fbFirestore.doc(window._fbDB, "managers", id));
     }
   }
 
@@ -663,7 +663,7 @@ function MgrsMgmt({ managers, setManagers, allEmps, depts }) {
     const id = "M" + String(Date.now()).slice(-5);
     const newMgr = { id, name: form.name.trim(), title: form.title.trim(), pin: form.pin.trim(), role: form.role, depts: form.role === "super" ? [] : form.depts, color: "#6366F1", shift: form.shift };
     setManagers(p => [...p, newMgr]);
-    if (window._fbDB) window._fbFirestore.setDoc(doc(window._fbDB, "managers", id), newMgr);
+    if (window._fbDB) window._fbFirestore.setDoc(window._fbFirestore.doc(window._fbDB, "managers", id), newMgr);
     setForm({ name: "", title: "", pin: "", role: "dept", depts: [], color: "#6366F1", shift: DEFAULT_SHIFT });
     setAdding(false);
   }
@@ -729,14 +729,14 @@ function EmpsMgmt({ emps, setEmps, managers, depts }) {
     const id = "E" + String(Date.now()).slice(-5);
     const newEmp = { id, ...form, name: form.name.trim(), pin: form.pin.trim() };
     setEmps(p => [...p, newEmp]);
-    if (window._fbDB) window._fbFirestore.setDoc(doc(window._fbDB, "employees", id), newEmp);
+    if (window._fbDB) window._fbFirestore.setDoc(window._fbFirestore.doc(window._fbDB, "employees", id), newEmp);
     setAdding(false);
   }
 
   function del(id) {
     if (confirm("هل تود حذف الموظف نهائياً؟")) {
       setEmps(p => p.filter(x => x.id !== id));
-      if (window._fbDB) window._fbFirestore.deleteDoc(doc(window._fbDB, "employees", id));
+      if (window._fbDB) window._fbFirestore.deleteDoc(window._fbFirestore.doc(window._fbDB, "employees", id));
     }
   }
 
@@ -862,7 +862,7 @@ function Reports({ emps, recs, depts, leaves }) {
   );
 }
 
-/* المكونات الإضافية المفقودة التي تم بناؤها لإصلاح المشكلة */
+/* المكونات الإضافية */
 
 function MgrLogin({ managers, onLogin, onBack }) {
   const [err, setErr] = useState("");
@@ -891,8 +891,8 @@ function EmpLeaveRequest({ emps, leaves, setLeaves, onBack, preAuthEmp }) {
   function submit() {
     const id = "L" + String(Date.now()).slice(-5);
     const newLeave = { id, empId: preAuthEmp?.id || "", empName: preAuthEmp?.name || "", type, date, notes, status: "pending" };
-    setLeaves(p => [...p, newLeave]);
-    if (window._fbDB) window._fbFirestore.setDoc(doc(window._fbDB, "leaves", id), newLeave);
+    if (setLeaves) setLeaves(p => [...p, newLeave]);
+    if (window._fbDB) window._fbFirestore.setDoc(window._fbFirestore.doc(window._fbDB, "leaves", id), newLeave);
     setDone(true);
     setTimeout(() => { onBack(); }, 2000);
   }
@@ -907,7 +907,7 @@ function EmpLeaveRequest({ emps, leaves, setLeaves, onBack, preAuthEmp }) {
           React.createElement("option", { value: "إجازة مرضية" }, "إجازة مرضية"),
           React.createElement("option", { value: "عارضة" }, "إجازة عارضة")
         ),
-        React.createElement("label", { style: { fontSize: 12, color: T.mid, fontWeight: 600 } }, "تاريخ تاريخ الإجازة"),
+        React.createElement("label", { style: { fontSize: 12, color: T.mid, fontWeight: 600 } }, "تاريخ الإجازة"),
         React.createElement("input", { type: "date", value: date, onChange: e => setDate(e.target.value) }),
         React.createElement("label", { style: { fontSize: 12, color: T.mid, fontWeight: 600 } }, "ملاحظات أو مبررات الطلب"),
         React.createElement("input", { placeholder: "اكتب المبرر هنا...", value: notes, onChange: e => setNotes(e.target.value) }),
@@ -927,7 +927,7 @@ function MgrPanel({ mgr, allEmps, setAllEmps, recs, setRecs, leaves, setLeaves, 
       React.createElement("div", { style: { background: T.surface, padding: 16, borderRadius: 16, border: `1px solid ${T.border}`, display: "flex", justifyContent: "space-between", alignItems: "center", boxShadow: T.sh } },
         React.createElement("div", { style: { textAlign: "right" } },
           React.createElement("div", { style: { fontWeight: 700, fontSize: 16 } }, `مرحباً أ/ ${mgr.name}`),
-          React.createElement("div", { style: { fontSize: 12, color: T.muted } }, mgr.role === "super" ? "مدير بالنظام - صلاحيات كاملة" : "لوحة تحكم الأقسام")
+          React.createElement("div", { style: { fontSize: 12, color: T.muted } }, mgr.role === "super" ? "مدير بالنظام - صلاحiات كاملة" : "لوحة تحكم الأقسام")
         ),
         React.createElement("button", { onClick: onExit, style: { padding: "8px 16px", background: T.dLight, color: T.danger, fontWeight: 600, borderRadius: 12 } }, "خروج آمن")
       ),
@@ -968,22 +968,22 @@ function App() {
 
   useEffect(() => {
     if (!window._fbDB) return;
-    window._fbFirestore.onSnapshot(collection(window._fbDB, "employees"), s => setEmps(s.docs.map(d => ({id: d.id, ...d.data()}))));
-    window._fbFirestore.onSnapshot(query(collection(window._fbDB, "records"), orderBy("timestamp", "asc")), s => setRecs(s.docs.map(d => ({id: d.id, ...d.data()}))));
-    window._fbFirestore.onSnapshot(collection(window._fbDB, "managers"), s => setManagers(s.docs.map(d => ({id: d.id, ...d.data()}))));
-    window._fbFirestore.onSnapshot(collection(window._fbDB, "leaves"), s => setLeaves(s.docs.map(d => ({id: d.id, ...d.data()}))));
-    window._fbFirestore.onSnapshot(collection(window._fbDB, "devices"), s => { const o={}; s.docs.forEach(d => o[d.id]=d.data()); setDevices(o); });
+    const { collection, query, orderBy, onSnapshot } = window._fbFirestore;
+    onSnapshot(collection(window._fbDB, "employees"), s => setEmps(s.docs.map(d => ({id: d.id, ...d.data()}))));
+    onSnapshot(query(collection(window._fbDB, "records"), orderBy("timestamp", "asc")), s => setRecs(s.docs.map(d => ({id: d.id, ...d.data()}))));
+    onSnapshot(collection(window._fbDB, "managers"), s => setManagers(s.docs.map(d => ({id: d.id, ...d.data()}))));
+    onSnapshot(collection(window._fbDB, "leaves"), s => setLeaves(s.docs.map(d => ({id: d.id, ...d.data()}))));
+    onSnapshot(collection(window._fbDB, "devices"), s => { const o={}; s.docs.forEach(d => o[d.id]=d.data()); setDevices(o); });
   }, []);
 
   return React.createElement(React.Fragment, null,
     React.createElement("style", null, CSS),
     view === "kiosk" && React.createElement(React.Fragment, null,
-      React.createElement(KioskWrapper, { emps, managers, recs, onRec: (r) => { setRecs(p=>[...p, r]); if(window._fbDB) window._fbFirestore.addDoc(collection(window._fbDB, "records"), {...r, timestamp: new Date().toISOString()}) }, devices, depts, kioskMode, onLeaveRequest: (e) => { setPreAuthEmp(e); setView("emp_leave"); } }),
+      React.createElement(KioskWrapper, { emps, managers, recs, onRec: (r) => { setRecs(p=>[...p, r]); if(window._fbDB) window._fbFirestore.addDoc(window._fbFirestore.collection(window._fbDB, "records"), {...r, timestamp: new Date().toISOString()}) }, devices, depts, kioskMode, onNavigateToLogin: () => setView("login") }),
       React.createElement("div", { style: { position: "fixed", bottom: 15, left: "50%", transform: "translateX(-50%)", zIndex: 200, display: "flex", gap: 8 } },
         React.createElement("button", { onClick: () => setView("login"), style: { padding: "8px 18px", background: T.surface, border: `1px solid ${T.border}`, borderRadius: 12, fontWeight: 700 } }, "دخول المديرين")
       )
     ),
-    view === "emp_leave" && React.createElement(EmpLeaveRequest, { emps, leaves, setLeaves, onBack: () => { setPreAuthEmp(null); setView("kiosk"); }, preAuthEmp }),
     view === "login" && React.createElement(MgrLogin, { managers, onLogin: m => { setCurMgr(m); setView("panel") }, onBack: () => setView("kiosk") }),
     view === "panel" && curMgr && React.createElement(MgrPanel, { mgr: curMgr, allEmps: emps, setAllEmps: setEmps, recs, setRecs, leaves, setLeaves, devices, setDevices, managers, setManagers, kioskMode, setKioskMode, depts, setDepts, onExit: () => { setCurMgr(null); setView("kiosk") } })
   );
