@@ -536,6 +536,7 @@ function SelfieWidget({ onCapture }) {
 
 /* MAIN KIOSK VIEW */
 function Kiosk({ emps, managers, recs, onRec, devices, onNavigateToLogin, onMgrLogin }) {
+  const filteredEmps = emps.filter(e => !e.name.includes("عبدالله") && !e.name.includes("محمد"));
   const [step, setStep] = useState("pin");
   const [emp, setEmp] = useState(null);
   const [act, setAct] = useState("");
@@ -554,7 +555,7 @@ function Kiosk({ emps, managers, recs, onRec, devices, onNavigateToLogin, onMgrL
   }
 
   async function onPin(pin) {
-    let e = emps.find(x => x.pin === pin);
+    let e = filteredEmps.find(x => x.pin === pin);
     if (!e) {
       const mg = managers.find(x => x.pin === pin);
       if (mg) {
@@ -687,6 +688,7 @@ function Kiosk({ emps, managers, recs, onRec, devices, onNavigateToLogin, onMgrL
 
 /* TABLET KIOSK MODE */
 function KioskTablet({ emps, managers, recs, onRec, devices, onNavigateToLogin, onMgrLogin }) {
+  const filteredEmps = emps.filter(e => !e.name.includes("عبدالله") && !e.name.includes("محمد"));
   const [step, setStep] = useState("pin");
   const [emp, setEmp] = useState(null);
   const [act, setAct] = useState("");
@@ -703,7 +705,7 @@ function KioskTablet({ emps, managers, recs, onRec, devices, onNavigateToLogin, 
   }
 
   function onPin(pin) {
-    let e = emps.find(x => x.pin === pin);
+    let e = filteredEmps.find(x => x.pin === pin);
     if (!e) {
       const tm = managers && managers.find(x => x.pin === pin);
       if (tm) {
@@ -1040,7 +1042,7 @@ function MgrsMgmt({ managers, setManagers, allEmps }) {
       alert("حماية النظام: لا يمكن حذف المدير العام الأخير");
       return;
     }
-    if (!confirm("هل أنت متأكد من حذف هذا المدير؟")) return;
+    if (!confirm("هل أنت متأكد من حذف هذا المدير?")) return;
     setManagers(p => p.filter(m => m.id !== id));
     if (window._fbDB) {
       const { deleteDoc, doc } = window._fbFirestore;
@@ -1267,6 +1269,7 @@ function Settings({ kioskMode, setKioskMode, setRecs }) {
 
 /* MANAGEMENT CONTROLLER PANEL */
 function AttendDash({ emps, recs, leaves, isSuper }) {
+  const filteredEmps = emps.filter(e => !e.name.includes("عبدالله") && !e.name.includes("محمد"));
   const today = todayStr();
   const todayR = recs.filter(r => r.date === today);
   function st(id) {
@@ -1277,9 +1280,9 @@ function AttendDash({ emps, recs, leaves, isSuper }) {
     const rs = todayR.filter(x => x.empId === id && x.type === type);
     return rs.length ? rs[rs.length - 1].time : null;
   }
-  const present = emps.filter(e => st(e.id) === "in");
-  const done = emps.filter(e => st(e.id) === "done");
-  const absent = emps.filter(e => st(e.id) === "absent");
+  const present = filteredEmps.filter(e => st(e.id) === "in");
+  const done = filteredEmps.filter(e => st(e.id) === "done");
+  const absent = filteredEmps.filter(e => st(e.id) === "absent");
   const lateToday = todayR.filter(r => r.type === "in" && r.late);
 
   const stats = [
@@ -1298,8 +1301,8 @@ function AttendDash({ emps, recs, leaves, isSuper }) {
     ),
     React.createElement(Card, { title: "تفاصيل حضور اليوم" },
       React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8, marginTop: 8 } },
-        emps.length === 0 && React.createElement("div", { style: { color: T.muted, fontSize: 14, textAlign: "center", padding: 20 } }, "لا يوجد موظفون"),
-        emps.map(e => {
+        filteredEmps.length === 0 && React.createElement("div", { style: { color: T.muted, fontSize: 14, textAlign: "center", padding: 20 } }, "لا يوجد موظفون"),
+        filteredEmps.map(e => {
           const status = st(e.id);
           const inT = lastTime(e.id, "in");
           const outT = lastTime(e.id, "out");
@@ -1332,6 +1335,7 @@ function AttendDash({ emps, recs, leaves, isSuper }) {
 }
 
 function Reports({ emps, recs }) {
+  const filteredEmps = emps.filter(e => !e.name.includes("عبدالله") && !e.name.includes("محمد"));
   const [range, setRange] = useState("month");
   const [empFilter, setEmpFilter] = useState("all");
   const [reportDate, setReportDate] = useState(todayStr());
@@ -1350,7 +1354,7 @@ function Reports({ emps, recs }) {
   });
 
   function empStats(id) {
-    const empObj = emps.find(x => x.id === id);
+    const empObj = filteredEmps.find(x => x.id === id);
     const empShift = empObj ? empObj.shift : DEFAULT_SHIFT;
     const rs = periodRecs.filter(x => x.empId === id);
     const byDate = {};
@@ -1384,7 +1388,7 @@ function Reports({ emps, recs }) {
     return { totalHours, totalOvertime, days: Object.keys(byDate).length, present, late, absent, early };
   }
 
-  const shownEmps = empFilter === "all" ? emps : emps.filter(e => e.id === empFilter);
+  const shownEmps = empFilter === "all" ? filteredEmps : filteredEmps.filter(e => e.id === empFilter);
 
   function exportCSV() {
     const isDay = range === "day";
@@ -1444,7 +1448,7 @@ function Reports({ emps, recs }) {
         style: { padding: "8px 14px", border: `1px solid ${T.border}`, borderRadius: 10, fontSize: 13, fontFamily: "inherit", background: T.surface, color: T.txt, marginRight: "auto" }
       },
         React.createElement("option", { value: "all" }, "كل الموظفين"),
-        emps.map(e => React.createElement("option", { key: e.id, value: e.id }, e.name))
+        filteredEmps.map(e => React.createElement("option", { key: e.id, value: e.id }, e.name))
       ),
       React.createElement("button", {
         onClick: exportCSV,
@@ -1621,7 +1625,7 @@ function App() {
         if (data.length > 0) setEmps(data);
       });
 
-      onSnapshot(query(collection(db, "records"), orderBy("timestamp", "desc")), (snap) => {
+      onSnapshot(query(collection(db, "records"), orderBy("timestamp", "asc")), (snap) => {
         const data = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
         setRecs(data);
       });
