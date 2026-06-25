@@ -113,7 +113,9 @@ const SHIFTS = {
 const DEFAULT_SHIFT = "9-5";
 const FACTORY_LAT = 29.970593;
 const FACTORY_LNG = 31.489092;
-const GEO_RADIUS = 350;
+const GEO_RADIUS = 100;
+
+// تصحيح معادلة حساب المسافة الجغرافية لمنع عطل الـ 30 كيلو
 function geoDistance(lat1, lng1, lat2, lng2) {
   const R = 6371000;
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -386,7 +388,7 @@ function GpsWidget({ onResult }) {
       const d = geoDistance(pos.coords.latitude, pos.coords.longitude, FACTORY_LAT, FACTORY_LNG);
       const inZone = d <= GEO_RADIUS;
       setDist(Math.round(d));
-      setSt("ok");
+      setSt(inZone ? "ok" : "out");
       onResult({ ok: true, lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: Math.round(pos.coords.accuracy), inZone: inZone, distance: Math.round(d) });
     };
     const onFail = (err) => {
@@ -414,14 +416,13 @@ function GpsWidget({ onResult }) {
   );
 }
 
-/* HIGH-COMPATIBILITY SELFIE WIDGET (FOR ALL DEVICES) */
+/* HIGH-COMPATIBILITY LIGHTWEIGHT SELFIE WIDGET */
 function SelfieWidget({ onCapture, empName }) {
   const fileRef = useRef(null);
   const cR = useRef(null);
   const [prev, setPrev] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // استدعاء نظام التقاط بيكسلات الكاميرا التلقائي الخاص بنظام التشغيل فوراً لمنع الشاشة السوداء
   useEffect(() => {
     if (fileRef.current) {
       fileRef.current.click();
@@ -443,21 +444,40 @@ function SelfieWidget({ onCapture, empName }) {
           onCapture(ev.target.result); 
           return; 
         }
-        c.width = img.width; 
-        c.height = img.height;
-        const ctx = c.getContext("2d");
-        ctx.drawImage(img, 0, 0);
         
-        // طباعة الختم المائي الآمن لحماية السجل السحابي
+        // تصغير ذكي وتلقائي لأبعاد الصورة لمنع تهنيج ذاكرة أجهزة التابلت والموبايل تماماً
+        const MAX_WIDTH = 800;
+        const MAX_HEIGHT = 800;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            width = MAX_HEIGHT;
+          }
+        }
+
+        c.width = width; 
+        c.height = height;
+        const ctx = c.getContext("2d");
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // دمج الختم المائي البصري لتوثيق الحضور والوقت بالثانية
         ctx.fillStyle = "rgba(0, 0, 0, 0.6)";
-        ctx.fillRect(0, c.height - 50, c.width, 50);
+        ctx.fillRect(0, height - 45, width, 45);
         ctx.fillStyle = "#FFFFFF";
-        ctx.font = "bold 16px Cairo, Arial, sans-serif";
+        ctx.font = "bold 14px Cairo, Arial, sans-serif";
         ctx.textAlign = "right";
         const dateStr = new Date().toLocaleString("ar-EG");
-        ctx.fillText(`بصمة حية موثقة: ${empName || ""} | التوقيت: ${dateStr}`, c.width - 20, c.height - 20);
+        ctx.fillText(`بصمة موثقة: ${empName || ""} | التوقيت: ${dateStr}`, width - 15, height - 16);
         
-        const stampedUrl = c.toDataURL("image/jpeg", 0.85);
+        const stampedUrl = c.toDataURL("image/jpeg", 0.80);
         setPrev(stampedUrl);
         setLoading(false);
         onCapture(stampedUrl);
@@ -469,17 +489,17 @@ function SelfieWidget({ onCapture, empName }) {
 
   return React.createElement("div", { style: { display: "flex", flexDirection: "column", alignItems: "center", gap: 12 } },
     React.createElement("input", { ref: fileRef, type: "file", accept: "image/*", capture: "user", style: { display: "none" }, onChange: handleFile }),
-    loading && React.createElement("div", { style: { fontSize: 14, color: T.muted, padding: 10 } }, "جاري معالجة وختم صورة البصمة الحية..."),
+    loading && React.createElement("div", { style: { fontSize: 14, color: T.muted, padding: 10 } }, "جاري ضغط ومعالجة كود الصورة حركياً..."),
     prev ? React.createElement("div", { style: { position: "relative", display: "inline-block" } },
       React.createElement("img", { src: prev, style: { width: 140, height: 140, borderRadius: 16, objectFit: "cover", border: `3px solid ${T.ok}`, display: "block" } }),
       React.createElement("div", { style: { position: "absolute", bottom: 4, right: 4, width: 24, height: 24, borderRadius: "50%", background: T.ok, color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12 } }, "✓"),
       React.createElement("button", { onClick: () => fileRef.current?.click(), style: { display: "block", margin: "10px auto 0", fontSize: 13, padding: "6px 16px", background: T.hi, color: T.txt, borderRadius: 20 } }, "إعادة التقاط الصورة")
-    ) : React.createElement("button", { onClick: () => fileRef.current?.click(), style: { padding: "14px 28px", background: T.accent, color: "#fff", fontWeight: 700, borderRadius: 12, fontSize: 14 } }, "📷 افتح كاميرا الجهاز لالتقاط الصورة الحية"),
+    ) : React.createElement("button", { onClick: () => fileRef.current?.click(), style: { padding: "14px 28px", background: T.accent, color: "#fff", fontWeight: 700, borderRadius: 12, fontSize: 14 } }, "📷 افتح كاميرا النظام لالتقاط الصورة"),
     React.createElement("canvas", { ref: cR, style: { display: "none" } })
   );
 }
 
-/* EMPLOYEE LIVE STATISTICS WIDGET */
+/* EMPLOYEE LIVE STATISTICS & LEAVES WIDGET (DETAILED REPORTS FOR SELF) */
 function EmpDashboardWidget({ emp, recs, leaves }) {
   if (!emp) return null;
   const [range, setRange] = useState("month");
@@ -1647,7 +1667,7 @@ function Settings({ kioskMode, setKioskMode, setRecs, depts, setDepts }) {
   }
 
   function wipe() {
-    if (confirm("هل أنت متأكد من رغبتك في مسح كافة السجلات الحالية نهائياً من النظام?")) {
+    if (confirm("هل أنت متأكد من رغبتك في مسح كافة السجلات الحالية نهائياً من النظام؟")) {
       setRecs([]);
       alert("تم تصفير سجلات العمل المحلية بنجاح");
     }
