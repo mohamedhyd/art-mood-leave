@@ -71,11 +71,13 @@ const T = {
 
 function Logo({ width = 160 }) {
   return React.createElement("div", {
-    style: { margin: "0 auto", textAlign: "center", lineHeight: 1, whiteSpace: "nowrap" }
+    style: { margin: "0 auto", textAlign: "center", display: "flex", justifyContent: "center", alignItems: "center" }
   },
-    React.createElement("span", {
-      style: { fontFamily: "'Manifesto', Cairo, sans-serif", fontSize: width * 0.26, color: T.txt, letterSpacing: 1, whiteSpace: "nowrap", display: "inline-block" }
-    }, "ART MOOD")
+    React.createElement("img", {
+      src: "logo.png",
+      alt: "Art Mood Logo",
+      style: { width: width, height: "auto", display: "block" }
+    })
   );
 }
 
