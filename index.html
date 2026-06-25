@@ -193,6 +193,11 @@ const fmtT = (t) => t || "—";
 const isLate = (t, shiftKey) => isLateForShift(t, shiftKey || DEFAULT_SHIFT);
 const getShiftForEmp = (emp) => emp?.shift || DEFAULT_SHIFT;
 
+function getDeptColor(deptName, deptsList) {
+  const d = deptsList?.find(x => x.name === deptName);
+  return d ? d.color : T.accent;
+}
+
 function diffH(s, e) {
   if (!s || !e) return 0;
   const [sh, sm] = s.split(":").map(Number);
@@ -325,8 +330,19 @@ function LiveClock() {
   }, []);
   const D = ["الأحد", "الاثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة", "السبت"];
   const M = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+  
+  const format12Hour = (date) => {
+    let hours = date.getHours();
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    const seconds = String(date.getSeconds()).padStart(2, '0');
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    return `${String(hours).padStart(2, '0')}:${minutes}:${seconds} ${ampm}`;
+  };
+
   return React.createElement("div", { style: { textAlign: "center" } },
-    React.createElement("div", { className: "mono", style: { fontSize: "clamp(36px,9vw,58px)", fontWeight: 700, color: T.txt, letterSpacing: -3, lineHeight: 1 } }, t.toTimeString().slice(0, 8)),
+    React.createElement("div", { className: "mono", style: { fontSize: "clamp(32px,8vw,52px)", fontWeight: 700, color: T.txt, letterSpacing: -1, lineHeight: 1 } }, format12Hour(t)),
     React.createElement("div", { style: { color: T.muted, fontSize: 13, marginTop: 6 } }, D[t.getDay()], "، ", t.getDate(), " ", M[t.getMonth()], " ", t.getFullYear())
   );
 }
@@ -800,6 +816,99 @@ function KioskTablet({ emps, managers, recs, onRec, devices, onNavigateToLogin, 
   );
 }
 
+/* EMPLOYEE SELF LEAVE REQUEST SCREEN */
+function EmpLeaveRequest({ emps, leaves, setLeaves, onBack }) {
+  const [step, setStep] = useState("pin");
+  const [emp, setEmp] = useState(null);
+  const [form, setForm] = useState({ date: todayStr(), type: "سنوية", reason: "" });
+  const [err, setErr] = useState("");
+  const [success, setSuccess] = useState("");
+  const [sk, setSk] = useState(0);
+
+  function onPin(pin) {
+    const e = emps.find(x => x.pin === pin);
+    if (!e) {
+      setErr("رمز التحقق الشخصي PIN غير صحيح");
+      setSk(k => k + 1);
+      setTimeout(() => setErr(""), 2000);
+      return;
+    }
+    setEmp(e);
+    setStep("form");
+  }
+
+  function submit() {
+    if (!form.date) return;
+    
+    // Constraint check: Same day leave requested after 08:00 AM
+    if (form.date === todayStr() && nowStr() >= "08:00") {
+      setErr("عذراً، لا يمكن تقديم طلب إجازة لنفس اليوم بعد الساعة 08:00 صباحاً");
+      setTimeout(() => setErr(""), 5000);
+      return;
+    }
+
+    const newLeave = {
+      id: Date.now(),
+      empId: emp.id,
+      empName: emp.name,
+      date: form.date,
+      type: form.type,
+      reason: form.reason,
+      status: "pending",
+      submittedAt: todayStr()
+    };
+
+    setLeaves(l => [...l, newLeave]);
+    if (window._fbDB) {
+      const { setDoc, doc } = window._fbFirestore;
+      setDoc(doc(window._fbDB, "leaves", String(newLeave.id)), newLeave);
+    }
+
+    setSuccess("تم إرسال طلب إجازتك بنجاح وهو قيد مراجعة الإدارة");
+    setTimeout(() => onBack(), 3500);
+  }
+
+  if (success) {
+    return React.createElement(CenteredPage, null,
+      React.createElement(IcoBox, { icon: "✓", bg: T.oLight, sz: 80 }),
+      React.createElement("div", { style: { fontSize: 20, fontWeight: 700, color: T.ok } }, success)
+    );
+  }
+
+  if (step === "form" && emp) {
+    return React.createElement(CenteredPage, null,
+      React.createElement(Card, { title: `تقديم طلب إجازة ذاتي للموظف: ${emp.name}` },
+        React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 12, width: 290, textAlign: "right" } },
+          React.createElement("label", { style: { fontSize: 13, fontWeight: 600 } }, "تاريخ الإجازة المطلوب:"),
+          React.createElement("input", { type: "date", value: form.date, onChange: (e) => setForm({ ...form, date: e.target.value }) }),
+          
+          React.createElement("label", { style: { fontSize: 13, fontWeight: 600 } }, "نوع الإجازة:"),
+          React.createElement("select", { value: form.type, onChange: (e) => setForm({ ...form, type: e.target.value }) },
+            ["سنوية", "مرضية", "طارئة", "بدون راتب"].map(t => React.createElement("option", { key: t, value: t }, t))
+          ),
+          
+          React.createElement("label", { style: { fontSize: 13, fontWeight: 600 } }, "السبب أو الملاحظات:"),
+          React.createElement("input", { placeholder: "اكتب مبررات الغياب...", value: form.reason, onChange: (e) => setForm({ ...form, reason: e.target.value }) })
+        ),
+        err && React.createElement("div", { style: { marginTop: 12, color: T.danger, fontSize: 12, fontWeight: 700, maxWidth: 290, lineHeight: 1.5 } }, err),
+        React.createElement("div", { style: { display: "flex", gap: 10, marginTop: 20 } },
+          React.createElement("button", { onClick: submit, style: { padding: "11px 20px", background: T.accent, color: "#fff", fontWeight: 700, borderRadius: 12, flex: 1 } }, "إرسال الطلب سحابياً"),
+          React.createElement("button", { onClick: onBack, style: { padding: "11px 20px", background: T.hi, color: T.txt, borderRadius: 12 } }, "إلغاء")
+        )
+      )
+    );
+  }
+
+  return React.createElement(CenteredPage, null,
+    React.createElement(IcoBox, { icon: "📝", bg: T.aLight }),
+    React.createElement("div", { style: { fontSize: 18, fontWeight: 800 } }, "شاشة طلب إجازة ذاتي للموظفين"),
+    React.createElement("div", { style: { fontSize: 13, color: T.muted } }, "يرجى إدخال رمز الـ PIN الشخصي لفتح الحساب المعني"),
+    err && React.createElement(Note, { color: T.danger, bg: T.dLight }, err),
+    React.createElement(PinPad, { key: sk, onConfirm: onPin, doShake: !!err }),
+    React.createElement("button", { onClick: onBack, style: { background: "none", color: T.muted, fontSize: 13, padding: 10 } }, "إلغاء والعودة للرئيسية")
+  );
+}
+
 /* DEVICE REGISTRATION SCREEN */
 function RegisterDevice({ emps, managers, devices, setDevices, onBack, onMgrLogin }) {
   const [step, setStep] = useState("pin");
@@ -916,7 +1025,7 @@ function MgrLogin({ managers, onLogin, onBack }) {
 }
 
 /* LEAVES MANAGEMENT VIEW */
-function Leaves({ emps, leaves, setLeaves, managers = [] }) {
+function Leaves({ emps, leaves, setLeaves, managers = [], depts }) {
   const [form, setForm] = useState({ empId: "", date: todayStr(), type: "سنوية", reason: "" });
 
   function submit() {
@@ -950,6 +1059,7 @@ function Leaves({ emps, leaves, setLeaves, managers = [] }) {
   }
 
   const activeLeaves = leaves.filter(l => l.status === "pending");
+  const processedLeaves = leaves.filter(l => l.status === "approved" || l.status === "rejected");
 
   return React.createElement("div", { style: { padding: "20px 0", display: "flex", flexDirection: "column", gap: 18 } },
     React.createElement(Card, { title: "تقديم طلب إجازة إدارية جديد" },
@@ -966,6 +1076,9 @@ function Leaves({ emps, leaves, setLeaves, managers = [] }) {
       ),
       React.createElement("button", { onClick: submit, style: { padding: "10px 24px", background: T.accent, color: "#fff", fontWeight: 700, borderRadius: 12 } }, "حفظ وإرسال الطلب")
     ),
+    
+    React.createElement("h3", { style: { fontSize: 15, fontWeight: 700, marginTop: 10 } }, "طلبات معلقة قيد الانتظار:"),
+    activeLeaves.length === 0 && React.createElement("div", { style: { color: T.muted, fontSize: 13, padding: 10 } }, "لا توجد طلبات إجازة معلقة حالياً."),
     activeLeaves.map(l => React.createElement("div", { key: l.id, style: { background: T.surface, border: `1px solid ${T.border}`, borderRadius: 14, padding: "13px 17px", display: "flex", alignItems: "center", gap: 12 } },
       React.createElement("div", { style: { flex: 1 } },
         React.createElement("div", { style: { fontWeight: 600 } }, l.empName),
@@ -975,6 +1088,21 @@ function Leaves({ emps, leaves, setLeaves, managers = [] }) {
         React.createElement("button", { onClick: () => upd(l.id, "approved"), style: { padding: "6px 14px", background: T.oLight, color: T.ok, borderRadius: 10, fontWeight: 600 } }, "اعتماد وموافقة"),
         React.createElement("button", { onClick: () => upd(l.id, "rejected"), style: { padding: "6px 14px", background: T.dLight, color: T.danger, borderRadius: 10, fontWeight: 600 } }, "رفض الطلب")
       )
+    )),
+
+    React.createElement("hr", { style: { border: "none", borderTop: `1.5px dashed ${T.border}`, margin: "15px 0" } }),
+    React.createElement("h3", { style: { fontSize: 15, fontWeight: 700 } }, "سجل الطلبات المعتمدة والمعالجة سابقاً:"),
+    processedLeaves.length === 0 && React.createElement("div", { style: { color: T.muted, fontSize: 13, padding: 10 } }, "لا توجد طلبات معتمدة أو مرفوضة في السجل الحاضر."),
+    processedLeaves.map(l => React.createElement("div", { key: l.id, style: { background: T.surface, border: `1px solid ${T.border}`, borderRadius: 14, padding: "13px 17px", display: "flex", alignItems: "center", gap: 12, opacity: 0.85 } },
+      React.createElement("div", { style: { flex: 1 } },
+        React.createElement("div", { style: { fontWeight: 600 } }, l.empName),
+        React.createElement("div", { style: { fontSize: 12, color: T.muted } }, l.date, " - نوع الإجازة: ", l.type, l.reason && ` - السبب: ${l.reason}`)
+      ),
+      React.createElement(Badge, { 
+        label: l.status === "approved" ? "تم قبولها واعتمادها" : "تم رفضها إدارياً", 
+        color: l.status === "approved" ? T.ok : T.danger, 
+        bg: l.status === "approved" ? T.oLight : T.dLight 
+      })
     ))
   );
 }
@@ -1002,13 +1130,12 @@ function DevsMgmt({ allEmps, devices, setDevices }) {
 }
 
 /* MANAGERS MANAGEMENT VIEW */
-function MgrsMgmt({ managers, setManagers, allEmps }) {
-  const deptList = [...new Set(allEmps.map(e => e.dept).filter(Boolean))];
+function MgrsMgmt({ managers, setManagers, allEmps, depts }) {
   const [adding, setAdding] = useState(false);
-  const [form, setForm] = useState({ name: "", title: "", pin: "", role: "dept", dept: "", color: "#6366F1", shift: DEFAULT_SHIFT });
+  const [form, setForm] = useState({ name: "", title: "", pin: "", role: "dept", depts: [], color: "#6366F1", shift: DEFAULT_SHIFT });
   const [err, setErr] = useState("");
   const [editId, setEditId] = useState(null);
-  const [editForm, setEditForm] = useState({ title: "", pin: "", role: "dept", dept: "", shift: DEFAULT_SHIFT });
+  const [editForm, setEditForm] = useState({ title: "", pin: "", role: "dept", depts: [], shift: DEFAULT_SHIFT });
 
   function countEmps(m) {
     if (m.role === "super") return allEmps.length;
@@ -1020,19 +1147,19 @@ function MgrsMgmt({ managers, setManagers, allEmps }) {
       setErr("يرجى تعبئة الاسم والـ PIN بحد أدنى 4 أرقام");
       return;
     }
-    if (form.role === "dept" && !form.dept.trim()) {
-      setErr("يرجى اختيار أو كتابة القسم المسؤول عنه المدير");
+    if (form.role === "dept" && (!form.depts || form.depts.length === 0)) {
+      setErr("يرجى تحديد قسم واحد على الأقل للمدير");
       return;
     }
     const id = "M" + String(Date.now()).slice(-5);
-    const depts = form.role === "super" ? [] : form.dept.split(",").map(d => d.trim()).filter(Boolean);
-    const newMgr = { id, name: form.name.trim(), title: form.title.trim(), pin: form.pin.trim(), role: form.role, depts, color: "#6366F1", shift: form.shift };
+    const linkedDepts = form.role === "super" ? [] : form.depts;
+    const newMgr = { id, name: form.name.trim(), title: form.title.trim(), pin: form.pin.trim(), role: form.role, depts: linkedDepts, color: "#6366F1", shift: form.shift };
     setManagers(p => [...p, newMgr]);
     if (window._fbDB) {
       const { setDoc, doc } = window._fbFirestore;
       setDoc(doc(window._fbDB, "managers", id), newMgr);
     }
-    setForm({ name: "", title: "", pin: "", role: "dept", dept: "", color: "#6366F1", shift: DEFAULT_SHIFT });
+    setForm({ name: "", title: "", pin: "", role: "dept", depts: [], color: "#6366F1", shift: DEFAULT_SHIFT });
     setAdding(false);
     setErr("");
   }
@@ -1052,17 +1179,17 @@ function MgrsMgmt({ managers, setManagers, allEmps }) {
 
   function startEdit(m) {
     setEditId(m.id);
-    setEditForm({ title: m.title || "", pin: m.pin, role: m.role, dept: (m.depts && m.depts.join(", ")) || "", shift: m.shift || DEFAULT_SHIFT });
+    setEditForm({ title: m.title || "", pin: m.pin, role: m.role, depts: m.depts || [], shift: m.shift || DEFAULT_SHIFT });
   }
 
   function saveEdit(id) {
     if (editForm.pin.length < 4) { alert("الـ PIN لا يقل عن 4 أرقام"); return; }
-    if (editForm.role === "dept" && !editForm.dept.trim()) { alert("يرجى اختيار أو كتابة القسم"); return; }
-    const depts = editForm.role === "super" ? [] : editForm.dept.split(",").map(d => d.trim()).filter(Boolean);
-    setManagers(p => p.map(m => m.id === id ? { ...m, title: editForm.title.trim(), pin: editForm.pin.trim(), role: editForm.role, depts, shift: editForm.shift } : m));
+    if (editForm.role === "dept" && (!editForm.depts || editForm.depts.length === 0)) { alert("يرجى تحديد قسم واحد على الأقل"); return; }
+    const linkedDepts = editForm.role === "super" ? [] : editForm.depts;
+    setManagers(p => p.map(m => m.id === id ? { ...m, title: editForm.title.trim(), pin: editForm.pin.trim(), role: editForm.role, depts: linkedDepts, shift: editForm.shift } : m));
     if (window._fbDB) {
       const { updateDoc, doc } = window._fbFirestore;
-      updateDoc(doc(window._fbDB, "managers", id), { title: editForm.title.trim(), pin: editForm.pin.trim(), role: editForm.role, depts, shift: editForm.shift });
+      updateDoc(doc(window._fbDB, "managers", id), { title: editForm.title.trim(), pin: editForm.pin.trim(), role: editForm.role, depts: linkedDepts, shift: editForm.shift });
     }
     setEditId(null);
   }
@@ -1081,12 +1208,25 @@ function MgrsMgmt({ managers, setManagers, allEmps }) {
           React.createElement("option", { value: "dept" }, "مدير قسم"),
           React.createElement("option", { value: "super" }, "صلاحيات كاملة")
         ),
-        form.role === "dept" && React.createElement(React.Fragment, null,
-          React.createElement("input", { placeholder: "الأقسام المسؤول عنها (افصل بينها بفاصلة ,) *", list: "mgrDeptOptions", value: form.dept, onChange: e => setForm({ ...form, dept: e.target.value }) }),
-          React.createElement("datalist", { id: "mgrDeptOptions" }, deptList.map(d => React.createElement("option", { key: d, value: d })))
-        ),
         React.createElement("select", { value: form.shift, onChange: e => setForm({ ...form, shift: e.target.value }) },
           Object.entries(SHIFTS).map(([k, s]) => React.createElement("option", { key: k, value: k }, s.label))
+        ),
+        form.role === "dept" && React.createElement("div", { style: { gridColumn: "1 / -1", background: T.bg, padding: 14, borderRadius: 12, marginTop: 5 } },
+          React.createElement("div", { style: { fontSize: 12, fontWeight: 700, marginBottom: 6, color: T.mid } }, "اختر الأقسام المسؤول عنها (يمكن اختيار أكثر من قسم):"),
+          React.createElement("div", { style: { display: "flex", gap: 14, flexWrap: "wrap" } },
+            depts.map(d => React.createElement("label", { key: d.name, style: { display: "flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer" } },
+              React.createElement("input", {
+                type: "checkbox",
+                checked: form.depts?.includes(d.name),
+                onChange: (evt) => {
+                  const current = form.depts || [];
+                  const next = evt.target.checked ? [...current, d.name] : current.filter(x => x !== d.name);
+                  setForm({ ...form, depts: next });
+                }
+              }),
+              d.name
+            ))
+          )
         )
       ),
       err && React.createElement(Note, { color: T.danger, bg: T.dLight }, err),
@@ -1097,8 +1237,8 @@ function MgrsMgmt({ managers, setManagers, allEmps }) {
         React.createElement("div", { style: { display: "flex", alignItems: "center", gap: 14 } },
           React.createElement(MgrAv, { m, sz: 46 }),
           React.createElement("div", null,
-            React.createElement("div", { style: { fontWeight: 700, fontSize: 15 } }, m.name, m.role === "super" ? " (كل الأقسام)" : ` (${m.depts.join("، ")})`, "  ", React.createElement("span", { style: { fontSize: 12, fontWeight: 700, color: T.accent, background: T.aLight, padding: "2px 10px", borderRadius: 20 } }, countEmps(m), " موظف")),
-            React.createElement("div", { style: { fontSize: 12, color: T.muted, marginTop: 3 } }, (m.role === "super" ? "صلاحيات كاملة" : ("مدير قسم - الأقسام: " + ((m.depts && m.depts.join("، ")) || "—"))), " | الشيفت: ", (SHIFTS[m.shift || DEFAULT_SHIFT]?.label), " | PIN: ", m.pin)
+            React.createElement("div", { style: { fontWeight: 700, fontSize: 15 } }, m.name, m.role === "super" ? " (كل الأقسام)" : ` (${m.depts?.join("، ") || "لا توجد أقسام"})`, "  ", React.createElement("span", { style: { fontSize: 12, fontWeight: 700, color: T.accent, background: T.aLight, padding: "2px 10px", borderRadius: 20 } }, countEmps(m), " موظف")),
+            React.createElement("div", { style: { fontSize: 12, color: T.muted, marginTop: 3 } }, (m.role === "super" ? "صلاحيات كاملة" : ("مدير قسم | الأقسام: " + ((m.depts && m.depts.join("، ")) || "—"))), " | الشيفت: ", (SHIFTS[m.shift || DEFAULT_SHIFT]?.label), " | PIN: ", m.pin)
           )
         ),
         React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } },
@@ -1118,11 +1258,6 @@ function MgrsMgmt({ managers, setManagers, allEmps }) {
             React.createElement("option", { value: "super" }, "صلاحيات كاملة")
           )
         ),
-        editForm.role === "dept" && React.createElement("div", { style: { flex: 1, minWidth: 130 } },
-          React.createElement("label", { style: { fontSize: 11, color: T.muted, display: "block", marginBottom: 4 } }, "الأقسام المسؤول عنها (افصل بـ ,)"),
-          React.createElement("input", { placeholder: "الأقسام", list: "mgrDeptOptionsEdit", value: editForm.dept, onChange: ev => setEditForm({ ...editForm, dept: ev.target.value }), style: { width: "100%" } }),
-          React.createElement("datalist", { id: "mgrDeptOptionsEdit" }, deptList.map(d => React.createElement("option", { key: d, value: d })))
-        ),
         React.createElement("div", { style: { flex: 1, minWidth: 130 } },
           React.createElement("label", { style: { fontSize: 11, color: T.muted, display: "block", marginBottom: 4 } }, "الشيفت المعتمد"),
           React.createElement("select", { value: editForm.shift, onChange: ev => setEditForm({ ...editForm, shift: ev.target.value }), style: { width: "100%" } },
@@ -1133,14 +1268,30 @@ function MgrsMgmt({ managers, setManagers, allEmps }) {
           React.createElement("label", { style: { fontSize: 11, color: T.muted, display: "block", marginBottom: 4 } }, "تغيير PIN"),
           React.createElement("input", { placeholder: "PIN جديد", maxLength: 6, value: editForm.pin, onChange: ev => setEditForm({ ...editForm, pin: ev.target.value.replace(/\D/g, "") }), style: { width: "100%" } })
         ),
-        React.createElement("button", { onClick: () => saveEdit(m.id), style: { padding: "9px 20px", background: T.ok, color: "#fff", fontWeight: 700, borderRadius: 10 } }, "حفظ")
+        editForm.role === "dept" && React.createElement("div", { style: { width: "100%", background: T.bg, padding: 12, borderRadius: 12, marginTop: 10, gridColumn: "1 / -1" } },
+          React.createElement("div", { style: { fontSize: 11, fontWeight: 700, marginBottom: 5, color: T.mid } }, "تعديل الأقسام المسؤول عنها المدير:"),
+          React.createElement("div", { style: { display: "flex", gap: 14, flexWrap: "wrap" } },
+            depts.map(d => React.createElement("label", { key: d.name, style: { display: "flex", alignItems: "center", gap: 6, fontSize: 13, cursor: "pointer" } },
+              React.createElement("input", {
+                type: "checkbox",
+                checked: editForm.depts?.includes(d.name),
+                onChange: (evt) => {
+                  const current = editForm.depts || [];
+                  const next = evt.target.checked ? [...current, d.name] : current.filter(x => x !== d.name);
+                  setEditForm({ ...editForm, depts: next });
+                }
+              }),
+              d.name
+            ))
+          )
+        ),
+        React.createElement("button", { onClick: () => saveEdit(m.id), style: { padding: "9px 20px", background: T.ok, color: "#fff", fontWeight: 700, borderRadius: 10, marginTop: 10 } }, "حفظ")
       )
     ))
   );
 }
 
-function EmpsMgmt({ emps, setEmps, managers }) {
-  const deptList = [...new Set(emps.map(e => e.dept).filter(Boolean))];
+function EmpsMgmt({ emps, setEmps, managers, depts }) {
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState({ name: "", dept: "", pin: "", color: "#6366F1", shift: DEFAULT_SHIFT });
   const [err, setErr] = useState("");
@@ -1149,7 +1300,7 @@ function EmpsMgmt({ emps, setEmps, managers }) {
 
   function add() {
     if (!form.name.trim() || form.pin.length < 4 || !form.dept.trim()) {
-      setErr("يرجى التأكد من كتابة الاسم، القسم، وتعيين PIN صالح لا يقل عن 4 أرقام");
+      setErr("يرجى التأكد من كتابة الاسم، اختيار القسم، وتعيين PIN صالح لا يقل عن 4 أرقام");
       return;
     }
     const id = "E" + String(Date.now()).slice(-5);
@@ -1199,9 +1350,9 @@ function EmpsMgmt({ emps, setEmps, managers }) {
     adding && React.createElement("div", { className: "fade", style: { background: T.surface, border: `1.5px solid ${T.accent}`, borderRadius: 18, padding: 22 } },
       React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(170px,1fr))", gap: 12, marginBottom: 14 } },
         React.createElement("input", { placeholder: "اسم الموظف الثلاثي *", value: form.name, onChange: e => setForm({ ...form, name: e.target.value }) }),
-        React.createElement(React.Fragment, null,
-          React.createElement("input", { placeholder: "القسم التابع له *", list: "deptOptions", value: form.dept, onChange: e => setForm({ ...form, dept: e.target.value }) }),
-          React.createElement("datalist", { id: "deptOptions" }, deptList.map(d => React.createElement("option", { key: d, value: d })))
+        React.createElement("select", { value: form.dept, onChange: e => setForm({ ...form, dept: e.target.value }) },
+          React.createElement("option", { value: "" }, "اختر القسم التابع له *"),
+          depts.map(d => React.createElement("option", { key: d.name, value: d.name }, d.name))
         ),
         React.createElement("input", { placeholder: "رمز الدخول PIN المخصص *", maxLength: 6, value: form.pin, onChange: e => setForm({ ...form, pin: e.target.value.replace(/\D/g, "") }) }),
         React.createElement("select", { value: form.shift, onChange: e => setForm({ ...form, shift: e.target.value }) },
@@ -1217,7 +1368,11 @@ function EmpsMgmt({ emps, setEmps, managers }) {
           React.createElement(Av, { e: e, sz: 38 }),
           React.createElement("div", null,
             React.createElement("div", { style: { fontWeight: 600 } }, e.name),
-            React.createElement("div", { style: { fontSize: 11, color: T.muted } }, "القسم: ", e.dept, " | PIN: ", e.pin)
+            React.createElement("div", { style: { fontSize: 11, color: T.muted, display: "flex", alignItems: "center", gap: 5, marginTop: 2 } }, 
+              "القسم: ", 
+              React.createElement("span", { style: { color: getDeptColor(e.dept, depts), fontWeight: 700 } }, e.dept), 
+              ` | PIN: ${e.pin}`
+            )
           )
         ),
         React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } },
@@ -1229,8 +1384,8 @@ function EmpsMgmt({ emps, setEmps, managers }) {
         React.createElement("div", { style: { flex: 1, minWidth: 140 } },
           React.createElement("label", { style: { fontSize: 11, color: T.muted, display: "block", marginBottom: 4 } }, "نقل لقسم آخر"),
           React.createElement("select", { value: editForm.dept, onChange: ev => setEditForm({ ...editForm, dept: ev.target.value }), style: { width: "100%" } },
-            React.createElement("option", { value: "" }, "اختر القسم"),
-            deptList.map(d => React.createElement("option", { key: d, value: d }, d))
+            React.createElement("option", { value: "" }, "اختر القسم الجديد"),
+            depts.map(d => React.createElement("option", { key: d.name, value: d.name }, d.name))
           )
         ),
         React.createElement("div", { style: { flex: 1, minWidth: 140 } },
@@ -1243,7 +1398,20 @@ function EmpsMgmt({ emps, setEmps, managers }) {
   );
 }
 
-function Settings({ kioskMode, setKioskMode, setRecs }) {
+function Settings({ kioskMode, setKioskMode, setRecs, depts, setDepts }) {
+  const [newDept, setNewDept] = useState("");
+  const [deptCol, setDeptCol] = useState(COLORS[0]);
+
+  function handleAddDept() {
+    if (!newDept.trim()) return;
+    if (depts.some(x => x.name === newDept.trim())) {
+      alert("هذا القسم مضاف ومسجل مسبقاً في النظام.");
+      return;
+    }
+    setDepts([...depts, { name: newDept.trim(), color: deptCol }]);
+    setNewDept("");
+  }
+
   function wipe() {
     if (confirm("هل أنت متأكد من رغبتك في مسح كافة السجلات الحالية نهائياً من النظام؟")) {
       setRecs([]);
@@ -1251,10 +1419,25 @@ function Settings({ kioskMode, setKioskMode, setRecs }) {
     }
   }
   return React.createElement("div", { style: { padding: "20px 0", display: "flex", flexDirection: "column", gap: 14, maxWidth: 520 } },
+    React.createElement(Card, { title: "إدارة الأقسام والألوان المخصصة" },
+      React.createElement("div", { style: { display: "flex", gap: 10, marginBottom: 15 } },
+        React.createElement("input", { placeholder: "اسم القسم الجديد...", value: newDept, onChange: e => setNewDept(e.target.value), style: { flex: 2 } }),
+        React.createElement("select", { value: deptCol, onChange: e => setDeptCol(e.target.value), style: { flex: 1, color: deptCol, fontWeight: 'bold' } },
+          COLORS.map(c => React.createElement("option", { key: c, value: c, style: { color: c } }, c))
+        ),
+        React.createElement("button", { onClick: handleAddDept, style: { padding: "10px 20px", background: T.ok, color: "#fff", fontWeight: 700, borderRadius: 12 } }, "إضافة")
+      ),
+      React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } },
+        depts.map(d => React.createElement("span", { key: d.name, style: { display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 14px", background: d.color + "15", border: `1.5px solid ${d.color}`, color: d.color, borderRadius: 20, fontSize: 12, fontWeight: 700 } },
+          d.name,
+          React.createElement("span", { onClick: () => { if(confirm(`هل تود بالتأكيد حذف قسم ${d.name}؟`)) setDepts(depts.filter(x => x.name !== d.name)); }, style: { cursor: "pointer", color: T.danger, fontWeight: "bold", fontSize: 14 } }, "×")
+        ))
+      )
+    ),
     React.createElement(Card, { title: "إعدادات وضع تشغيل النظام" },
       React.createElement("div", { style: { fontSize: 12, color: T.muted, marginBottom: 12 } }, "تحديد أسلوب وآلية عمل وإثبات الحضور المعتمدة لهذا الجهاز الرقمي"),
       React.createElement("div", { style: { display: "flex", gap: 12, flexWrap: "wrap" } },
-        [{ v: "personal", l: "نظام الهاتف الشخصي للموظف (بصمة رقمية)" }, { v: "tablet", l: "نظام تابلت البوابة المشترك (صورة تحقق حية)" }].map(o => React.createElement("button", {
+        [{ v: "personal", l: "نظام الهاتف الشخصي للموظف (بصسة رقمية)" }, { v: "tablet", l: "نظام تابلت البوابة المشترك (صورة تحقق حية)" }].map(o => React.createElement("button", {
           key: o.v,
           onClick: () => setKioskMode(o.v),
           style: { flex: 1, minWidth: 150, padding: "14px 16px", background: kioskMode === o.v ? T.aLight : T.hi, border: `2px solid ${kioskMode === o.v ? T.accent : T.border}`, borderRadius: 14, fontWeight: 700, color: kioskMode === o.v ? T.accent : T.txt }
@@ -1268,7 +1451,7 @@ function Settings({ kioskMode, setKioskMode, setRecs }) {
 }
 
 /* MANAGEMENT CONTROLLER PANEL */
-function AttendDash({ emps, recs, leaves, isSuper }) {
+function AttendDash({ emps, recs, leaves, isSuper, depts }) {
   const filteredEmps = emps.filter(e => !e.name.includes("عبدالله") && !e.name.includes("محمد"));
   const today = todayStr();
   const todayR = recs.filter(r => r.date === today);
@@ -1312,11 +1495,12 @@ function AttendDash({ emps, recs, leaves, isSuper }) {
             absent: { l: "غائب", c: T.muted, bg: T.hi }
           };
           const sd = stMap[status];
+          const dynamicColor = getDeptColor(e.dept, depts);
           return React.createElement("div", { key: e.id, style: { display: "flex", alignItems: "center", gap: 12, padding: "10px 14px", background: T.surface, border: `1px solid ${T.border}`, borderRadius: 12 } },
             React.createElement(Av, { e: e, sz: 40 }),
             React.createElement("div", { style: { flex: 1 } },
               React.createElement("div", { style: { fontWeight: 600, color: T.txt, fontSize: 14 } }, e.name),
-              React.createElement("div", { style: { fontSize: 12, color: T.muted } }, e.dept)
+              React.createElement("span", { style: { fontSize: 11, color: dynamicColor, fontWeight: 700, background: dynamicColor + "10", padding: "2px 8px", borderRadius: 10 } }, e.dept)
             ),
             inT && React.createElement("div", { style: { fontSize: 12, color: T.mid, textAlign: "center" } },
               React.createElement("div", { style: { color: T.muted, fontSize: 10 } }, "حضور"),
@@ -1334,7 +1518,7 @@ function AttendDash({ emps, recs, leaves, isSuper }) {
   );
 }
 
-function Reports({ emps, recs }) {
+function Reports({ emps, recs, depts }) {
   const filteredEmps = emps.filter(e => !e.name.includes("عبدالله") && !e.name.includes("محمد"));
   const [range, setRange] = useState("month");
   const [empFilter, setEmpFilter] = useState("all");
@@ -1493,6 +1677,8 @@ function Reports({ emps, recs }) {
               else if (currentStatus === "late") { dayStatusLabel = "متأخر"; statusColor = T.warn; statusBg = T.wLight; }
               else { dayStatusLabel = "غائب"; statusColor = T.danger; statusBg = T.dLight; }
 
+              const dynamicColor = getDeptColor(e.dept, depts);
+
               if (range === "day") {
                 return React.createElement("tr", { key: e.id, style: { borderBottom: `1px solid ${T.border}` } },
                   React.createElement("td", { style: { padding: "10px 8px" } },
@@ -1500,7 +1686,7 @@ function Reports({ emps, recs }) {
                       React.createElement(Av, { e: e, sz: 32 }),
                       React.createElement("div", null,
                         React.createElement("div", { style: { fontWeight: 600, color: T.txt } }, e.name),
-                        React.createElement("div", { style: { fontSize: 11, color: T.muted } }, e.dept)
+                        React.createElement("span", { style: { fontSize: 10, color: dynamicColor, fontWeight: 700 } }, e.dept)
                       )
                     )
                   ),
@@ -1520,7 +1706,7 @@ function Reports({ emps, recs }) {
                     React.createElement(Av, { e: e, sz: 32 }),
                     React.createElement("div", null,
                       React.createElement("div", { style: { fontWeight: 600, color: T.txt } }, e.name),
-                      React.createElement("div", { style: { fontSize: 11, color: T.muted } }, e.dept)
+                      React.createElement("span", { style: { fontSize: 10, color: dynamicColor, fontWeight: 700 } }, e.dept)
                     )
                   )
                 ),
@@ -1541,7 +1727,7 @@ function Reports({ emps, recs }) {
 }
 
 /* MAIN PANEL CONTROLLER */
-function MgrPanel({ mgr, allEmps, setAllEmps, recs, setRecs, leaves, setLeaves, devices, setDevices, managers, setManagers, kioskMode, setKioskMode, onExit }) {
+function MgrPanel({ mgr, allEmps, setAllEmps, recs, setRecs, leaves, setLeaves, devices, setDevices, managers, setManagers, kioskMode, setKioskMode, depts, setDepts, onExit }) {
   const [tab, setTab] = useState("dash");
   const isSuper = mgr.role === "super";
 
@@ -1580,7 +1766,7 @@ function MgrPanel({ mgr, allEmps, setAllEmps, recs, setRecs, leaves, setLeaves, 
         )
       )
     ),
-    !isSuper && React.createElement("div", { style: { background: T.aLight, borderBottom: "1px solid rgba(99,102,241,.2)", padding: "8px 20px", fontSize: 12, color: T.accent } }, "قسم مخول برؤيته: ", React.createElement("b", null, (mgr.depts || []).join("، ")), " — ", visEmps.length, " موظف"),
+    !isSuper && React.createElement("div", { style: { background: T.aLight, borderBottom: "1px solid rgba(99,102,241,.2)", padding: "8px 20px", fontSize: 12, color: T.accent } }, "الأقسام المخول برؤيتها: ", React.createElement("b", null, (mgr.depts || []).join("، ")), " — ", visEmps.length, " موظف"),
     React.createElement("div", { style: { background: T.surface, borderBottom: `1px solid ${T.border}`, padding: "0 20px", display: "flex", overflowX: "auto" } },
       TABS.map(t => React.createElement("button", {
         key: t.id,
@@ -1589,13 +1775,13 @@ function MgrPanel({ mgr, allEmps, setAllEmps, recs, setRecs, leaves, setLeaves, 
       }, t.l))
     ),
     React.createElement("div", { style: { flex: 1, padding: "0 20px", maxWidth: 1200, width: "100%", margin: "0 auto" } },
-      tab === "dash" && React.createElement(AttendDash, { emps: visAll, recs: recs, leaves: leaves, isSuper: isSuper }),
-      tab === "rep" && React.createElement(Reports, { emps: visAll, recs: recs }),
-      tab === "leave" && React.createElement(Leaves, { emps: visEmps, leaves: leaves, setLeaves: setLeaves, managers: managers }),
+      tab === "dash" && React.createElement(AttendDash, { emps: visAll, recs: recs, leaves: leaves, isSuper: isSuper, depts: depts }),
+      tab === "rep" && React.createElement(Reports, { emps: visAll, recs: recs, depts: depts }),
+      tab === "leave" && React.createElement(Leaves, { emps: visEmps, leaves: leaves, setLeaves: setLeaves, managers: managers, depts: depts }),
       tab === "devs" && isSuper && React.createElement(DevsMgmt, { allEmps: allEmps, devices: devices, setDevices: setDevices }),
-      tab === "mgrs" && isSuper && React.createElement(MgrsMgmt, { managers: managers, setManagers: setManagers, allEmps: allEmps }),
-      tab === "emps" && isSuper && React.createElement(EmpsMgmt, { emps: allEmps, setEmps: setAllEmps, managers: managers }),
-      tab === "sett" && isSuper && React.createElement(Settings, { kioskMode: kioskMode, setKioskMode: setKioskMode, setRecs: setRecs })
+      tab === "mgrs" && isSuper && React.createElement(MgrsMgmt, { managers: managers, setManagers: setManagers, allEmps: allEmps, depts: depts }),
+      tab === "emps" && isSuper && React.createElement(EmpsMgmt, { emps: allEmps, setEmps: setAllEmps, managers: managers, depts: depts }),
+      tab === "sett" && isSuper && React.createElement(Settings, { kioskMode: kioskMode, setKioskMode: setKioskMode, setRecs: setRecs, depts: depts, setDepts: setDepts })
     )
   );
 }
@@ -1608,6 +1794,12 @@ function App() {
   const [devices, setDevices] = useLS("a9_devs", {});
   const [managers, setManagers] = useLS("a9_mgrs", DEF_MGRS);
   const [kioskMode, setKioskMode] = useLS("a9_kioskmode", "personal");
+  const [depts, setDepts] = useLS("a9_depts", [
+    { name: "الإدارة", color: "#6366F1" },
+    { name: "المبيعات", color: "#EC4899" },
+    { name: "الحسابات", color: "#F59E0B" },
+    { name: "الإنتاج", color: "#10B981" }
+  ]);
   const [view, setView] = useState("kiosk");
   const [curMgr, setCurMgr] = useState(null);
 
@@ -1659,20 +1851,23 @@ function App() {
     React.createElement("style", null, CSS),
     view === "kiosk" && kioskMode === "personal" && React.createElement(React.Fragment, null,
       React.createElement(Kiosk, { emps, managers, recs, onRec: (r) => { setRecs(rs => [...rs, r]); if (window._fbDB) { const { addDoc, collection } = window._fbFirestore; addDoc(collection(window._fbDB, "records"), { ...r, timestamp: new Date().toISOString() }); } }, devices, onNavigateToLogin: () => setView("login"), onMgrLogin: (m) => { setCurMgr(m); setView("panel"); } }),
-      React.createElement("div", { style: { position: "fixed", bottom: 20, left: "50%", transform: "translateX(-50%)", zIndex: 200, display: "flex", gap: 8 } },
-        React.createElement("button", { onClick: () => setView("reg"), style: { padding: "9px 18px", background: T.surface, color: T.accent, border: `1.5px solid ${T.accent}`, fontSize: 13, fontWeight: 600, borderRadius: 12, boxShadow: T.shM } }, "تسجيل هاتف الموظف"),
-        React.createElement("button", { onClick: () => setView("login"), style: { padding: "9px 18px", background: T.surface, color: T.mid, border: `1.5px solid ${T.border}`, fontSize: 13, fontWeight: 600, borderRadius: 12, boxShadow: T.shM, marginRight: 8 } }, "دخول المديرين")
+      React.createElement("div", { style: { position: "fixed", bottom: 15, left: "50%", transform: "translateX(-50%)", zIndex: 200, display: "flex", gap: 6, flexWrap: "wrap", justifyContent: "center", width: "100%", maxWidth: 450 } },
+        React.createElement("button", { onClick: () => setView("emp_leave"), style: { padding: "8px 14px", background: T.surface, color: T.warn, border: `1.5px solid ${T.warn}`, fontSize: 12, fontWeight: 700, borderRadius: 12, boxShadow: T.shM } }, "تقديم طلب إجازة للموظف"),
+        React.createElement("button", { onClick: () => setView("reg"), style: { padding: "8px 14px", background: T.surface, color: T.accent, border: `1.5px solid ${T.accent}`, fontSize: 12, fontWeight: 700, borderRadius: 12, boxShadow: T.shM } }, "تسجيل هاتف الموظف"),
+        React.createElement("button", { onClick: () => setView("login"), style: { padding: "8px 14px", background: T.surface, color: T.mid, border: `1.5px solid ${T.border}`, fontSize: 12, fontWeight: 700, borderRadius: 12, boxShadow: T.shM } }, "دخول المديرين")
       )
     ),
     view === "kiosk" && kioskMode === "tablet" && React.createElement(React.Fragment, null,
       React.createElement(KioskTablet, { emps, managers, recs, onRec: (r) => { setRecs(rs => [...rs, r]); if (window._fbDB) { const { addDoc, collection } = window._fbFirestore; addDoc(collection(window._fbDB, "records"), { ...r, timestamp: new Date().toISOString() }); } }, devices, onNavigateToLogin: () => setView("login"), onMgrLogin: (m) => { setCurMgr(m); setView("panel"); } }),
-      React.createElement("div", { style: { position: "fixed", bottom: 20, left: "50%", transform: "translateX(-50%)", zIndex: 200 } },
-        React.createElement("button", { onClick: () => setView("login"), style: { padding: "9px 18px", background: T.surface, color: T.mid, border: `1px solid ${T.border}`, fontSize: 13, fontWeight: 600, borderRadius: 12, boxShadow: T.shM } }, "دخول المديرين")
+      React.createElement("div", { style: { position: "fixed", bottom: 15, left: "50%", transform: "translateX(-50%)", zIndex: 200, display: "flex", gap: 8 } },
+        React.createElement("button", { onClick: () => setView("emp_leave"), style: { padding: "9px 18px", background: T.surface, color: T.warn, border: `1.5px solid ${T.warn}`, fontSize: 13, fontWeight: 700, borderRadius: 12, boxShadow: T.shM } }, "تقديم طلب إجازة للموظف"),
+        React.createElement("button", { onClick: () => setView("login"), style: { padding: "9px 18px", background: T.surface, color: T.mid, border: `1.5px solid ${T.border}`, fontSize: 13, fontWeight: 700, borderRadius: 12, boxShadow: T.shM } }, "دخول المديرين")
       )
     ),
+    view === "emp_leave" && React.createElement(EmpLeaveRequest, { emps, leaves, setLeaves, onBack: () => setView("kiosk") }),
     view === "reg" && React.createElement(RegisterDevice, { emps, managers, devices, setDevices, onBack: () => setView("kiosk"), onMgrLogin: (m) => { setCurMgr(m); setView("panel"); } }),
     view === "login" && React.createElement(MgrLogin, { managers, onLogin: (m) => { setCurMgr(m); setView("panel"); }, onBack: () => setView("kiosk") }),
-    view === "panel" && curMgr && React.createElement(MgrPanel, { mgr: curMgr, allEmps: emps, setAllEmps: setEmps, recs, setRecs, leaves, setLeaves, devices, setDevices, managers, setManagers, kioskMode, setKioskMode, onExit: () => { setCurMgr(null); setView("kiosk"); } })
+    view === "panel" && curMgr && React.createElement(MgrPanel, { mgr: curMgr, allEmps: emps, setAllEmps: setEmps, recs, setRecs, leaves, setLeaves, devices, setDevices, managers, setManagers, kioskMode, setKioskMode, depts, setDepts, onExit: () => { setCurMgr(null); setView("kiosk"); } })
   );
 }
 
