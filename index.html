@@ -698,7 +698,6 @@ function EmpDashboardWidget({ emp, recs, leaves }) {
 
 /* MAIN KIOSK VIEW */
 function Kiosk({ emps, managers, recs, onRec, devices, onNavigateToLogin, onMgrLogin, depts, onLeaveRequest, leaves }) {
-  const filteredEmps = emps.filter(e => !e.name.includes("عبدالله") && !e.name.includes("محمد"));
   const [step, setStep] = useState("pin");
   const [emp, setEmp] = useState(null);
   const [act, setAct] = useState("");
@@ -717,7 +716,7 @@ function Kiosk({ emps, managers, recs, onRec, devices, onNavigateToLogin, onMgrL
   }
 
   async function onPin(pin) {
-    let e = filteredEmps.find(x => x.pin === pin);
+    let e = emps.find(x => x.pin === pin);
     if (!e) {
       const mg = managers.find(x => x.pin === pin);
       if (mg) {
@@ -855,7 +854,6 @@ function Kiosk({ emps, managers, recs, onRec, devices, onNavigateToLogin, onMgrL
 
 /* TABLET KIOSK MODE */
 function KioskTablet({ emps, managers, recs, onRec, devices, onNavigateToLogin, onMgrLogin, depts, onLeaveRequest, leaves }) {
-  const filteredEmps = emps.filter(e => !e.name.includes("عبدالله") && !e.name.includes("محمد"));
   const [step, setStep] = useState("pin");
   const [emp, setEmp] = useState(null);
   const [act, setAct] = useState("");
@@ -872,7 +870,7 @@ function KioskTablet({ emps, managers, recs, onRec, devices, onNavigateToLogin, 
   }
 
   function onPin(pin) {
-    let e = filteredEmps.find(x => x.pin === pin);
+    let e = emps.find(x => x.pin === pin);
     if (!e) {
       const tm = managers && managers.find(x => x.pin === pin);
       if (tm) {
@@ -1184,6 +1182,8 @@ function Leaves({ emps, leaves, setLeaves, managers = [], depts, mgr }) {
 
   function submit() {
     if (!form.empId || !form.date) return;
+    
+    // فحص تكرار الـ PIN غير مطلوب هنا لأنه مجرد ربط بالمعرف، ولكن نأتي لكل الحسابات
     const allPeople = [...emps, ...managers];
     const target = allPeople.find(x => x.id === form.empId);
     const newLeave = {
@@ -1293,10 +1293,10 @@ function DevsMgmt({ allEmps, devices, setDevices, depts }) {
   }
   return React.createElement("div", { style: { padding: "20px 0", display: "flex", flexDirection: "column", gap: 16 } },
     reg.map(e => React.createElement("div", { key: e.id, style: { background: T.surface, border: `1px solid ${T.border}`, borderRadius: 14, padding: "13px 17px", display: "flex", alignItems: "center", gap: 12 } },
-      React.createElement(Av, { e: e, sz: 40, color: getDeptColor(e.dept, depts) }),
+      React.createElement(Av, { e: e, sz: 40, color: getDeptColor(e.dept || "الإدارة", depts) }),
       React.createElement("div", { style: { flex: 1 } },
         React.createElement("div", { style: { fontWeight: 600 } }, e.name),
-        React.createElement("div", { style: { fontSize: 11, color: T.muted } }, "القسم الإداري: ", e.dept)
+        React.createElement("div", { style: { fontSize: 11, color: T.muted } }, "القسم الإداري: ", e.dept || "إدارة النظام")
       ),
       React.createElement("button", { onClick: () => reset(e.id), style: { padding: "7px 14px", background: T.dLight, color: T.danger, borderRadius: 10, fontWeight: 600 } }, "إلغاء ارتباط الهاتف الحالي")
     ))
@@ -1326,6 +1326,14 @@ function MgrsMgmt({ managers, setManagers, allEmps, depts }) {
       setErr("يرجى تحديد قسم واحد على الأقل للمدير");
       return;
     }
+    
+    // فحص تكرار الـ PIN
+    const pinExists = managers.some(x => x.pin === form.pin.trim()) || allEmps.some(x => x.pin === form.pin.trim());
+    if (pinExists) {
+      setErr("رمز الـ PIN هذا مسجل مسبقاً لمستخدم آخر، يرجى اختيار رمز فريد.");
+      return;
+    }
+
     const id = "M" + String(Date.now()).slice(-5);
     const linkedDepts = form.role === "super" ? [] : form.depts;
     const newMgr = { id, name: form.name.trim(), title: form.title.trim(), pin: form.pin.trim(), role: form.role, depts: linkedDepts, color: "#6366F1", shift: form.shift, order: managers.length };
@@ -1360,11 +1368,20 @@ function MgrsMgmt({ managers, setManagers, allEmps, depts }) {
   function saveEdit(id) {
     if (editForm.pin.length < 4) { alert("الـ PIN لا يقل عن 4 أرقام"); return; }
     if (editForm.role === "dept" && (!editForm.depts || editForm.depts.length === 0)) { alert("يرجى تحديد قسم واحد على الأقل"); return; }
+    
+    // فحص تكرار الـ PIN عند التعديل
+    const pinExists = managers.some(x => x.id !== id && x.pin === editForm.pin.trim()) || allEmps.some(x => x.pin === editForm.pin.trim());
+    if (pinExists) {
+      alert("رمز الـ PIN هذا مسجل مسبقاً لمستخدم آخر، يرجى اختيار رمز فريد.");
+      return;
+    }
+
     const linkedDepts = editForm.role === "super" ? [] : editForm.depts;
     setManagers(p => p.map(m => m.id === id ? { ...m, title: editForm.title.trim(), pin: editForm.pin.trim(), role: editForm.role, depts: linkedDepts, shift: editForm.shift } : m));
     if (window._fbDB) {
-      const { updateDoc, doc } = window._fbFirestore;
-      updateDoc(doc(window._fbDB, "managers", id), { title: editForm.title.trim(), pin: editForm.pin.trim(), role: editForm.role, depts: linkedDepts, shift: editForm.shift });
+      const { setDoc, doc } = window._fbFirestore;
+      const original = managers.find(x => x.id === id);
+      setDoc(doc(window._fbDB, "managers", id), { ...original, title: editForm.title.trim(), pin: editForm.pin.trim(), role: editForm.role, depts: linkedDepts, shift: editForm.shift }, { merge: true });
     }
     setEditId(null);
   }
@@ -1504,7 +1521,7 @@ function MgrsMgmt({ managers, setManagers, allEmps, depts }) {
             ))
           )
         ),
-        React.createElement("button", { onClick: () => saveEdit(editForm.id || m.id), style: { padding: "9px 20px", background: T.ok, color: "#fff", fontWeight: 700, borderRadius: 10, marginTop: 10 } }, "حفظ")
+        React.createElement("button", { onClick: () => saveEdit(m.id), style: { padding: "9px 20px", background: T.ok, color: "#fff", fontWeight: 700, borderRadius: 10, marginTop: 10 } }, "حفظ")
       )
     ))
   );
@@ -1523,6 +1540,14 @@ function EmpsMgmt({ emps, setEmps, managers, depts }) {
       setErr("يرجى التأكد من كتابة الاسم، اختيار القسم، وتعيين PIN صالح لا يقل عن 4 أرقام");
       return;
     }
+
+    // فحص تكرار الـ PIN عند الإضافة للموظف
+    const pinExists = emps.some(x => x.pin === form.pin.trim()) || managers.some(x => x.pin === form.pin.trim());
+    if (pinExists) {
+      setErr("رمز الـ PIN هذا مسجل مسبقاً لمستخدم آخر، يرجى اختيار رمز فريد.");
+      return;
+    }
+
     const id = "E" + String(Date.now()).slice(-5);
     const newEmp = { id, ...form, name: form.name.trim(), pin: form.pin.trim(), order: emps.length };
     setEmps(p => [...p, newEmp]);
@@ -1554,6 +1579,14 @@ function EmpsMgmt({ emps, setEmps, managers, depts }) {
       alert("القسم مطلوب والـ PIN لا يقل عن 4 أرقام");
       return;
     }
+
+    // فحص تكرار الـ PIN عند تعديل الموظف
+    const pinExists = emps.some(x => x.id !== id && x.pin === editForm.pin.trim()) || managers.some(x => x.pin === editForm.pin.trim());
+    if (pinExists) {
+      alert("رمز الـ PIN هذا مسجل مسبقاً لمستخدم آخر، يرجى اختيار رمز فريد.");
+      return;
+    }
+
     setEmps(p => p.map(e => e.id === id ? { ...e, dept: editForm.dept.trim(), pin: editForm.pin.trim() } : e));
     if (window._fbDB) {
       const { updateDoc, doc } = window._fbFirestore;
@@ -1708,7 +1741,6 @@ function Settings({ kioskMode, setKioskMode, setRecs, depts, setDepts }) {
 
 /* MANAGEMENT CONTROLLER PANEL */
 function AttendDash({ emps, recs, leaves, isSuper, depts }) {
-  const filteredEmps = emps.filter(e => !e.name.includes("عبدالله") && !e.name.includes("محمد"));
   const today = todayStr();
   const todayR = recs.filter(r => r.date === today);
   
@@ -1725,10 +1757,10 @@ function AttendDash({ emps, recs, leaves, isSuper, depts }) {
     return rs.length ? rs[rs.length - 1].time : null;
   }
   
-  const present = filteredEmps.filter(e => st(e.id) === "in");
-  const done = filteredEmps.filter(e => st(e.id) === "done");
-  const absent = filteredEmps.filter(e => st(e.id) === "absent");
-  const absentLeave = filteredEmps.filter(e => st(e.id) === "leave");
+  const present = emps.filter(e => st(e.id) === "in");
+  const done = emps.filter(e => st(e.id) === "done");
+  const absent = emps.filter(e => st(e.id) === "absent");
+  const absentLeave = emps.filter(e => st(e.id) === "leave");
   const lateToday = todayR.filter(r => r.type === "in" && r.late);
 
   const stats = [
@@ -1748,8 +1780,8 @@ function AttendDash({ emps, recs, leaves, isSuper, depts }) {
     ),
     React.createElement(Card, { title: "تفاصيل حضور اليوم" },
       React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 8, marginTop: 8 } },
-        filteredEmps.length === 0 && React.createElement("div", { style: { color: T.muted, fontSize: 14, textAlign: "center", padding: 20 } }, "لا يوجد موظفون"),
-        filteredEmps.map(e => {
+        emps.length === 0 && React.createElement("div", { style: { color: T.muted, fontSize: 14, textAlign: "center", padding: 20 } }, "لا يوجد موظفون"),
+        emps.map(e => {
           const status = st(e.id);
           const inT = lastTime(e.id, "in");
           const outT = lastTime(e.id, "out");
@@ -1784,7 +1816,6 @@ function AttendDash({ emps, recs, leaves, isSuper, depts }) {
 }
 
 function Reports({ emps, recs, depts, leaves }) {
-  const filteredEmps = emps.filter(e => !e.name.includes("عبدالله") && !e.name.includes("محمد"));
   const [range, setRange] = useState("month");
   const [empFilter, setEmpFilter] = useState("all");
   const [reportDate, setReportDate] = useState(todayStr());
@@ -1803,7 +1834,7 @@ function Reports({ emps, recs, depts, leaves }) {
   });
 
   function empStats(id) {
-    const empObj = filteredEmps.find(x => x.id === id);
+    const empObj = emps.find(x => x.id === id);
     const empShift = empObj ? empObj.shift : DEFAULT_SHIFT;
     const rs = periodRecs.filter(x => x.empId === id);
     const byDate = {};
@@ -1841,7 +1872,7 @@ function Reports({ emps, recs, depts, leaves }) {
     return { totalHours, totalOvertime, days: Object.keys(byDate).length, present, late, absent, early, leaveDays };
   }
 
-  const shownEmps = empFilter === "all" ? filteredEmps : filteredEmps.filter(e => e.id === empFilter);
+  const shownEmps = empFilter === "all" ? emps : emps.filter(e => e.id === empFilter);
 
   function exportCSV() {
     const isDay = range === "day";
@@ -1902,8 +1933,8 @@ function Reports({ emps, recs, depts, leaves }) {
         value: empFilter, onChange: (e) => setEmpFilter(e.target.value),
         style: { padding: "8px 14px", border: `1px solid ${T.border}`, borderRadius: 10, fontSize: 13, fontFamily: "inherit", background: T.surface, color: T.txt, marginRight: "auto" }
       },
-        React.createElement("option", { value: "all" }, "كل الموظفين"),
-        filteredEmps.map(e => React.createElement("option", { key: e.id, value: e.id }, e.name))
+        React.createElement("option", { value: "all" }, "كل طاقم العمل"),
+        emps.map(e => React.createElement("option", { key: e.id, value: e.id }, e.name))
       ),
       React.createElement("button", {
         onClick: exportCSV,
@@ -1917,8 +1948,8 @@ function Reports({ emps, recs, depts, leaves }) {
           React.createElement("thead", null,
             React.createElement("tr", { style: { borderBottom: `2px solid ${T.border}` } },
               (range === "day" 
-                ? ["الموظف", "الحالة", "ميعاد الحضور", "ميعاد الانصراف", "ساعات العمل", "العمل الإضافي"]
-                : ["الموظف", "أيام الحضور", "حاضر", "تأخير", "غياب", "إجازات", "انصراف مبكر", "ساعات العمل", "العمل الإضافي"]
+                ? ["الموظف/المدير", "الحالة", "ميعاد الحضور", "ميعاد الانصراف", "ساعات العمل", "العمل الإضافي"]
+                : ["الموظف/المدير", "أيام الحضور", "حاضر", "تأخير", "غياب", "إجازات", "انصراف مبكر", "ساعات العمل", "العمل الإضافي"]
               ).map((h, i) =>
                 React.createElement("th", { key: i, style: { padding: "10px 8px", textAlign: i === 0 ? "right" : "center", color: T.mid, fontWeight: 700, whiteSpace: "nowrap" } }, h)
               )
@@ -1956,7 +1987,7 @@ function Reports({ emps, recs, depts, leaves }) {
                 dayStatusLabel = "غائب"; statusColor = T.danger; statusBg = T.dLight; 
               }
 
-              const dynamicColor = getDeptColor(e.dept, depts);
+              const dynamicColor = e._isMgr ? (e.role === 'super' ? T.gold : getDeptColor(e.depts?.[0], depts)) : getDeptColor(e.dept, depts);
 
               if (range === "day") {
                 return React.createElement("tr", { key: e.id, style: { borderBottom: `1px solid ${T.border}` } },
@@ -2030,6 +2061,9 @@ function MgrPanel({ mgr, allEmps, setAllEmps, recs, setRecs, leaves, setLeaves, 
     { id: "leave", l: "الإجازات" }
   ];
 
+  // دمج الموظفين والمديرين لإظهار كافة الهواتف المسجلة لأي حساب بالنظام
+  const combinedPeopleForDevices = [...allEmps, ...managers.map(m => ({ id: m.id, name: m.name, dept: m.role === "super" ? "الإدارة العليا" : (m.depts?.[0] || "الإدارة") }))];
+
   return React.createElement("div", { style: { minHeight: "100vh", background: T.bg, display: "flex", flexDirection: "column" } },
     React.createElement("div", { style: { background: T.surface, borderBottom: `1px solid ${T.border}`, padding: "10px 16px", position: "sticky", top: 0, zIndex: 100, boxShadow: T.sh } },
       React.createElement("div", { style: { display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 } },
@@ -2058,7 +2092,7 @@ function MgrPanel({ mgr, allEmps, setAllEmps, recs, setRecs, leaves, setLeaves, 
       tab === "dash" && React.createElement(AttendDash, { emps: visAll, recs: recs, leaves: leaves, isSuper: isSuper, depts: depts }),
       tab === "rep" && React.createElement(Reports, { emps: visAll, recs: recs, depts: depts, leaves: leaves }),
       tab === "leave" && React.createElement(Leaves, { emps: visEmps, leaves: leaves, setLeaves: setLeaves, managers: managers, depts: depts, mgr: mgr }),
-      tab === "devs" && isSuper && React.createElement(DevsMgmt, { allEmps: allEmps, devices: devices, setDevices: setDevices, depts: depts }),
+      tab === "devs" && isSuper && React.createElement(DevsMgmt, { allEmps: combinedPeopleForDevices, devices: devices, setDevices: setDevices, depts: depts }),
       tab === "mgrs" && isSuper && React.createElement(MgrsMgmt, { managers: managers, setManagers: setManagers, allEmps: allEmps, depts: depts }),
       tab === "emps" && isSuper && React.createElement(EmpsMgmt, { emps: allEmps, setEmps: setAllEmps, managers: managers, depts: depts }),
       tab === "sett" && isSuper && React.createElement(Settings, { kioskMode: kioskMode, setKioskMode: setKioskMode, setRecs: setRecs, depts: depts, setDepts: setDepts })
