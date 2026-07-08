@@ -828,7 +828,7 @@ function Kiosk({ emps, managers, recs, onRec, onNavigateToLogin, depts, onLeaveR
             React.createElement(Row, { l: "التوقيت الحالي", v: React.createElement("span", { className: "mono" }, nowStr()) }),
             React.createElement(Row, { l: "الصورة الحية", v: selfie ? "ملتقطة ومرفقة" : "لم يتم الإرفاق" })
           ),
-          React.createElement("button", { onClick: doRec, style: { padding: 14, background: T.accent, color: "#fff", fontWeight: 700, fontSize: 15, borderRadius: 12 } }, "تأكيد وإرسال السجل")
+          React.createElement("button", { onClick: doRec, style: { padding: 14, background: T.accent, color: "#fff", fontWeight: 700, fontSize: 15, borderRadius: 12 } }, "تأكيد وإرسال الطلب")
         )
       ),
       React.createElement(EmpDashboardWidget, { emp, recs, leaves, holidays, missions }),
@@ -1148,7 +1148,7 @@ function EmpMissionRequest({ emps, missions, setMissions, onBack, preAuthEmp }) 
         ),
         err && React.createElement("div", { style: { marginTop: 12, color: T.danger, fontSize: 12, fontWeight: 700, maxWidth: 290 } }, err),
         React.createElement("div", { style: { display: "flex", gap: 10, marginTop: 20 } },
-          React.createElement("button", { onClick: submit, style: { padding: "11px 20px", background: T.accent, color: "#fff", fontWeight: 700, borderRadius: 12, flex: 1 } }, "إرسال السجل"),
+          React.createElement("button", { onClick: submit, style: { padding: "11px 20px", background: T.accent, color: "#fff", fontWeight: 700, borderRadius: 12, flex: 1 } }, "إرسال الطلب"),
           React.createElement("button", { onClick: onBack, style: { padding: "11px 20px", background: T.hi, color: T.txt, borderRadius: 12 } }, "إلغاء")
         )
       )
@@ -1563,7 +1563,7 @@ function AttendDash({ emps, recs, leaves, depts, holidays = [], missions = [] })
 }
 
 function Reports({ emps, recs, depts, leaves, holidays = [], missions = [] }) {
-  const [range, setRange] = useState("month");
+  const [range, setRange] = useState("day");
   const [empFilter, setEmpFilter] = useState("all");
   const [reportDate, setReportDate] = useState(todayStr());
 
