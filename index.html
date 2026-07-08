@@ -857,7 +857,6 @@ function Kiosk({ emps, managers, recs, onRec, devices, onNavigateToLogin, onNavi
     err && React.createElement(Note, { color: T.danger, bg: T.dLight }, err),
     React.createElement(PinPad, { key: sk, onConfirm: onPin, doShake: !!err }),
     React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center", width: "100%", maxWidth: 400, marginTop: 12 } },
-      React.createElement("button", { onClick: onNavigateToRegister, style: { padding: "10px 16px", background: T.surface, color: T.accent, border: `1.5px solid ${T.accent}`, fontSize: 13, fontWeight: 700, borderRadius: 12, boxShadow: T.sh, flex: 1, minWidth: 140 } }, "تسجيل هاتف الموظف"),
       React.createElement("button", { onClick: onNavigateToLogin, style: { padding: "10px 16px", background: T.surface, color: T.mid, border: `1.5px solid ${T.border}`, fontSize: 13, fontWeight: 700, borderRadius: 12, boxShadow: T.sh, flex: 1, minWidth: 140 } }, "دخول المديرين")
     )
   );
@@ -964,6 +963,10 @@ function KioskTablet({ emps, managers, recs, onRec, devices, onNavigateToLogin, 
         onClick: () => onLeaveRequest && onLeaveRequest(emp),
         style: { padding: "10px 20px", background: T.wLight, color: T.warn, border: `1.5px dashed ${T.warn}`, borderRadius: 12, fontWeight: 700, fontSize: 13, width: "100%", maxWidth: 420 }
       }, "تقديم طلب إجازة بدلاً من البصمة"),
+      React.createElement("button", {
+  onClick: () => setPreAuthEmp ? (setPreAuthEmp(emp) || setView("emp_mission")) : (window.location.reload()),
+  style: { marginTop: 6, padding: "10px 20px", background: T.aLight, color: T.accent, border: `1.5px dashed ${T.accent}`, borderRadius: 12, fontWeight: 700, fontSize: 13, width: "100%", maxWidth: 400 }
+}, "تقديم طلب مأمورية خارجية (خارج المصنع)")                         
       React.createElement("button", { onClick: () => { setStep("pin"); setEmp(null); setSelfie(null); }, style: { background: "none", color: T.muted, fontSize: 13, padding: 8 } }, "إلغاء الأمر")
     );
   }
