@@ -133,7 +133,14 @@ const ABSENT_AFTER = 10 * 60 + 30;  // 10:30
 const EARLY_LEAVE_BEFORE = 16 * 60; // 16:00
 function toMins(t) { if (!t) return null; const [h, m] = t.split(":").map(Number); return h * 60 + m; }
 
-function dayStatus(inTime, outTime, shiftKey) {
+function dayStatus(inTime, outTime, shiftKey, dateStr, holidays = [], missions = [], empId = "") {
+  // 1. التحقق أولاً إذا كان اليوم إجازة رسمية عامة للجميع
+  if (holidays && holidays.some(h => h.date === dateStr)) return "holiday";
+  
+  // 2. التحقق إذا كان للموظف مأمورية خارجية معتمدة في هذا التاريخ
+  if (missions && missions.some(m => m.empId === empId && m.date === dateStr && m.status === "approved")) return "mission";
+  
+  // 3. إذا لم يتوفر أي منهما، يكمل السيستم حساباته القديمة المعتادة
   if (!inTime) return "absent"; 
   const shift = SHIFTS[shiftKey || DEFAULT_SHIFT];
   if (shift && shift.isFlexible) return "present"; 
@@ -141,7 +148,7 @@ function dayStatus(inTime, outTime, shiftKey) {
   if (inM >= ABSENT_AFTER) return "absent";          
   if (outTime && toMins(outTime) < EARLY_LEAVE_BEFORE) return "absent"; 
   if (inM >= LATE_AFTER) return "late";              
-  return "present";                                  
+  return "present";                                                                    
 }
 
 function isLateForShift(time, shiftKey) {
@@ -727,7 +734,7 @@ function Kiosk({ emps, managers, recs, onRec, devices, onNavigateToLogin, onNavi
     return rs.length ? (rs[rs.length - 1].type === "in" ? "in" : "done") : "absent";
   }
 
-  async function onPin(pin) {
+ async function onPin(pin) {
     let e = emps.find(x => x.pin === pin);
     if (!e) {
       const mg = managers.find(x => x.pin === pin);
@@ -741,19 +748,8 @@ function Kiosk({ emps, managers, recs, onRec, devices, onNavigateToLogin, onNavi
       setTimeout(() => setErr(""), 2000);
       return;
     }
-    if (!devices[e.id]) {
-      setEmp(e);
-      setStep("nodev");
-      return;
-    }
-    setChecking(true);
-    const fp = await getDeviceFP();
-    setChecking(false);
-    if (devices[e.id].fp !== fp) {
-      setEmp(e);
-      setStep("blocked");
-      return;
-    }
+    
+    // الانتقال الفوري والمباشر لخطوة الحضور والـ GPS دون فحص قيود أو حظر هاتف الموظف
     setEmp(e);
     setAct(empSt(e.id) === "in" ? "out" : "in");
     setStep("gps");
@@ -1080,89 +1076,68 @@ function EmpLeaveRequest({ emps, leaves, setLeaves, onBack, preAuthEmp }) {
 }
 
 /* DEVICE REGISTRATION SCREEN */
-function RegisterDevice({ emps, managers, devices, setDevices, onBack, onMgrLogin, depts }) {
-  const [step, setStep] = useState("pin");
-  const [emp, setEmp] = useState(null);
-  const [fp, setFp] = useState(null);
+function RegisterDevice() { return null; }
+
+function EmpMissionRequest({ emps, missions, setMissions, onBack, preAuthEmp }) {
+  const [step, setStep] = useState(preAuthEmp ? "form" : "pin");
+  const [emp, setEmp] = useState(preAuthEmp || null);
+  const [form, setForm] = useState({ date: todayStr(), destination: "", details: "" });
   const [err, setErr] = useState("");
+  const [success, setSuccess] = useState("");
   const [sk, setSk] = useState(0);
 
-  async function onPin(pin) {
-    let e = emps.find(x => x.pin === pin);
-    if (!e) {
-      const mg = managers.find(x => x.pin === pin);
-      if (mg) {
-        e = { id: mg.id, name: mg.name, dept: mg.title || "الإدارة", pin: mg.pin, color: mg.color, shift: mg.shift || DEFAULT_SHIFT, _isMgr: true };
-      }
-    }
-    if (!e) {
-      setErr("رمز التحقق الشخصي PIN غير صحيح");
-      setSk(k => k + 1);
-      setTimeout(() => setErr(""), 2000);
-      return;
-    }
-    if (devices[e.id]) {
-      setEmp({ ...e, already: true });
-      setStep("already");
-      return;
-    }
-    const f = await getDeviceFP();
-    setFp(f);
-    setEmp(e);
-    setStep("confirm");
+  function onPin(pin) {
+    const e = emps.find(x => x.pin === pin);
+    if (!e) { setErr("رمز التحقق الشخصي PIN غير صحيح"); setSk(k => k + 1); return; }
+    setEmp(e); setStep("form");
   }
 
-  function confirm() {
-    const devData = { fp: fp, registeredAt: new Date().toISOString() };
-    setDevices(d => ({ ...d, [emp.id]: devData }));
-    if (window._fbDB) {
-      const { setDoc, doc } = window._fbFirestore;
-      setDoc(doc(window._fbDB, "devices", emp.id), devData);
-    }
-    setStep("done");
+  function submit() {
+    if (!form.destination.trim()) { setErr("يرجى كتابة مكان أو وجهة المأمورية الخارجية"); return; }
+    const newMission = {
+      id: Date.now(), empId: emp.id, empName: emp.name, date: form.date,
+      destination: form.destination.trim(), details: form.details.trim(),
+      status: "pending", submittedAt: todayStr()
+    };
+    setMissions(m => [...m, newMission]);
+    if (window._fbDB) window._fbFirestore.setDoc(window._fbFirestore.doc(window._fbDB, "missions", String(newMission.id)), newMission);
+    setSuccess("تم إرسال طلب المأمورية الخارجية بنجاح وهو قيد مراجعة الإدارة");
+    setTimeout(() => onBack(), 3000);
   }
 
-  if (step === "already") {
+  if (success) {
     return React.createElement(CenteredPage, null,
-      React.createElement(IcoBox, { icon: "تنبيه", bg: T.wLight }),
-      React.createElement("div", { style: { fontSize: 18, fontWeight: 700 } }, "هذا الحساب مرتبط بجهاز مسجل مسبقاً"),
-      emp && React.createElement(React.Fragment, null, React.createElement(Av, { e: emp, sz: 52, color: getDeptColor(emp.dept, depts) }), React.createElement("div", { style: { fontWeight: 600 } }, emp.name)),
-      React.createElement(Note, { color: T.warn, bg: T.wLight }, "لإعادة توثيق حسابك على هاتف ذكي جديد، يرجى تقديم طلب تعيين لمدير النظام"),
-      React.createElement("button", { onClick: onBack, style: { padding: "12px 32px", background: T.accent, color: "#fff", fontWeight: 700, borderRadius: 12 } }, "العودة للشاشة الرئيسية")
+      React.createElement(IcoBox, { icon: "💼", bg: T.oLight, sz: 80 }),
+      React.createElement("div", { style: { fontSize: 20, fontWeight: 700, color: T.ok } }, success)
     );
   }
 
-  if (step === "done") {
+  if (step === "form" && emp) {
     return React.createElement(CenteredPage, null,
-      React.createElement(IcoBox, { icon: "توثيق", bg: T.oLight, sz: 80 }),
-      React.createElement("div", { style: { fontSize: 20, fontWeight: 700 } }, "تم تفعيل وتوثيق الهاتف الحالي بنجاح"),
-      emp && React.createElement(React.Fragment, null, React.createElement(Av, { e: emp, sz: 52, color: getDeptColor(emp.dept, depts) }), React.createElement("div", { style: { fontWeight: 600 } }, emp.name)),
-      React.createElement("button", { onClick: onBack, style: { padding: "12px 32px", background: T.accent, color: "#fff", fontWeight: 700, fontSize: 15, borderRadius: 12 } }, "بدء تسجيل الحضور والإنصراف الآمن")
-    );
-  }
-
-  if (step === "confirm" && emp) {
-    return React.createElement(CenteredPage, null,
-      React.createElement("div", { style: { fontSize: 18, fontWeight: 700 } }, "تأكيد تسجيل وإقران الهاتف"),
-      React.createElement(Av, { e: emp, sz: 56, color: getDeptColor(emp.dept, depts) }),
-      React.createElement("div", { style: { fontWeight: 700, fontSize: 16 } }, emp.name),
-      React.createElement("div", { style: { background: T.surface, border: `1px solid ${T.border}`, borderRadius: 16, padding: 18, width: "100%", maxWidth: 340, boxShadow: T.sh } },
-        React.createElement(Row, { l: "الرمز التوثيقي المكتشف", v: React.createElement("span", { className: "mono", style: { fontSize: 11, color: T.accent } }, fp?.slice(0, 18), "...") }),
-        React.createElement("div", { style: { marginTop: 14, background: T.wLight, border: "1px solid #FCD34D", borderRadius: 10, padding: "10px 14px", fontSize: 12, color: T.warn } }, "تنبيه حماية: بمجرد إتمام الارتباط التلقائي، لن يتم قبول تسجيل الحضور الخاص بك إلا من خلال هذا الهاتف حصراً")
-      ),
-      React.createElement("button", { onClick: confirm, style: { padding: "12px 28px", background: T.accent, color: "#fff", fontWeight: 700, fontSize: 14, borderRadius: 12 } }, "ربط واعتماد هذا الهاتف ذكياً"),
-      React.createElement("button", { onClick: () => setStep("pin"), style: { background: "none", color: T.muted, fontSize: 13, padding: 8 } }, "إلغاء وتراجع")
+      React.createElement(Card, { title: `💼 تسجيل طلب مأمورية خارجية للموظف: ${emp.name}` },
+        React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 12, width: 290, textAlign: "right" } },
+          React.createElement("label", { style: { fontSize: 13, fontWeight: 600 } }, "تاريخ المأمورية بره المصنع:"),
+          React.createElement("input", { type: "date", value: form.date, onChange: e => setForm({ ...form, date: e.target.value }) }),
+          React.createElement("label", { style: { fontSize: 13, fontWeight: 600 } }, "مكان المأمورية (رايح فين؟):"),
+          React.createElement("input", { placeholder: "اسم العميل، وجهة موقع العمل الخارجي...", value: form.destination, onChange: e => setForm({ ...form, destination: e.target.value }) }),
+          React.createElement("label", { style: { fontSize: 13, fontWeight: 600 } }, "تفاصيل أو طبيعة الشغل المطلوبة:"),
+          React.createElement("input", { placeholder: "طبيعة التكليف أو المبررات...", value: form.details, onChange: e => setForm({ ...form, details: e.target.value }) })
+        ),
+        err && React.createElement("div", { style: { marginTop: 12, color: T.danger, fontSize: 12, fontWeight: 700 } }, err),
+        React.createElement("div", { style: { display: "flex", gap: 10, marginTop: 20 } },
+          React.createElement("button", { onClick: submit, style: { padding: "11px 20px", background: T.accent, color: "#fff", fontWeight: 700, borderRadius: 12, flex: 1 } }, "إرسال المأمورية"),
+          React.createElement("button", { onClick: onBack, style: { padding: "11px 20px", background: T.hi, color: T.txt, borderRadius: 12 } }, "إلغاء")
+        )
+      )
     );
   }
 
   return React.createElement(CenteredPage, null,
-    React.createElement(IcoBox, { icon: "هاتف", bg: T.aLight }),
-    React.createElement("div", { style: { textAlign: "center" } },
-      React.createElement("div", { style: { fontSize: 19, fontWeight: 800 } }, "تسجيل هاتف الموظف")
-    ),
+    React.createElement(IcoBox, { icon: "💼", bg: T.aLight }),
+    React.createElement("div", { style: { fontSize: 18, fontWeight: 800 } }, "شاشة طلب مأمورية خارجية مستقلة"),
     err && React.createElement(Note, { color: T.danger, bg: T.dLight }, err),
     React.createElement(PinPad, { key: sk, onConfirm: onPin, doShake: !!err }),
-    React.createElement("button", { onClick: onBack, style: { background: "none", color: T.muted, fontSize: 13, padding: 10 } }, "إلغاء والعودة للرئيسية")
+    React.createElement("button", { onClick: onBack, style: { background: "none", color: T.muted } }, "إلغاء الأمر")
   );
 }
 
@@ -1701,24 +1676,17 @@ function EmpsMgmt({ emps, setEmps, managers, depts }) {
     ))
   );
 }
-
-function Settings({ kioskMode, setKioskMode, setRecs, depts, setDepts }) {
+function Settings({ kioskMode, setKioskMode, setRecs, depts, setDepts, isSuper, holidays = [], setHolidays }) {
   const [newDept, setNewDept] = useState("");
   const [deptCol, setDeptCol] = useState(COLORS[0]);
+  const [hForm, setHForm] = useState({ date: todayStr(), label: "" });
 
   function handleAddDept() {
     if (!newDept.trim()) return;
-    if (depts.some(x => x.name === newDept.trim())) {
-      alert("هذا القسم مضاف ومسجل مسبقاً في النظام.");
-      return;
-    }
+    if (depts.some(x => x.name === newDept.trim())) { alert("هذا القسم مضاف ومسجل مسبقاً."); return; }
     const updatedDepts = [...depts, { name: newDept.trim(), color: deptCol }];
     setDepts(updatedDepts);
-    
-    if (window._fbDB) {
-      const { setDoc, doc } = window._fbFirestore;
-      setDoc(doc(window._fbDB, "system_settings", "depts_config"), { list: updatedDepts });
-    }
+    if (window._fbDB) window._fbFirestore.setDoc(window._fbFirestore.doc(window._fbDB, "system_settings", "depts_config"), { list: updatedDepts });
     setNewDept("");
   }
 
@@ -1726,60 +1694,61 @@ function Settings({ kioskMode, setKioskMode, setRecs, depts, setDepts }) {
     if(!confirm(`هل تود بالتأكيد حذف قسم ${name}؟`)) return;
     const updatedDepts = depts.filter(x => x.name !== name);
     setDepts(updatedDepts);
-    if (window._fbDB) {
-      const { setDoc, doc } = window._fbFirestore;
-      setDoc(doc(window._fbDB, "system_settings", "depts_config"), { list: updatedDepts });
-    }
+    if (window._fbDB) window._fbFirestore.setDoc(window._fbFirestore.doc(window._fbDB, "system_settings", "depts_config"), { list: updatedDepts });
   }
 
-  function wipe() {
-    if (confirm("هل أنت متأكد من رغبتك في مسح كافة السجلات الحالية نهائياً من النظام؟")) {
-      setRecs([]);
-      alert("تم تصفير سجلات العمل المحلية بنجاح");
-    }
+  function handleAddHoliday() {
+    if (!hForm.label.trim()) return;
+    const newH = { id: String(Date.now()), date: hForm.date, label: hForm.label.trim() };
+    setHolidays(h => [...h, newH]);
+    if (window._fbDB) window._fbFirestore.setDoc(window._fbFirestore.doc(window._fbDB, "holidays", newH.id), newH);
+    setHForm({ date: todayStr(), label: "" });
   }
+
+  function handleDeleteHoliday(id) {
+    if (!confirm("هل تود حذف يوم الإجازة الرسمية العامة هذا؟")) return;
+    setHolidays(h => h.filter(x => x.id !== id));
+    if (window._fbDB) window._fbFirestore.deleteDoc(window._fbFirestore.doc(window._fbDB, "holidays", id));
+  }
+
   return React.createElement("div", { style: { padding: "20px 0", display: "flex", flexDirection: "column", gap: 14, maxWidth: 520 } },
-    React.createElement(Card, { title: "إدارة الأقسام والألوان المخصصة" },
+    // كارت الأقسام معروض فقط للسوبر أدمن
+    isSuper && React.createElement(Card, { title: "إدارة الأقسام والألوان المخصصة" },
       React.createElement("div", { style: { display: "flex", gap: 10, marginBottom: 10 } },
         React.createElement("input", { placeholder: "اسم القسم الجديد...", value: newDept, onChange: e => setNewDept(e.target.value), style: { flex: 2 } }),
         React.createElement("button", { onClick: handleAddDept, style: { padding: "10px 20px", background: T.ok, color: "#fff", fontWeight: 700, borderRadius: 12, flex: 1 } }, "إضافة")
       ),
-      React.createElement("div", { style: { fontSize: 12, fontWeight: 700, color: T.mid, marginBottom: 4 } }, "اختر لون القسم من الدوائر التالية البصرية:"),
-      React.createElement("div", { style: { display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 20, background: T.hi, padding: 10, borderRadius: 12 } },
-        COLORS.map(c => React.createElement("div", {
-          key: c,
-          onClick: () => setDeptCol(c),
-          style: {
-            width: 32,
-            height: 32,
-            borderRadius: "50%",
-            background: c,
-            cursor: "pointer",
-            border: deptCol === c ? "3px solid #0F172A" : "1px solid #E4E8F0",
-            boxShadow: deptCol === c ? "0 0 0 2px #6366F1" : "none",
-            transition: "all 0.15s"
-          }
-        }))
-      ),
       React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap" } },
         depts.map(d => React.createElement("span", { key: d.name, style: { display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 14px", background: d.color + "15", border: `1.5px solid ${d.color}`, color: d.color, borderRadius: 20, fontSize: 12, fontWeight: 700 } },
-          d.name,
-          React.createElement("span", { onClick: () => handleDeleteDept(d.name), style: { cursor: "pointer", color: T.danger, fontWeight: "bold", fontSize: 14 } }, "×")
+          d.name, React.createElement("span", { onClick: () => handleDeleteDept(d.name), style: { cursor: "pointer", color: T.danger } }, "×")
         ))
       )
     ),
+    // كارت وضع تشغيل النظام متاح لجميع المديرين
     React.createElement(Card, { title: "إعدادات وضع تشغيل النظام" },
-      React.createElement("div", { style: { fontSize: 12, color: T.muted, marginBottom: 12 } }, "تحديد أسلوب وآلية عمل وإثبات الحضور المعتمدة لهذا الجهاز الرقمي"),
+      React.createElement("div", { style: { fontSize: 12, color: T.muted, marginBottom: 12 } }, "تحديد آلية عمل متصفح هذا الجهاز الحالي فورا بين الأنظمة المعتمدة:"),
       React.createElement("div", { style: { display: "flex", gap: 12, flexWrap: "wrap" } },
-        [{ v: "personal", l: "نظام الهاتف الشخصي للموظف (بصمة رقمية)" }, { v: "tablet", l: "نظام تابلت البوابة المشترك (صورة تحقق حية)" }].map(o => React.createElement("button", {
-          key: o.v,
-          onClick: () => setKioskMode(o.v),
-          style: { flex: 1, minWidth: 150, padding: "14px 16px", background: kioskMode === o.v ? T.aLight : T.hi, border: `2px solid ${T.accent} : ${T.border}`, borderRadius: 14, fontWeight: 700, color: kioskMode === o.v ? T.accent : T.txt }
+        [{ v: "personal", l: "نظام الهاتف الشخصي (بصمة رقمية)" }, { v: "tablet", l: "نظام تابلت البوابة المشترك (لقطة حية)" }].map(o => React.createElement("button", {
+          key: o.v, onClick: () => setKioskMode(o.v),
+          style: { flex: 1, minWidth: 150, padding: "14px 16px", background: kioskMode === o.v ? T.aLight : T.hi, border: `2px solid ${kioskMode === o.v ? T.accent : T.border}`, borderRadius: 14, fontWeight: 700, color: kioskMode === o.v ? T.accent : T.txt }
         }, o.l))
       )
     ),
-    React.createElement(Card, { title: "صيانة وإدارة البيانات" },
-      React.createElement("button", { onClick: wipe, style: { padding: 11, background: T.dLight, color: T.danger, border: "1.5px solid #FCA5A5", fontSize: 14, fontWeight: 600, borderRadius: 12, width: "100%" } }, "مسح وتصفير كافة سجلات الحضور الحالية")
+    // كارت إضافة الإجازة الرسمية الشاملة متاح لجميع المديرين
+    React.createElement(Card, { title: "📅 خيار تعيين يوم إجازة رسمية عامة للجميع" },
+      React.createElement("div", { style: { display: "flex", flexDirection: "column", gap: 10 } },
+        React.createElement("input", { type: "date", value: hForm.date, onChange: e => setHForm({ ...hForm, date: e.target.value }) }),
+        React.createElement("input", { placeholder: "اسم المناسبة الرسمية...", value: hForm.label, onChange: e => setHForm({ ...hForm, label: e.target.value }) }),
+        React.createElement("button", { onClick: handleAddHoliday, style: { padding: "10px 20px", background: T.ok, color: "#fff", fontWeight: 700, borderRadius: 12 } }, "تفعيل الإجازة للكل سحابياً")
+      ),
+      React.createElement("div", { style: { marginTop: 14, display: "flex", gap: 8, flexWrap: "wrap" } },
+        holidays.map(h => React.createElement("span", { key: h.id, style: { display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 14px", background: T.gLight, border: `1.5px solid ${T.gold}`, color: T.gold, borderRadius: 20, fontSize: 12, fontWeight: 700 } },
+          `${h.date} : ${h.label}`, React.createElement("span", { onClick: () => handleDeleteHoliday(h.id), style: { cursor: "pointer", color: T.danger, marginRight: 6 } }, "×")
+        ))
+      )
+    ),
+    isSuper && React.createElement(Card, { title: "صيانة البيانات" },
+      React.createElement("button", { onClick: () => confirm("مسح؟") && setRecs([]), style: { padding: 11, background: T.dLight, color: T.danger, width: "100%" } }, "تصفير السجلات المحلية")
     )
   );
 }
@@ -2108,18 +2077,19 @@ function MgrPanel({ mgr, allEmps, setAllEmps, recs, setRecs, leaves, setLeaves, 
   const visAll = [...visEmps, ...visMgrs.map(m => ({ id: m.id, name: m.name, dept: m.role === 'super' ? "كل الأقسام" : (m.depts?.join("، ") || "الإدارة"), color: m.color, shift: m.shift || DEFAULT_SHIFT, _isMgr: true, role: m.role, depts: m.depts }))];
 
   const TABS = isSuper ? [
-    { id: "dash", l: "لوحة المتابعة الفورية" },
-    { id: "rep", l: "التقارير الإحصائية" },
-    { id: "leave", l: "طلبات الإجازة" },
-    { id: "devs", l: "الهواتف الموثقة" },
-    { id: "mgrs", l: "المديرين" },
-    { id: "emps", l: "الموظفين" },
-    { id: "sett", l: "إعدادات النظام" }
-  ] : [
-    { id: "dash", l: "طاقم فريقي الحالي" },
-    { id: "rep", l: "تقارير الحضور" },
-    { id: "leave", l: "إجازات فريقي" }
-  ];
+  { id: "dash", l: "لوحة المتابعة الفورية" },
+  { id: "rep", l: "التقارير الإحصائية" },
+  { id: "leave", l: "طلبات الإجازة" },
+  { id: "devs", l: "الهواتف الموثقة" },
+  { id: "mgrs", l: "المديرين" },
+  { id: "emps", l: "الموظفين" },
+  { id: "sett", l: "إعدادات النظام" }
+] : [
+  { id: "dash", l: "طاقم فريقي الحالي" },
+  { id: "rep", l: "تقارير الحضور" },
+  { id: "leave", l: "إجازات فريقي" },
+  { id: "sett", l: "إعدادات النظام" }
+];
 
   const combinedPeopleForDevices = [...allEmps, ...managers.map(m => ({ id: m.id, name: m.name, dept: m.role === "super" ? "الإدارة العليا" : (m.depts?.[0] || "الإدارة") }))];
 
@@ -2154,8 +2124,7 @@ function MgrPanel({ mgr, allEmps, setAllEmps, recs, setRecs, leaves, setLeaves, 
       tab === "devs" && isSuper && React.createElement(DevsMgmt, { allEmps: combinedPeopleForDevices, devices: devices, setDevices: setDevices, depts: depts }),
       tab === "mgrs" && isSuper && React.createElement(MgrsMgmt, { managers: managers, setManagers: setManagers, allEmps: allEmps, depts: depts }),
       tab === "emps" && isSuper && React.createElement(EmpsMgmt, { emps: allEmps, setEmps: setAllEmps, managers: managers, depts: depts }),
-      tab === "sett" && isSuper && React.createElement(Settings, { kioskMode: kioskMode, setKioskMode: setKioskMode, setRecs: setRecs, depts: depts, setDepts: setDepts })
-    )
+      tab === "sett" && React.createElement(Settings, { kioskMode, setKioskMode, setRecs, depts, setDepts, isSuper, holidays, setHolidays })    )
   );
 }
 
@@ -2173,6 +2142,8 @@ function App() {
     { name: "الحسابات", color: "#F59E0B" },
     { name: "الإنتاج", color: "#10B981" }
   ]);
+  const [holidays, setHolidays] = useLS("a9_holidays", []);
+const [missions, setMissions] = useLS("a9_missions", []);
   const [view, setView] = useState("kiosk");
   const [curMgr, setCurMgr] = useState(null);
   const [preAuthEmp, setPreAuthEmp] = useState(null);
@@ -2190,6 +2161,15 @@ function App() {
         if (docSnap.exists() && docSnap.data().list) {
           setDepts(docSnap.data().list);
         }
+      });
+      onSnapshot(collection(db, "holidays"), (snap) => {
+        const data = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
+        if (data.length > 0) setHolidays(data);
+      });
+
+      onSnapshot(collection(db, "missions"), (snap) => {
+        const data = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
+        if (data.length > 0) setMissions(data);
       });
 
       onSnapshot(collection(db, "employees"), (snap) => {
