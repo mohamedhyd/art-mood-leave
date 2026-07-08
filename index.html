@@ -715,7 +715,7 @@ function EmpDashboardWidget({ emp, recs, leaves, holidays = [], missions = [] })
       })
     ),
 
-    React.createElement("div", { style: { fontSize: 12, fontWeight: 700, marginTop: 10, marginBottom: 6 } }, "💼 موقف طلبات مأمورياتك الخارجية:"),
+    React.createElement("div", { style: { fontSize: 12, fontWeight: 700, marginTop: 10, marginBottom: 6 } }, "موقف طلبات مأمورياتك الخارجية:"),
     missions.filter(m => m.empId === emp.id).length === 0 ? React.createElement("div", { style: { fontSize: 11, color: "#94A3B8", padding: "4px 0" } }, "لا توجد مأموريات خارجية مسجلة لحسابك") :
     React.createElement("div", { style: { maxHeight: 90, overflowY: "auto", display: "flex", flexDirection: "column", gap: 5 } },
       missions.filter(m => m.empId === emp.id).map(m => {
@@ -855,7 +855,7 @@ function Kiosk({ emps, managers, recs, onRec, onNavigateToLogin, depts, onLeaveR
     err && React.createElement(Note, { color: T.danger, bg: T.dLight }, err),
     React.createElement(PinPad, { key: sk, onConfirm: onPin, doShake: !!err }),
     React.createElement("div", { style: { display: "flex", gap: 8, flexWrap: "wrap", justifyContent: "center", width: "100%", maxWidth: 400, marginTop: 12 } },
-      React.createElement("button", { onClick: onNavigateToLogin, style: { padding: "12px 16px", background: T.surface, color: T.mid, border: `1.5px solid ${T.border}`, fontSize: 13, fontWeight: 700, borderRadius: 12, boxShadow: T.sh, width: "100%" } }, "دخول المديرين والمشرفين")
+      React.createElement("button", { onClick: onNavigateToLogin, style: { padding: "12px 16px", background: T.surface, color: T.mid, border: `1.5px solid ${T.border}`, fontSize: 13, fontWeight: 700, borderRadius: 12, boxShadow: T.sh, width: "100%" } }, "دخول الإدارة")
     )
   );
 }
@@ -1183,9 +1183,9 @@ function MgrLogin({ managers, onLogin, onBack }) {
 
   return React.createElement("div", { style: { minHeight: "100vh", background: T.bg, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 20, padding: 32 } },
     React.createElement(Logo, { width: 140 }),
-    React.createElement(IcoBox, { icon: "قفل", bg: T.aLight }),
+    React.createElement(IcoBox, { icon: "HELLO", bg: T.aLight }),
     React.createElement("div", { style: { textAlign: "center" } },
-      React.createElement("div", { style: { fontSize: 22, fontWeight: 800 } }, "دخول الادارة")
+      React.createElement("div", { style: { fontSize: 22, fontWeight: 800 } }, "دخول الإدارة")
     ),
     err && React.createElement(Note, { color: T.danger, bg: T.dLight }, err),
     React.createElement(PinPad, { key: sk, onConfirm: onPin, doShake: !!err }),
@@ -1307,7 +1307,7 @@ function Leaves({ emps, leaves, setLeaves, managers = [], depts, mgr, missions =
     React.createElement("hr", { style: { border: "none", borderTop: `1.5px dashed ${T.border}`, margin: "15px 0" } }),
     
     /* MISSIONS SECTION SYSTEM */
-    React.createElement("h2", { style: { fontSize: 16, fontWeight: 800, color: T.accent, marginBottom: 10 } }, "💼 إدارة المأموريات الخارجية للمصنع"),
+    React.createElement("h2", { style: { fontSize: 16, fontWeight: 800, color: T.accent, marginBottom: 10 } }, "إدارة المأموريات الخارجية للمصنع"),
     React.createElement(Card, { title: "إسناد أو تسجيل مأمورية خارجية جديدة لمهام عمل" },
       React.createElement("div", { style: { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(170px,1fr))", gap: 12, marginBottom: 14 } },
         React.createElement("select", { value: mForm.empId, onChange: (e) => setMForm({ ...mForm, empId: e.target.value }) },
@@ -2201,7 +2201,7 @@ function MgrPanel({ mgr, allEmps, setAllEmps, recs, setRecs, leaves, setLeaves, 
 
   const TABS = [
     { id: "dash", l: isSuper ? "لوحة المتابعة الفورية" : "طاقم فريقي الحالي" },
-    { id: "rep", l: "التقارير الإحصائية" },
+    { id: "rep", l: "التقارير" },
     { id: "leave", l: "الإجازات والمأموريات" },
     ...(isSuper ? [
       { id: "mgrs", l: "المديرين" },
