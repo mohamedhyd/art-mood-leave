@@ -2260,8 +2260,7 @@ const [missions, setMissions] = useLS("a9_missions", []);
     view === "emp_mission" && React.createElement(EmpMissionRequest, { emps, missions, setMissions, onBack: () => setView("kiosk"), preAuthEmp }),
     view === "reg" && React.createElement(RegisterDevice, { emps, managers, devices, setDevices, onBack: () => setView("kiosk"), onMgrLogin: (m) => { setCurMgr(m); setView("panel"); }, depts }),
     view === "login" && React.createElement(MgrLogin, { managers, onLogin: (m) => { setCurMgr(m); setView("panel"); }, onBack: () => setView("kiosk") }),
-    view === "panel" && curMgr && React.createElement(MgrPanel, { mgr: curMgr, allEmps: emps, setAllEmps: setEmps, recs, setRecs, leaves, setLeaves, devices, setDevices, managers, setManagers, kioskMode, setKioskMode, depts, setDepts, onExit: () => { setCurMgr(null); setView("kiosk"); } })
-  );
+    view === "panel" && curMgr && React.createElement(MgrPanel, { mgr: curMgr, allEmps: emps, setAllEmps: setEmps, recs, setRecs, leaves, setLeaves, devices, setDevices, managers, setManagers, kioskMode, setKioskMode, depts, setDepts, holidays, setHolidays, missions, setMissions, onExit: () => { setCurMgr(null); setView("kiosk"); } })
 }
 
 ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
