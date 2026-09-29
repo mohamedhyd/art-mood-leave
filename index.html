@@ -23,7 +23,7 @@
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
-    import { getFirestore, collection, onSnapshot, addDoc, setDoc, deleteDoc, doc, query, orderBy, where } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+    import { getFirestore, collection, onSnapshot, addDoc, setDoc, deleteDoc, doc, query, where, updateDoc } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
     
     const firebaseConfig = {
       apiKey: "AIzaSyDAOT-XL05ZoMrZxkQWS7W6zZbzP7IywGI",
@@ -37,7 +37,8 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
     window._fbDB = db;
-    window._fbFirestore = { collection, onSnapshot, addDoc, setDoc, deleteDoc, doc, query, orderBy, where };
+    // تم إضافة where و updateDoc وإزالة orderBy للاعتماد على الكود في الترتيب
+    window._fbFirestore = { collection, onSnapshot, addDoc, setDoc, deleteDoc, doc, query, where, updateDoc };
     window.dispatchEvent(new Event("fbReady"));
   </script>
 </head>
@@ -208,32 +209,6 @@ function diffH(s, e) {
 
 function ini(name) {
   return name ? name.split(" ").slice(0, 2).map(w => w[0]).join("") : "";
-}
-
-async function getDeviceFP() {
-  const p = [
-    navigator.userAgent,
-    navigator.language,
-    screen.width + "x" + screen.height,
-    screen.colorDepth,
-    new Date().getTimezoneOffset(),
-    navigator.hardwareConcurrency || "",
-    (() => {
-      try {
-        const c = document.createElement("canvas"), x = c.getContext("2d");
-        x.font = "14px Arial";
-        x.fillStyle = "#f60";
-        x.fillRect(10, 1, 40, 10);
-        x.fillStyle = "#069";
-        x.fillText("FP", 2, 10);
-        return c.toDataURL().slice(-30);
-      } catch {
-        return "nc";
-      }
-    })()
-  ].join("|");
-  const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(p));
-  return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, "0")).join("").slice(0, 32);
 }
 
 function useLS(k, d) {
@@ -1356,13 +1331,13 @@ function Settings({ kioskMode, setKioskMode, setRecs, recs, depts, setDepts, isS
   const [hName, setHName] = useState("");
 
   async function cleanOldPhotos() {
-    if (!confirm("هل أنت متأكد من مسح كافة صور الأيام السابقة لتخفيف الضغط؟ (سيبقى سجل الحضور والوقت كما هو)")) return;
+    if (!confirm("هل أنت متأكد من مسح كافة صور الأيام السابقة يدوياً لتخفيف الضغط؟ (سيبقى سجل الحضور والوقت كما هو)")) return;
 
     const today = todayStr();
     const oldRecsWithPhotos = recs.filter(r => r.date !== today && r.selfieUrl);
 
     if (oldRecsWithPhotos.length === 0) {
-      alert("لا توجد صور قديمة لمسحها، النظام نظيف.");
+      alert("لا توجد صور قديمة لمسحها، النظام نظيف ومحسّن مسبقاً.");
       return;
     }
 
@@ -1496,7 +1471,7 @@ function Settings({ kioskMode, setKioskMode, setRecs, recs, depts, setDepts, isS
         React.createElement("button", { 
           onClick: cleanOldPhotos, 
           style: { padding: 11, background: "#EFF6FF", color: "#2563EB", border: "1.5px solid #93C5FD", fontSize: 14, fontWeight: 600, borderRadius: 12, width: "100%" } 
-        }, "🧹 مسح صور الأيام السابقة (لتسريع النظام)"),
+        }, "🧹 مسح صور الأيام السابقة يدوياً (لتسريع النظام)"),
         React.createElement("button", { 
           onClick: wipe, 
           style: { padding: 11, background: T.dLight, color: T.danger, border: "1.5px solid #FCA5A5", fontSize: 14, fontWeight: 600, borderRadius: 12, width: "100%" } 
@@ -1865,7 +1840,7 @@ function MgrsMgmt({ managers, setManagers, allEmps, depts }) {
     
     const pinExists = managers.some(x => x.pin === form.pin.trim()) || allEmps.some(x => x.pin === form.pin.trim());
     if (pinExists) {
-      setErr("رمز الـ PIN هذا مسجل مسبقاً لمخدم آخر، يرجى اختيار رمز فريد.");
+      setErr("رمز الـ PIN هذا مسجل مسبقاً لمستخدم آخر، يرجى اختيار رمز فريد.");
       return;
     }
 
@@ -2296,6 +2271,7 @@ function App() {
   const [view, setView] = useState("kiosk");
   const [curMgr, setCurMgr] = useState(null);
   const [preAuthEmp, setPreAuthEmp] = useState(null);
+  const [hasCleaned, setHasCleaned] = useState(false);
 
   useEffect(() => {
     function initFirebase() {
@@ -2304,7 +2280,7 @@ function App() {
         return;
       }
       const db = window._fbDB;
-      const { collection, onSnapshot, query, orderBy, where } = window._fbFirestore;
+      const { collection, onSnapshot, query, where } = window._fbFirestore; // تمت إزالة orderBy
 
       // تحميل الأقسام
       onSnapshot(window._fbFirestore.doc(db, "system_settings", "depts_config"), (docSnap) => {
@@ -2323,12 +2299,13 @@ function App() {
       // حساب تاريخ القطع (لآخر 3 شهور)
       const cutoffDate = new Date();
       cutoffDate.setMonth(cutoffDate.getMonth() - 3);
-      const cutoffISO = cutoffDate.toISOString();
-      const cutoffDay = cutoffISO.split("T")[0];
+      const cutoffDay = cutoffDate.toISOString().split("T")[0]; // YYYY-MM-DD
 
-      // تحميل السجلات لآخر 3 شهور فقط
-      onSnapshot(query(collection(db, "records"), where("timestamp", ">=", cutoffISO), orderBy("timestamp", "asc")), (snap) => {
+      // تحميل السجلات مفلترة بالتاريخ بـ where فقط
+      onSnapshot(query(collection(db, "records"), where("date", ">=", cutoffDay)), (snap) => {
         const data = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
+        // ترتيب السجلات زمنياً هنا في الكود عشان نتجنب مشكلة الفايربيز اندكس
+        data.sort((a, b) => (a.timestamp || "").localeCompare(b.timestamp || ""));
         if (data.length > 0) setRecs(data);
       });
 
@@ -2339,7 +2316,7 @@ function App() {
         if (data.length > 0) setManagers(data);
       });
 
-      // تحميل الإجازات لآخر 3 شهور فقط
+      // تحميل الإجازات لآخر 3 شهور
       onSnapshot(query(collection(db, "leaves"), where("date", ">=", cutoffDay)), (snap) => {
         const data = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
         if (data.length > 0) setLeaves(data);
@@ -2351,7 +2328,7 @@ function App() {
         if (data.length > 0) setHolidays(data);
       });
 
-      // تحميل المأموريات لآخر 3 شهور فقط
+      // تحميل المأموريات لآخر 3 شهور
       onSnapshot(query(collection(db, "missions"), where("date", ">=", cutoffDay)), (snap) => {
         const data = snap.docs.map(d => Object.assign({ id: d.id }, d.data()));
         if (data.length > 0) setMissions(data);
@@ -2359,6 +2336,23 @@ function App() {
     }
     initFirebase();
   }, []);
+
+  // وظيفة التنظيف التلقائي الذكي للصور القديمة في الخلفية
+  useEffect(() => {
+    if (!hasCleaned && recs.length > 0 && window._fbDB) {
+      const today = todayStr();
+      const oldRecsWithPhotos = recs.filter(r => r.date !== today && r.selfieUrl);
+      
+      if (oldRecsWithPhotos.length > 0) {
+        const { setDoc, doc } = window._fbFirestore;
+        oldRecsWithPhotos.forEach(r => {
+          // مسح الصور القديمة فقط بصمت مع الاحتفاظ بالبيانات
+          setDoc(doc(window._fbDB, "records", String(r.id)), { selfieUrl: null }, { merge: true }).catch(() => {});
+        });
+      }
+      setHasCleaned(true); // منع تكرار التنظيف
+    }
+  }, [recs, hasCleaned]);
 
   const handleKioskLeaveRequest = (employee) => {
     setPreAuthEmp(employee);
